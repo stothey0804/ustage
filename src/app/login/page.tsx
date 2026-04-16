@@ -16,14 +16,14 @@ export default async function LoginPage({ searchParams }: Props) {
   } = await supabase.auth.getUser();
 
   if (user) {
-    redirect(next && next.startsWith("/") ? next : "/admin");
+    redirect(next && next.startsWith("/") ? next : "/dashboard");
   }
 
   return (
     <main className="flex flex-1 items-center justify-center px-6 py-16">
       <div className="flex w-full max-w-sm flex-col gap-8">
         <header className="flex flex-col gap-2 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">공연자 로그인</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">로그인</h1>
           <p className="text-sm text-muted-foreground">
             이메일과 비밀번호로 로그인하세요.
           </p>
@@ -35,14 +35,22 @@ export default async function LoginPage({ searchParams }: Props) {
           </p>
         ) : null}
 
-        <LoginForm next={next ?? "/admin"} />
+        <LoginForm next={next ?? "/dashboard"} />
 
-        <p className="text-center text-sm text-muted-foreground">
-          아직 계정이 없으신가요?{" "}
-          <Link href="/signup" className="font-medium underline underline-offset-4">
-            회원가입
+        <div className="flex flex-col gap-3 text-center text-sm text-muted-foreground">
+          <p>
+            아직 계정이 없으신가요?{" "}
+            <Link href="/signup" className="font-medium underline underline-offset-4">
+              회원가입
+            </Link>
+          </p>
+          <Link
+            href="/e"
+            className="font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"
+          >
+            비회원 예약정보 조회
           </Link>
-        </p>
+        </div>
       </div>
     </main>
   );

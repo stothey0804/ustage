@@ -10,14 +10,14 @@ export default async function SignupPage() {
   } = await supabase.auth.getUser();
 
   if (user) {
-    redirect("/admin");
+    redirect("/dashboard");
   }
 
   return (
     <main className="flex flex-1 items-center justify-center px-6 py-16">
       <div className="flex w-full max-w-sm flex-col gap-8">
         <header className="flex flex-col gap-2 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">공연자 회원가입</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">회원가입</h1>
           <p className="text-sm text-muted-foreground">
             이메일과 비밀번호로 가입하세요.
           </p>

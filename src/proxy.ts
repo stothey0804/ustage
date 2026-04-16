@@ -6,8 +6,8 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // /admin 이하는 공연자 로그인 필요.
-  if (pathname.startsWith("/admin") && !user) {
+  // /dashboard 이하는 공연자 로그인 필요.
+  if (pathname.startsWith("/dashboard") && !user) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
     redirectUrl.searchParams.set("next", pathname);
@@ -22,7 +22,7 @@ export async function proxy(request: NextRequest) {
   // 이미 로그인한 사용자가 /login, /signup 접근 시 대시보드로.
   if ((pathname === "/login" || pathname === "/signup") && user) {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/admin";
+    redirectUrl.pathname = "/dashboard";
     const redirectResponse = NextResponse.redirect(redirectUrl);
     supabaseResponse.cookies.getAll().forEach((cookie) => {
       redirectResponse.cookies.set(cookie.name, cookie.value);

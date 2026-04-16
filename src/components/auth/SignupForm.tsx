@@ -41,7 +41,7 @@ export function SignupForm() {
 
     // 이메일 확인이 꺼져 있으면 세션이 즉시 반환됨 → 바로 이동.
     if (data.session) {
-      window.location.href = "/admin";
+      window.location.href = "/dashboard";
       return;
     }
 

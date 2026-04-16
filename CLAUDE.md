@@ -4,7 +4,10 @@
 
 소규모 공연/강연을 위한 폐쇄형 예매 및 입장확인 시스템.
 공연자가 예매 링크를 직접 공유하고, 참석자는 그 링크를 통해서만 예매·조회할 수 있다.
-결제는 계좌이체 전용이며 공연자가 수동으로 입금 확인 처리를 한다.
+결제는 계좌이체 전용이며 이벤트 소유자가 수동으로 입금 확인 처리를 한다.
+
+**통합 인증**: 역할 구분 없이 한 계정으로 이벤트 생성(공연자)과 예매(참석자) 모두 가능.
+비회원도 예매할 수 있으며, 이름+비밀번호로 예약을 조회한다.
 
 ---
 
@@ -12,7 +15,7 @@
 
 | 역할            | 라이브러리              |
 | --------------- | ----------------------- |
-| 프레임워크      | Next.js 15 (App Router) |
+| 프레임워크      | Next.js 16 (App Router) |
 | 언어            | TypeScript (strict)     |
 | 스타일          | Tailwind CSS v4         |
 | UI 컴포넌트     | shadcn/ui               |
@@ -22,6 +25,8 @@
 | 폼              | react-hook-form + zod   |
 | QR 생성         | react-qr-code           |
 | QR 스캔         | html5-qrcode            |
+| 리치텍스트 에디터| CKEditor 5              |
+| 이미지 저장     | Supabase Storage        |
 | 날짜            | date-fns                |
 
 ---
@@ -31,26 +36,36 @@
 ```
 src/
 ├── app/
-│   ├── page.tsx                        # 랜딩 (공연자 로그인 버튼만 노출)
-│   ├── login/page.tsx                  # 공연자 로그인
+│   ├── page.tsx                        # 랜딩 (로그인/회원가입 버튼)
+│   ├── login/page.tsx                  # 로그인 + "비회원 예약정보 조회" 링크
+│   ├── signup/page.tsx                 # 회원가입
 │   │
-│   ├── admin/                          # 공연자 전용 — 미들웨어로 보호
+│   ├── dashboard/                      # 로그인 전용 — proxy.ts로 보호
 │   │   ├── layout.tsx
-│   │   ├── page.tsx                    # 대시보드 (내 공연 목록)
-│   │   └── events/
-│   │       ├── new/page.tsx            # 공연 생성
-│   │       └── [id]/
-│   │           ├── page.tsx            # 공연 상세 + 예매 명단
-│   │           ├── edit/page.tsx       # 공연 수정
-│   │           └── scan/page.tsx       # QR 스캔 입장확인 (카메라)
+│   │   ├── page.tsx                    # 홈 ("내 이벤트 관리" / "내 예약 조회" 선택)
+│   │   ├── events/
+│   │   │   ├── page.tsx                # 내 이벤트 목록
+│   │   │   ├── new/page.tsx            # 이벤트 생성
+│   │   │   └── [id]/
+│   │   │       ├── page.tsx            # 이벤트 상세 + 예매 명단
+│   │   │       ├── edit/page.tsx       # 이벤트 수정
+│   │   │       └── scan/page.tsx       # QR 스캔 입장확인 (카메라)
+│   │   └── bookings/
+│   │       ├── page.tsx                # 내 예약 목록 (참석자 관점)
+│   │       └── [id]/page.tsx           # 예약 상세 + QR 코드
 │   │
-│   └── e/                              # 참석자 전용 — 로그인 불필요
-│       └── [slug]/
-│           ├── page.tsx                # 예매 폼
-│           └── me/page.tsx             # 예약 조회 + QR 확인
+│   ├── e/                              # 공개 — 로그인 불필요
+│   │   └── [slug]/
+│   │       ├── page.tsx                # 예매 폼 (로그인 시 user_id 연결)
+│   │       └── me/page.tsx             # 비회원 예약 조회 (이름+비밀번호)
+│   │
+│   ├── auth/callback/route.ts          # 이메일 확인 콜백
+│   ├── actions/                        # Server Actions
+│   └── api/                            # Route Handlers (service_role 필요한 작업)
 │
 ├── components/
-│   ├── admin/                          # 공연자 전용 컴포넌트
+│   ├── auth/                           # 인증 관련 (LoginForm, SignupForm)
+│   ├── dashboard/                      # 대시보드 컴포넌트 (Header, EventForm, BookingList 등)
 │   ├── booking/                        # 예매 흐름 컴포넌트
 │   └── ui/                             # shadcn 자동 생성 (직접 수정 금지)
 │
@@ -58,7 +73,8 @@ src/
 │   ├── supabase/
 │   │   ├── client.ts                   # 브라우저용 Supabase 클라이언트
 │   │   ├── server.ts                   # 서버 컴포넌트용 (cookies 기반)
-│   │   └── middleware.ts               # 세션 갱신 헬퍼
+│   │   ├── admin.ts                    # service_role 전용 (bcrypt, QR 토큰 조회)
+│   │   └── middleware.ts               # 세션 갱신 헬퍼 (proxy에서 호출)
 │   ├── validations/                    # zod 스키마 모음
 │   └── utils.ts                        # cn() 등 공통 유틸
 │
@@ -67,7 +83,7 @@ src/
 ├── types/
 │   ├── database.ts                     # supabase gen types로 자동생성 — 직접 수정 금지
 │   └── index.ts                        # 앱 레벨 공통 타입
-└── middleware.ts                       # /admin/* 인증 가드
+└── proxy.ts                            # /dashboard/* 인증 가드 (Next 16)
 ```
 
 ---
@@ -82,7 +98,8 @@ src/
 id              uuid PK
 performer_id    uuid → auth.users
 title           text
-description     text
+description     text             # 리치텍스트 (HTML) — CKEditor로 입력
+poster_url      text nullable    # 포스터 이미지 URL (Supabase Storage)
 event_date      timestamptz
 venue           text
 price           integer          # 원 단위
@@ -90,33 +107,35 @@ bank_info       text             # "카카오뱅크 3333-123-456789 홍길동"
 contact         text             # 오픈카톡 URL 또는 전화번호
 custom_fields   jsonb            # [{id, label, type, required}]
 slug            text UNIQUE      # 참석자 접근용 URL 식별자
-status          text             # 'open' | 'closed'
+status          text             # 'draft' | 'open' | 'closed'
 capacity        integer nullable
+booking_start   timestamptz      # 예매 시작일시
+booking_end     timestamptz      # 예매 종료일시
 created_at      timestamptz
 ```
 
 **bookings**
 
 ```
-id                    uuid PK
-event_id              uuid → events
-name                  text
-password_hash         text             # bcrypt, 서버에서만 처리
-depositor_name        text             # 입금자명 (참석자 입력)
-deposited_at          text             # 입금시간 (참석자 입력, 자유형식)
-payment_confirmed     boolean          # 공연자가 처리
-payment_confirmed_at  timestamptz nullable
-checked_in            boolean
-checked_in_at         timestamptz nullable
-qr_token              uuid UNIQUE default gen_random_uuid()
-custom_answers        jsonb            # {field_id: value}
-created_at            timestamptz
+id              uuid PK
+event_id        uuid → events
+user_id         uuid nullable → auth.users  # 로그인 참석자 연결 (비회원은 NULL)
+name            text
+password_hash   text nullable    # bcrypt, 비회원 예매 시에만 사용
+depositor_name  text             # 입금자명 (참석자 입력)
+deposited_at    text             # 입금시간 (참석자 입력, 자유형식)
+status          text             # 'pending' | 'confirmed' | 'cancelled'
+checked_in      boolean
+checked_in_at   timestamptz nullable
+qr_token        uuid UNIQUE default gen_random_uuid()
+custom_answers  jsonb            # {field_id: value}
+created_at      timestamptz
 ```
 
 ### RLS 정책 원칙
 
-- `events`: 공연자는 자신의 공연만 CUD, 모든 사람이 SELECT 가능 (slug 기반 접근)
-- `bookings`: 공연자는 자기 이벤트의 예매만 조회/수정, INSERT는 누구나 가능 (예매 제출)
+- `events`: 소유자(performer_id)는 자신의 이벤트만 CUD, 모든 사람이 SELECT 가능 (slug 기반 접근)
+- `bookings`: 소유자는 자기 이벤트의 예매만 조회/수정, 로그인 사용자는 자신의 예매(user_id) SELECT 가능, INSERT는 누구나 가능 (예매 제출)
 - 비밀번호 검증과 QR 토큰 조회는 **service_role**을 쓰는 API Route에서만 처리
 
 ### 타입 재생성 명령어
@@ -129,37 +148,56 @@ npx supabase gen types typescript --project-id <PROJECT_ID> > src/types/database
 
 ## URL 설계
 
-| 경로                      | 접근   | 설명                                 |
-| ------------------------- | ------ | ------------------------------------ |
-| `/`                       | 누구나 | 랜딩 — 공연 목록 없음, 로그인 버튼만 |
-| `/login`                  | 누구나 | 공연자 로그인                        |
-| `/admin`                  | 공연자 | 내 공연 대시보드                     |
-| `/admin/events/new`       | 공연자 | 공연 생성                            |
-| `/admin/events/[id]`      | 공연자 | 공연 상세 + 명단                     |
-| `/admin/events/[id]/scan` | 공연자 | QR 스캔 입장확인                     |
-| `/e/[slug]`               | 누구나 | 참석자 예매 폼                       |
-| `/e/[slug]/me`            | 누구나 | 참석자 예약 조회 (이름+비밀번호)     |
+| 경로                           | 접근   | 설명                                           |
+| ------------------------------ | ------ | ---------------------------------------------- |
+| `/`                            | 누구나 | 랜딩 — 로그인/회원가입 버튼                    |
+| `/login`                       | 누구나 | 로그인 + "비회원 예약정보 조회" 링크           |
+| `/signup`                      | 누구나 | 회원가입                                       |
+| `/dashboard`                   | 로그인 | 홈 — "내 이벤트 관리" / "내 예약 조회" 선택    |
+| `/dashboard/events`            | 로그인 | 내 이벤트 목록 + "이벤트 추가하기"             |
+| `/dashboard/events/new`        | 로그인 | 이벤트 생성                                    |
+| `/dashboard/events/[id]`       | 로그인 | 이벤트 상세 + 예매 명단                        |
+| `/dashboard/events/[id]/edit`  | 로그인 | 이벤트 수정                                    |
+| `/dashboard/events/[id]/scan`  | 로그인 | QR 스캔 입장확인                               |
+| `/dashboard/bookings`          | 로그인 | 내 예약 목록 (참석자 관점)                     |
+| `/dashboard/bookings/[id]`     | 로그인 | 예약 상세 + QR 코드                            |
+| `/e/[slug]`                    | 누구나 | 예매 폼 (로그인 시 user_id 연결, 비로그인 시 이름+비밀번호) |
+| `/e/[slug]/me`                 | 누구나 | 비회원 예약 조회 (이름+비밀번호)               |
 
-> `/e/[slug]`는 공연자가 공유하는 링크. 메인에서 검색·발견 불가.
+> `/e/[slug]`는 이벤트 소유자가 공유하는 링크. 메인에서 검색·발견 불가.
 
 ---
 
 ## 비즈니스 로직 규칙
 
-### 예매 상태 흐름
+### 이벤트 상태
+
+```
+draft  (오픈 전)   → 이벤트 작성 중, 예매 불가
+open   (티켓 오픈) → 예매기간 내 + 좌석 여유 → 예매 가능
+closed (티켓 마감) → 예매기간 종료 또는 좌석 소진 또는 수동 마감
+```
+
+- `draft` → `open`: 수동. booking_start/end 설정 필요.
+- `open` → `closed`: 수동 마감, 또는 booking_end 도래, 또는 예매 수 >= capacity 시 자동.
+- `closed` → `open`: 재오픈 가능 (좌석 여유 + 예매기간 내).
+
+### 예매(참석자) 상태
 
 ```
 예매 제출
-  → payment_confirmed: false   (입금확인 대기)
-  → payment_confirmed: true    (공연자가 확인 처리)
-  → checked_in: true           (QR 스캔으로 입장)
+  → status: 'pending'     (입금대기 — 기본값)
+  → status: 'confirmed'   (참석확정 — 이벤트 소유자가 수동 처리)
+  → status: 'cancelled'   (취소 — 이벤트 소유자가 처리)
+  → checked_in: true      (QR 스캔으로 입장 — 별도 필드)
 ```
 
 ### 입금 확인 처리
 
-- 공연자만 가능 (`/admin/events/[id]`)
-- 확인 처리와 취소(삭제) 모두 가능
-- `payment_confirmed: false` 상태에서는 QR 스캔 시 입장 처리 불가 (경고 표시)
+- 이벤트 소유자만 가능 (`/dashboard/events/[id]`)
+- pending ↔ confirmed 전환 가능 (실수 대응)
+- pending/confirmed → cancelled 전환 가능
+- `status: 'pending'` 상태에서는 QR 스캔 시 입장 처리 불가 (경고 표시)
 
 ### QR 토큰
 
@@ -167,11 +205,32 @@ npx supabase gen types typescript --project-id <PROJECT_ID> > src/types/database
 - 스캔 시 서버에서 토큰으로 예약 조회 → 이름, 입금상태, 입장여부 표시
 - 이미 입장 처리된 경우 "재입장 시도" 경고 표시
 
-### 참석자 인증
+### 참석자 인증 (이중 경로)
 
-- 이름 + 비밀번호 조합으로 `/e/[slug]/me` 에서 본인 예약 조회
+**로그인 참석자**:
+- 예매 시 user_id가 booking에 연결됨
+- `/dashboard/bookings`에서 자신의 전체 예약 목록 확인 가능
+- 비밀번호 입력 불필요
+
+**비회원 참석자**:
+- 예매 시 이름 + 비밀번호 입력 → password_hash로 저장
+- `/e/[slug]/me`에서 이름+비밀번호로 본인 예약 조회
 - 비밀번호는 서버에서 bcrypt 비교 (클라이언트에 hash 노출 금지)
-- JWT 세션 없음 — 조회할 때마다 이름+비밀번호 입력
+
+### 예매 흐름 (참석자 관점)
+
+```
+/e/[slug]                  이벤트 정보 페이지
+  ├── 포스터 이미지          poster_url
+  ├── 안내 (리치텍스트)      description (HTML)
+  ├── 일시/장소/가격 등      기본 정보
+  └── [예매하기] 버튼        → 예매 폼으로 이동 (같은 페이지 내 스텝 전환 또는 별도 경로)
+
+예매 폼
+  ├── 기본 필드: 이름, (비회원 시 비밀번호), 입금자명, 입금시간
+  ├── 커스텀 필드: 이벤트 소유자가 설정한 추가 필드
+  └── [예매 제출] → status='pending' 생성
+```
 
 ### 커스텀 폼 필드
 
@@ -233,7 +292,7 @@ SUPABASE_SERVICE_ROLE_KEY=      # 서버 전용, NEXT_PUBLIC 붙이지 말 것
 
 | 결정                          | 이유                                                    |
 | ----------------------------- | ------------------------------------------------------- |
-| 참석자 로그인 없음            | 이름+비밀번호로 단순 조회만 필요, 계정 관리 불필요      |
+| 통합 인증 + 비회원 예매 병행  | 로그인하면 대시보드에서 이벤트/예약 관리, 비회원은 이름+비밀번호로 예매·조회 |
 | QR에 UUID만 인코딩            | 개인정보 보호, 토큰 무효화 가능                         |
 | 계좌이체 전용                 | 카드 PG 연동 불필요, 공연자가 직접 확인                 |
 | slug 기반 참석자 URL          | 공연 ID 노출 없이 공유 가능, 메인에서 검색 불가         |

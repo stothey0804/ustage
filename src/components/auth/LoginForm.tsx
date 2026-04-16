@@ -13,7 +13,7 @@ interface Props {
   next?: string;
 }
 
-export function LoginForm({ next = "/admin" }: Props) {
+export function LoginForm({ next = "/dashboard" }: Props) {
   const [serverError, setServerError] = useState<string | null>(null);
 
   const {

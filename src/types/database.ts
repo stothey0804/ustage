@@ -29,6 +29,8 @@ export type Database = {
           payment_confirmed: boolean | null
           payment_confirmed_at: string | null
           qr_token: string | null
+          status: string
+          user_id: string | null
         }
         Insert: {
           checked_in?: boolean | null
@@ -44,6 +46,8 @@ export type Database = {
           payment_confirmed?: boolean | null
           payment_confirmed_at?: string | null
           qr_token?: string | null
+          status?: string
+          user_id?: string | null
         }
         Update: {
           checked_in?: boolean | null
@@ -59,6 +63,8 @@ export type Database = {
           payment_confirmed?: boolean | null
           payment_confirmed_at?: string | null
           qr_token?: string | null
+          status?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -73,6 +79,8 @@ export type Database = {
       events: {
         Row: {
           bank_info: string
+          booking_end: string | null
+          booking_start: string | null
           capacity: number | null
           contact: string
           created_at: string | null
@@ -81,6 +89,7 @@ export type Database = {
           event_date: string
           id: string
           performer_id: string
+          poster_url: string | null
           price: number
           slug: string
           status: string | null
@@ -89,6 +98,8 @@ export type Database = {
         }
         Insert: {
           bank_info: string
+          booking_end?: string | null
+          booking_start?: string | null
           capacity?: number | null
           contact: string
           created_at?: string | null
@@ -97,6 +108,7 @@ export type Database = {
           event_date: string
           id?: string
           performer_id: string
+          poster_url?: string | null
           price: number
           slug: string
           status?: string | null
@@ -105,6 +117,8 @@ export type Database = {
         }
         Update: {
           bank_info?: string
+          booking_end?: string | null
+          booking_start?: string | null
           capacity?: number | null
           contact?: string
           created_at?: string | null
@@ -113,6 +127,7 @@ export type Database = {
           event_date?: string
           id?: string
           performer_id?: string
+          poster_url?: string | null
           price?: number
           slug?: string
           status?: string | null

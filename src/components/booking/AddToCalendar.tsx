@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 
 interface AddToCalendarProps {
   title: string;
-  date: string; // ISO string
+  date: string;
+  endDate?: string;
   venue: string;
   venueAddress?: string;
 }
@@ -29,14 +30,16 @@ function toICSDate(isoStr: string): string {
 export function AddToCalendar({
   title,
   date,
+  endDate: endDateProp,
   venue,
   venueAddress,
 }: AddToCalendarProps) {
   function handleClick() {
     const start = toICSDate(date);
-    // 기본 2시간 이벤트
-    const endDate = new Date(new Date(date).getTime() + 2 * 60 * 60 * 1000);
-    const end = toICSDate(endDate.toISOString());
+    const endFallback = new Date(new Date(date).getTime() + 2 * 60 * 60 * 1000);
+    const end = endDateProp
+      ? toICSDate(endDateProp)
+      : toICSDate(endFallback.toISOString());
     const location = venueAddress || venue;
 
     const ics = [

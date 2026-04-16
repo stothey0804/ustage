@@ -43,6 +43,7 @@ export default async function EditEventPage({
     description: event.description ?? "",
     poster_url: event.poster_url ?? "",
     event_date: toDatetimeLocal(event.event_date) ?? "",
+    event_end_date: toDatetimeLocal(event.event_end_date) ?? undefined,
     venue: event.venue,
     venue_address: event.venue_address ?? undefined,
     venue_lat: event.venue_lat ?? undefined,

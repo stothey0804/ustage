@@ -61,6 +61,7 @@ export function EventForm({
       description: "",
       poster_url: "",
       event_date: "",
+      event_end_date: undefined,
       venue: "",
       venue_address: undefined,
       venue_lat: undefined,
@@ -178,16 +179,28 @@ export function EventForm({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label>공연 일시 *</Label>
+            <Label>공연 시작 *</Label>
             <DateTimePicker
               value={watch("event_date") || undefined}
               onChange={(v) => setValue("event_date", v, { shouldValidate: true })}
-              placeholder="공연 날짜·시간 선택"
+              placeholder="시작 날짜·시간"
             />
             {errors.event_date && (
               <p className="text-xs text-destructive">{errors.event_date.message}</p>
             )}
           </div>
+
+          <div className="space-y-1.5">
+            <Label>공연 종료</Label>
+            <DateTimePicker
+              value={watch("event_end_date") || undefined}
+              onChange={(v) => setValue("event_end_date", v)}
+              placeholder="종료 날짜·시간"
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
 
           <div className="space-y-1.5">
             <Label htmlFor="venue">공연 장소 *</Label>

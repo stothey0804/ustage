@@ -14,6 +14,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { CustomField } from "@/lib/validations/event";
 
 interface BookingFormProps {
@@ -52,6 +58,7 @@ export function BookingForm({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
       name: "",
+      email: "",
       depositor_name: "",
       deposited_at: "",
       quantity: 1,
@@ -61,12 +68,10 @@ export function BookingForm({
   });
 
   const onSubmit = (values: BookingFormValues) => {
-    // 비회원 비밀번호 수동 검증 (스키마에서는 optional)
     if (!isLoggedIn && (!values.password || values.password.length < 4)) {
       setError("password", { message: "비밀번호는 4자 이상이어야 합니다." });
       return;
     }
-    // 유료 이벤트는 입금 정보 필수
     if (!isFree) {
       if (!values.depositor_name) {
         setError("depositor_name", { message: "입금자명을 입력해 주세요." });
@@ -78,7 +83,6 @@ export function BookingForm({
       }
     }
 
-    // 비회원 수정 불가 안내
     if (!isLoggedIn) {
       const confirmed = window.confirm(
         "비회원 예매는 제출 후 정보를 수정할 수 없습니다. 입력 내용이 정확한지 확인해 주세요.\n\n예매를 진행하시겠습니까?"
@@ -94,6 +98,7 @@ export function BookingForm({
         body: JSON.stringify({
           event_id: eventId,
           name: values.name,
+          email: values.email,
           depositor_name: values.depositor_name,
           deposited_at: values.deposited_at,
           quantity: values.quantity,
@@ -171,142 +176,157 @@ export function BookingForm({
     );
   }
 
-  // 예매 시작 버튼
-  if (step === "idle") {
-    return (
+  return (
+    <>
       <Button size="lg" className="w-full" onClick={() => setStep("form")}>
         예매하기
       </Button>
-    );
-  }
 
-  // 예매 폼
-  return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-      {/* 기본 정보 */}
-      <div className="space-y-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="name">이름 *</Label>
-          <Input
-            id="name"
-            {...register("name")}
-            placeholder="홍길동"
-            autoComplete="name"
-          />
-          {errors.name && (
-            <p className="text-xs text-destructive">{errors.name.message}</p>
-          )}
-        </div>
+      <Dialog open={step === "form"} onOpenChange={(open) => { if (!open) setStep("idle"); }}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{isFree ? "참가 신청" : "예매하기"}</DialogTitle>
+          </DialogHeader>
 
-        {!isLoggedIn && (
-          <div className="space-y-1.5">
-            <Label htmlFor="password">
-              비밀번호 *{" "}
-              <span className="text-muted-foreground font-normal text-xs">
-                (예약 조회 시 사용)
-              </span>
-            </Label>
-            <Input
-              id="password"
-              type="password"
-              {...register("password")}
-              placeholder="4자 이상"
-              autoComplete="new-password"
-            />
-            {errors.password && (
-              <p className="text-xs text-destructive">
-                {errors.password.message}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="name">이름 *</Label>
+                <Input
+                  id="name"
+                  {...register("name")}
+                  placeholder="홍길동"
+                  autoComplete="name"
+                />
+                {errors.name && (
+                  <p className="text-xs text-destructive">{errors.name.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="email">이메일 *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  {...register("email")}
+                  placeholder="name@example.com"
+                  autoComplete="email"
+                />
+                {errors.email && (
+                  <p className="text-xs text-destructive">{errors.email.message}</p>
+                )}
+              </div>
+
+              {!isLoggedIn && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="password">
+                    비밀번호 *{" "}
+                    <span className="text-muted-foreground font-normal text-xs">
+                      (예약 조회 시 사용)
+                    </span>
+                  </Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    {...register("password")}
+                    placeholder="4자 이상"
+                    autoComplete="new-password"
+                  />
+                  {errors.password && (
+                    <p className="text-xs text-destructive">
+                      {errors.password.message}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <Label htmlFor="quantity">매수 *</Label>
+                <Input
+                  id="quantity"
+                  type="number"
+                  min={1}
+                  max={10}
+                  {...register("quantity", { valueAsNumber: true })}
+                />
+                {errors.quantity && (
+                  <p className="text-xs text-destructive">{errors.quantity.message}</p>
+                )}
+              </div>
+
+              {!isFree && (
+                <>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="depositor_name">입금자명 *</Label>
+                    <Input
+                      id="depositor_name"
+                      {...register("depositor_name")}
+                      placeholder="입금자 이름 (계좌 표시명)"
+                    />
+                    {errors.depositor_name && (
+                      <p className="text-xs text-destructive">
+                        {errors.depositor_name.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="deposited_at">
+                      입금 시간 *{" "}
+                      <span className="text-muted-foreground font-normal text-xs">
+                        (예: 오늘 오후 3시)
+                      </span>
+                    </Label>
+                    <Input
+                      id="deposited_at"
+                      {...register("deposited_at")}
+                      placeholder="예: 오늘 오후 3시 / 내일 오전 11시"
+                    />
+                    {errors.deposited_at && (
+                      <p className="text-xs text-destructive">
+                        {errors.deposited_at.message}
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {customFields.length > 0 && (
+              <>
+                <Separator />
+                <CustomFieldRenderer
+                  fields={customFields}
+                  control={control}
+                  errors={errors}
+                />
+              </>
+            )}
+
+            {serverError && (
+              <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {serverError}
               </p>
             )}
-          </div>
-        )}
 
-        <div className="space-y-1.5">
-          <Label htmlFor="quantity">매수 *</Label>
-          <Input
-            id="quantity"
-            type="number"
-            min={1}
-            max={10}
-            {...register("quantity", { valueAsNumber: true })}
-          />
-          {errors.quantity && (
-            <p className="text-xs text-destructive">{errors.quantity.message}</p>
-          )}
-        </div>
-
-        {!isFree && (
-          <>
-            <div className="space-y-1.5">
-              <Label htmlFor="depositor_name">입금자명 *</Label>
-              <Input
-                id="depositor_name"
-                {...register("depositor_name")}
-                placeholder="입금자 이름 (계좌 표시명)"
-              />
-              {errors.depositor_name && (
-                <p className="text-xs text-destructive">
-                  {errors.depositor_name.message}
-                </p>
-              )}
+            <div className="flex gap-3 pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setStep("idle")}
+                disabled={isPending}
+                className="flex-1"
+              >
+                취소
+              </Button>
+              <Button type="submit" disabled={isPending} className="flex-1">
+                {isPending && <Loader2 className="size-4 mr-2 animate-spin" />}
+                {isFree ? "참가 신청" : "예매 신청"}
+              </Button>
             </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="deposited_at">
-                입금 시간 *{" "}
-                <span className="text-muted-foreground font-normal text-xs">
-                  (예: 오늘 오후 3시)
-                </span>
-              </Label>
-              <Input
-                id="deposited_at"
-                {...register("deposited_at")}
-                placeholder="예: 오늘 오후 3시 / 내일 오전 11시"
-              />
-              {errors.deposited_at && (
-                <p className="text-xs text-destructive">
-                  {errors.deposited_at.message}
-                </p>
-              )}
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* 커스텀 필드 */}
-      {customFields.length > 0 && (
-        <>
-          <Separator />
-          <CustomFieldRenderer
-            fields={customFields}
-            control={control}
-            errors={errors}
-          />
-        </>
-      )}
-
-      {/* 에러 메시지 */}
-      {serverError && (
-        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {serverError}
-        </p>
-      )}
-
-      <div className="flex gap-3 pt-1">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => setStep("idle")}
-          disabled={isPending}
-          className="flex-1"
-        >
-          취소
-        </Button>
-        <Button type="submit" disabled={isPending} className="flex-1">
-          {isPending && <Loader2 className="size-4 mr-2 animate-spin" />}
-          예매 신청
-        </Button>
-      </div>
-    </form>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

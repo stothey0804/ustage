@@ -144,7 +144,15 @@ export default async function EventDetailPage({
 
           {/* 기본 정보 */}
           <div className="grid gap-3 text-sm">
-            <InfoRow icon={Calendar} label="일시" value={formatKST(event.event_date)} />
+            <InfoRow
+              icon={Calendar}
+              label="일시"
+              value={
+                event.event_end_date
+                  ? `${formatKST(event.event_date)} ~ ${formatKST(event.event_end_date, "HH:mm")}`
+                  : formatKST(event.event_date)
+              }
+            />
             <InfoRow icon={MapPin} label="장소" value={event.venue} />
             <InfoRow
               icon={CreditCard}

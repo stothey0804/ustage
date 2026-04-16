@@ -121,10 +121,18 @@ export default async function EventPublicPage({
       {/* 기본 정보 */}
       <div className="grid gap-2.5 text-sm">
         <div className="flex items-center justify-between gap-2">
-          <InfoRow icon={Calendar} value={formatKST(event.event_date)} />
+          <InfoRow
+            icon={Calendar}
+            value={
+              event.event_end_date
+                ? `${formatKST(event.event_date)} ~ ${formatKST(event.event_end_date, "HH:mm")}`
+                : formatKST(event.event_date)
+            }
+          />
           <AddToCalendar
             title={event.title}
             date={event.event_date}
+            endDate={event.event_end_date ?? undefined}
             venue={event.venue}
             venueAddress={event.venue_address ?? undefined}
           />

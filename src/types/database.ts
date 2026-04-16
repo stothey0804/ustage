@@ -57,6 +57,7 @@ export type Database = {
           custom_answers: Json | null
           deposited_at: string
           depositor_name: string
+          email: string | null
           event_id: string
           id: string
           name: string
@@ -75,6 +76,7 @@ export type Database = {
           custom_answers?: Json | null
           deposited_at: string
           depositor_name: string
+          email?: string | null
           event_id: string
           id?: string
           name: string
@@ -93,6 +95,7 @@ export type Database = {
           custom_answers?: Json | null
           deposited_at?: string
           depositor_name?: string
+          email?: string | null
           event_id?: string
           id?: string
           name?: string
@@ -125,6 +128,7 @@ export type Database = {
           custom_fields: Json | null
           description: string | null
           event_date: string
+          event_end_date: string | null
           id: string
           performer_id: string
           poster_url: string | null
@@ -147,6 +151,7 @@ export type Database = {
           custom_fields?: Json | null
           description?: string | null
           event_date: string
+          event_end_date?: string | null
           id?: string
           performer_id: string
           poster_url?: string | null
@@ -169,6 +174,7 @@ export type Database = {
           custom_fields?: Json | null
           description?: string | null
           event_date?: string
+          event_end_date?: string | null
           id?: string
           performer_id?: string
           poster_url?: string | null

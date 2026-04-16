@@ -44,12 +44,6 @@ export default async function LoginPage({ searchParams }: Props) {
               회원가입
             </Link>
           </p>
-          <Link
-            href="/e"
-            className="font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"
-          >
-            비회원 예약정보 조회
-          </Link>
         </div>
       </div>
     </main>

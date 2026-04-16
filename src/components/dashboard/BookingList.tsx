@@ -225,6 +225,11 @@ export function BookingList({
                       </Badge>
                     )}
                   </div>
+                  <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+                    {!isFree && <span>입금자: {booking.depositor_name}</span>}
+                    {!isFree && <span>입금시간: {booking.deposited_at}</span>}
+                    <span>예약: {formatCreatedAt(booking.created_at)}</span>
+                  </div>
                 </div>
                 {!isFree && booking.status === "pending" && (
                   <Button

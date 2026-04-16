@@ -9,6 +9,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { QRTicket } from "@/components/booking/QRTicket";
+import { AddToCalendar } from "@/components/booking/AddToCalendar";
 
 const BOOKING_STATUS_MAP = {
   pending: { label: "입금대기", variant: "secondary" },
@@ -40,7 +41,7 @@ export default async function BookingDetailPage({
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "*, events(id, title, event_date, venue, price, bank_info, slug, poster_url)"
+      "*, events(id, title, event_date, venue, venue_address, price, bank_info, slug, poster_url)"
     )
     .eq("id", id)
     .eq("user_id", user.id)
@@ -61,6 +62,7 @@ export default async function BookingDetailPage({
     title: string;
     event_date: string;
     venue: string;
+    venue_address: string | null;
     price: number;
     bank_info: string;
     slug: string;
@@ -118,28 +120,68 @@ export default async function BookingDetailPage({
 
       {/* 이벤트 정보 */}
       {event && (
-        <div className="grid gap-3 text-sm">
-          {event.event_date && (
+        <div className="space-y-3">
+          <div className="grid gap-3 text-sm">
+            {event.event_date && (
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-start gap-3">
+                  <Calendar className="size-4 text-muted-foreground shrink-0 mt-0.5" />
+                  <span className="text-muted-foreground w-20 shrink-0">일시</span>
+                  <span>{formatDate(event.event_date)}</span>
+                </div>
+                <AddToCalendar
+                  title={event.title}
+                  date={event.event_date}
+                  venue={event.venue}
+                  venueAddress={event.venue_address ?? undefined}
+                />
+              </div>
+            )}
+            {!event.venue_address && (
+              <div className="flex items-start gap-3">
+                <MapPin className="size-4 text-muted-foreground shrink-0 mt-0.5" />
+                <span className="text-muted-foreground w-20 shrink-0">장소</span>
+                <span>{event.venue}</span>
+              </div>
+            )}
             <div className="flex items-start gap-3">
-              <Calendar className="size-4 text-muted-foreground shrink-0 mt-0.5" />
-              <span className="text-muted-foreground w-20 shrink-0">일시</span>
-              <span>{formatDate(event.event_date)}</span>
+              <CreditCard className="size-4 text-muted-foreground shrink-0 mt-0.5" />
+              <span className="text-muted-foreground w-20 shrink-0">가격</span>
+              <span>
+                {event.price === 0
+                  ? "무료"
+                  : `${(event.price * quantity).toLocaleString()}원 (${event.price.toLocaleString()}원 × ${quantity}매)`}
+              </span>
+            </div>
+          </div>
+
+          {/* 지도 링크 */}
+          {event.venue_address && (
+            <div className="rounded-lg border overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-3 text-sm">
+                <MapPin className="size-4 text-muted-foreground shrink-0" />
+                <span className="flex-1">{event.venue_address}</span>
+              </div>
+              <div className="flex border-t divide-x">
+                <a
+                  href={`https://map.kakao.com/link/search/${encodeURIComponent(event.venue_address)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-2.5 text-center text-xs text-primary hover:bg-muted/50 transition-colors"
+                >
+                  카카오맵
+                </a>
+                <a
+                  href={`https://map.naver.com/p/search/${encodeURIComponent(event.venue_address)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-2.5 text-center text-xs text-primary hover:bg-muted/50 transition-colors"
+                >
+                  네이버지도
+                </a>
+              </div>
             </div>
           )}
-          <div className="flex items-start gap-3">
-            <MapPin className="size-4 text-muted-foreground shrink-0 mt-0.5" />
-            <span className="text-muted-foreground w-20 shrink-0">장소</span>
-            <span>{event.venue}</span>
-          </div>
-          <div className="flex items-start gap-3">
-            <CreditCard className="size-4 text-muted-foreground shrink-0 mt-0.5" />
-            <span className="text-muted-foreground w-20 shrink-0">가격</span>
-            <span>
-              {event.price === 0
-                ? "무료"
-                : `${(event.price * quantity).toLocaleString()}원 (${event.price.toLocaleString()}원 × ${quantity}매)`}
-            </span>
-          </div>
         </div>
       )}
 

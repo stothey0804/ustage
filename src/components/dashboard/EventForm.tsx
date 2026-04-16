@@ -12,6 +12,7 @@ import { ImageIcon, Loader2, X } from "lucide-react";
 import { eventSchema, type EventFormValues } from "@/lib/validations/event";
 import { createEvent, updateEvent } from "@/app/actions/event";
 import { createClient } from "@/lib/supabase/client";
+import { resizeImage } from "@/lib/image";
 import { CustomFieldEditor } from "./CustomFieldEditor";
 
 import { Button } from "@/components/ui/button";
@@ -81,19 +82,30 @@ export function EventForm({
       toast.error("이미지 파일만 업로드할 수 있습니다.");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("파일 크기는 5MB 이하여야 합니다.");
+    // 원본 20MB 초과는 차단 (리사이징 전 안전망)
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("파일 크기는 20MB 이하여야 합니다.");
       return;
     }
 
     setUploading(true);
+
+    let uploadBlob: Blob;
+    try {
+      // 최대 1200×1800px, JPEG 85% 품질로 리사이징
+      uploadBlob = await resizeImage(file);
+    } catch {
+      toast.error("이미지 처리에 실패했습니다.");
+      setUploading(false);
+      return;
+    }
+
     const supabase = createClient();
-    const ext = file.name.split(".").pop();
-    const path = `${userId}/${Date.now()}.${ext}`;
+    const path = `${userId}/${Date.now()}.jpg`;
 
     const { data, error } = await supabase.storage
       .from("posters")
-      .upload(path, file, { cacheControl: "3600", upsert: false });
+      .upload(path, uploadBlob, { contentType: "image/jpeg", cacheControl: "3600", upsert: false });
 
     if (error) {
       console.error("[poster upload]", error);

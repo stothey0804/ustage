@@ -42,12 +42,12 @@ export function KakaoAddressSearch({ onSelect }: KakaoAddressSearchProps) {
       );
 
       const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
+      console.log("[KakaoAddress] key exists:", !!kakaoKey);
 
       // 2. Kakao Maps SDK 로드 (좌표 변환용)
       if (kakaoKey) {
-        await loadScript(
-          `//dapi.kakao.com/v2/maps/sdk.js?appkey=${kakaoKey}&libraries=services&autoload=false`
-        );
+        const sdkSrc = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${kakaoKey}&libraries=services&autoload=false`;
+        await loadScript(sdkSrc);
       }
 
       // 3. 주소 검색 팝업
@@ -63,6 +63,7 @@ export function KakaoAddressSearch({ onSelect }: KakaoAddressSearchProps) {
             window.kakao.maps.load(() => {
               const geocoder = new window.kakao.maps.services.Geocoder();
               geocoder.addressSearch(address, (result, status) => {
+                console.log("[KakaoAddress] geocode status:", status, result);
                 if (
                   status === window.kakao.maps.services.Status.OK &&
                   result.length > 0
@@ -74,7 +75,6 @@ export function KakaoAddressSearch({ onSelect }: KakaoAddressSearchProps) {
                     venue_lat: parseFloat(result[0].y),
                   });
                 } else {
-                  // 좌표 변환 실패 — 주소만 저장
                   onSelect({
                     venue: displayName,
                     venue_address: address,
@@ -85,7 +85,7 @@ export function KakaoAddressSearch({ onSelect }: KakaoAddressSearchProps) {
               });
             });
           } else {
-            // 카카오 키 없음 — 주소만 저장
+            console.log("[KakaoAddress] no kakao sdk, skipping geocode");
             onSelect({
               venue: displayName,
               venue_address: address,

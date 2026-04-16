@@ -32,12 +32,15 @@ export function QRTicket({ name, tickets }: QRTicketProps) {
             )}
           </p>
           {ticket.checked_in ? (
-            <div className="flex items-center justify-center size-[200px] rounded bg-green-50 text-green-700">
+            <div className="flex items-center justify-center w-full max-w-[200px] aspect-square rounded bg-green-50 text-green-700">
               <p className="text-sm font-medium">입장 완료</p>
             </div>
           ) : (
-            <div className="bg-white p-2 rounded">
-              <QRCode value={ticket.qr_token} size={200} />
+            <div className="bg-white p-2 rounded w-full max-w-[232px]">
+              <QRCode
+                value={ticket.qr_token}
+                style={{ width: "100%", height: "auto" }}
+              />
             </div>
           )}
           <p className="text-xs text-gray-500">

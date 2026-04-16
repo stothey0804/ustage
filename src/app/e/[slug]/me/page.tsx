@@ -22,7 +22,7 @@ export default async function BookingLookupPage({ params }: Props) {
   if (!event) notFound();
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-8 space-y-6">
+    <div className="mx-auto w-full max-w-xl px-4 py-8 space-y-6">
       <div>
         <Link
           href={`/e/${slug}`}

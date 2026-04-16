@@ -51,6 +51,7 @@ export function BookingForm({
       name: "",
       depositor_name: "",
       deposited_at: "",
+      quantity: 1,
       password: "",
       custom_answers: {},
     },
@@ -73,6 +74,7 @@ export function BookingForm({
           name: values.name,
           depositor_name: values.depositor_name,
           deposited_at: values.deposited_at,
+          quantity: values.quantity,
           password: values.password || undefined,
           custom_answers:
             Object.keys(values.custom_answers ?? {}).length > 0
@@ -188,6 +190,20 @@ export function BookingForm({
             )}
           </div>
         )}
+
+        <div className="space-y-1.5">
+          <Label htmlFor="quantity">매수 *</Label>
+          <Input
+            id="quantity"
+            type="number"
+            min={1}
+            max={10}
+            {...register("quantity", { valueAsNumber: true })}
+          />
+          {errors.quantity && (
+            <p className="text-xs text-destructive">{errors.quantity.message}</p>
+          )}
+        </div>
 
         <div className="space-y-1.5">
           <Label htmlFor="depositor_name">입금자명 *</Label>

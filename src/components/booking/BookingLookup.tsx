@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { CheckCircle2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,14 +16,20 @@ interface Props {
   eventId: string;
 }
 
+type LookupTicket = {
+  qr_token: string;
+  ticket_number: number;
+  checked_in: boolean;
+};
+
 type LookupResult = {
   id: string;
   name: string;
   status: string;
-  qr_token: string | null;
+  quantity: number;
   depositor_name: string;
   deposited_at: string;
-  checked_in: boolean | null;
+  tickets: LookupTicket[];
   events: {
     title: string;
     event_date: string;
@@ -142,7 +147,14 @@ export function BookingLookup({ eventId }: Props) {
           <Separator />
 
           <div className="flex items-center justify-between">
-            <p className="font-medium">{result.name}</p>
+            <p className="font-medium">
+              {result.name}
+              {result.quantity > 1 && (
+                <span className="text-muted-foreground ml-1">
+                  ({result.quantity}매)
+                </span>
+              )}
+            </p>
             <Badge
               variant={
                 statusInfo.variant as "secondary" | "default" | "outline"
@@ -177,17 +189,9 @@ export function BookingLookup({ eventId }: Props) {
             </div>
           )}
 
-          {/* 입장 완료 */}
-          {result.checked_in && (
-            <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
-              <CheckCircle2 className="size-4" />
-              <span>입장 완료</span>
-            </div>
-          )}
-
           {/* QR 코드 */}
-          {result.status === "confirmed" && result.qr_token && (
-            <QRTicket qrToken={result.qr_token} name={result.name} />
+          {result.status === "confirmed" && result.tickets.length > 0 && (
+            <QRTicket name={result.name} tickets={result.tickets} />
           )}
         </div>
       )}

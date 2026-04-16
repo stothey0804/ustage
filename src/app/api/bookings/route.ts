@@ -74,30 +74,39 @@ export async function POST(req: Request) {
     );
   }
 
-  // 예매 가능 조건 3: 좌석 여유 확인
+  // 예매 가능 조건 3: 좌석 여유 확인 (quantity 기반)
+  const admin = createAdminClient();
+
   if (event.capacity) {
-    const { count } = await supabase
+    const { data: sumResult } = await admin
       .from("bookings")
-      .select("*", { count: "exact", head: true })
+      .select("quantity")
       .eq("event_id", event.id)
       .neq("status", "cancelled");
 
-    if (count !== null && count >= event.capacity) {
+    const totalBooked = (sumResult ?? []).reduce(
+      (sum, b) => sum + (b.quantity ?? 1),
+      0
+    );
+
+    if (totalBooked + data.quantity > event.capacity) {
+      const remaining = event.capacity - totalBooked;
       return NextResponse.json(
-        { error: "좌석이 모두 찼습니다." },
+        {
+          error:
+            remaining <= 0
+              ? "좌석이 모두 찼습니다."
+              : `잔여 좌석이 ${remaining}석입니다. 수량을 조정해 주세요.`,
+        },
         { status: 409 }
       );
     }
   }
 
   // 비밀번호 해시 (비회원만)
-  // 로그인 사용자는 user_id로 예약 조회하므로 password_hash는 사용 안 함
-  const password_hash = user
-    ? ""
-    : await bcrypt.hash(data.password!, 10);
+  const password_hash = user ? "" : await bcrypt.hash(data.password!, 10);
 
-  // 예매 생성 (service_role로 RLS 우회 — 검증은 위에서 완료)
-  const admin = createAdminClient();
+  // 예매 생성 (service_role로 RLS 우회)
   const { data: booking, error: insertError } = await admin
     .from("bookings")
     .insert({
@@ -107,6 +116,7 @@ export async function POST(req: Request) {
       password_hash,
       depositor_name: data.depositor_name,
       deposited_at: data.deposited_at,
+      quantity: data.quantity,
       custom_answers: data.custom_answers ?? null,
       status: "pending",
     })
@@ -117,6 +127,26 @@ export async function POST(req: Request) {
     console.error("[bookings POST]", insertError);
     return NextResponse.json(
       { error: "예매 처리 중 오류가 발생했습니다." },
+      { status: 500 }
+    );
+  }
+
+  // 개별 티켓 생성 (quantity 만큼)
+  const tickets = Array.from({ length: data.quantity }, (_, i) => ({
+    booking_id: booking.id,
+    ticket_number: i + 1,
+  }));
+
+  const { error: ticketError } = await admin
+    .from("booking_tickets")
+    .insert(tickets);
+
+  if (ticketError) {
+    console.error("[bookings POST] ticket creation error", ticketError);
+    // 예매는 생성됐지만 티켓 생성 실패 — 삭제 후 에러
+    await admin.from("bookings").delete().eq("id", booking.id);
+    return NextResponse.json(
+      { error: "티켓 생성 중 오류가 발생했습니다." },
       { status: 500 }
     );
   }

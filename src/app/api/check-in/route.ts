@@ -52,36 +52,54 @@ export async function POST(req: Request) {
     );
   }
 
-  // QR 토큰으로 예약 조회 (service_role — RLS 우회)
+  // QR 토큰으로 티켓 조회 (service_role)
   const admin = createAdminClient();
-  const { data: booking } = await admin
-    .from("bookings")
-    .select("id, name, status, checked_in, checked_in_at, event_id")
+  const { data: ticket } = await admin
+    .from("booking_tickets")
+    .select("id, ticket_number, checked_in, checked_in_at, booking_id")
     .eq("qr_token", qr_token)
-    .eq("event_id", event_id)
     .single();
 
-  if (!booking) {
+  if (!ticket) {
     return NextResponse.json(
       { result: "invalid", message: "유효하지 않은 QR 코드입니다." },
       { status: 200 }
     );
   }
 
-  // 취소된 예매
-  if (booking.status === "cancelled") {
+  // 예약 정보 조회 + 이벤트 일치 확인
+  const { data: booking } = await admin
+    .from("bookings")
+    .select("id, name, status, event_id, quantity")
+    .eq("id", ticket.booking_id)
+    .single();
+
+  if (!booking || booking.event_id !== event_id) {
     return NextResponse.json(
-      { result: "cancelled", name: booking.name, message: "취소된 예매입니다." },
+      { result: "invalid", message: "이 이벤트의 QR 코드가 아닙니다." },
       { status: 200 }
     );
   }
 
-  // 입금대기 상태 — 입장 불가
+  const ticketLabel =
+    booking.quantity > 1
+      ? `${booking.name} (${ticket.ticket_number}/${booking.quantity})`
+      : booking.name;
+
+  // 취소된 예매
+  if (booking.status === "cancelled") {
+    return NextResponse.json(
+      { result: "cancelled", name: ticketLabel, message: "취소된 예매입니다." },
+      { status: 200 }
+    );
+  }
+
+  // 입금대기 상태
   if (booking.status === "pending") {
     return NextResponse.json(
       {
         result: "pending",
-        name: booking.name,
+        name: ticketLabel,
         message: "입금 확인이 되지 않은 예매입니다.",
       },
       { status: 200 }
@@ -89,23 +107,23 @@ export async function POST(req: Request) {
   }
 
   // 이미 입장됨
-  if (booking.checked_in) {
+  if (ticket.checked_in) {
     return NextResponse.json(
       {
         result: "already_checked_in",
-        name: booking.name,
-        checked_in_at: booking.checked_in_at,
-        message: "이미 입장 처리된 예매입니다.",
+        name: ticketLabel,
+        checked_in_at: ticket.checked_in_at,
+        message: "이미 입장 처리된 티켓입니다.",
       },
       { status: 200 }
     );
   }
 
-  // 입장 성공 — checked_in 업데이트
+  // 입장 성공
   const { error: updateError } = await admin
-    .from("bookings")
+    .from("booking_tickets")
     .update({ checked_in: true, checked_in_at: new Date().toISOString() })
-    .eq("id", booking.id);
+    .eq("id", ticket.id);
 
   if (updateError) {
     console.error("[check-in]", updateError);
@@ -116,7 +134,7 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json(
-    { result: "success", name: booking.name, message: "입장이 확인되었습니다." },
+    { result: "success", name: ticketLabel, message: "입장이 확인되었습니다." },
     { status: 200 }
   );
 }

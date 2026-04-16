@@ -51,9 +51,18 @@ export async function POST(req: Request) {
   for (const booking of bookings ?? []) {
     const hash = booking.password_hash;
     if (hash && (await bcrypt.compare(password, hash))) {
+      // 티켓 조회
+      const { data: tickets } = await adminSupabase
+        .from("booking_tickets")
+        .select("qr_token, ticket_number, checked_in")
+        .eq("booking_id", booking.id)
+        .order("ticket_number", { ascending: true });
+
       const { password_hash, ...safeBooking } = booking;
       void password_hash;
-      return NextResponse.json({ booking: safeBooking });
+      return NextResponse.json({
+        booking: { ...safeBooking, tickets: tickets ?? [] },
+      });
     }
   }
 

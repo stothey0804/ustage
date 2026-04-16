@@ -5,6 +5,7 @@ export const bookingApiSchema = z.object({
   name: z.string().min(1, "이름을 입력해 주세요."),
   depositor_name: z.string().min(1, "입금자명을 입력해 주세요."),
   deposited_at: z.string().min(1, "입금 시간을 입력해 주세요."),
+  quantity: z.number().int().min(1, "최소 1매 이상이어야 합니다.").max(10, "최대 10매까지 예매할 수 있습니다."),
   password: z.string().optional(),
   custom_answers: z
     .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
@@ -18,6 +19,7 @@ export const bookingFormSchema = z.object({
   name: z.string().min(1, "이름을 입력해 주세요."),
   depositor_name: z.string().min(1, "입금자명을 입력해 주세요."),
   deposited_at: z.string().min(1, "입금 시간을 입력해 주세요."),
+  quantity: z.number().int().min(1).max(10),
   password: z.string().optional(),
   custom_answers: z.record(z.string(), z.string()).optional(),
 });

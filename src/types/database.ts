@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      booking_tickets: {
+        Row: {
+          id: string
+          booking_id: string
+          ticket_number: number
+          qr_token: string
+          checked_in: boolean
+          checked_in_at: string | null
+        }
+        Insert: {
+          id?: string
+          booking_id: string
+          ticket_number: number
+          qr_token?: string
+          checked_in?: boolean
+          checked_in_at?: string | null
+        }
+        Update: {
+          id?: string
+          booking_id?: string
+          ticket_number?: number
+          qr_token?: string
+          checked_in?: boolean
+          checked_in_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_tickets_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           checked_in: boolean | null
@@ -28,6 +63,7 @@ export type Database = {
           password_hash: string
           payment_confirmed: boolean | null
           payment_confirmed_at: string | null
+          quantity: number
           qr_token: string | null
           status: string
           user_id: string | null
@@ -45,6 +81,7 @@ export type Database = {
           password_hash: string
           payment_confirmed?: boolean | null
           payment_confirmed_at?: string | null
+          quantity?: number
           qr_token?: string | null
           status?: string
           user_id?: string | null
@@ -62,6 +99,7 @@ export type Database = {
           password_hash?: string
           payment_confirmed?: boolean | null
           payment_confirmed_at?: string | null
+          quantity?: number
           qr_token?: string | null
           status?: string
           user_id?: string | null

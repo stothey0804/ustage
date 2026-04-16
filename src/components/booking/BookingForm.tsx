@@ -184,12 +184,12 @@ export function BookingForm({
         </Button>
       ) : (
         <div className="flex gap-3">
-          <Button size="lg" className="flex-1" asChild variant="outline">
+          <Button size="lg" className="flex-1" asChild>
             <a href={`/login?next=${encodeURIComponent(window.location.pathname)}`}>
               로그인
             </a>
           </Button>
-          <Button size="lg" className="flex-1" onClick={() => setStep("form")}>
+          <Button size="lg" className="flex-1" variant="outline" onClick={() => setStep("form")}>
             비회원 예매
           </Button>
         </div>

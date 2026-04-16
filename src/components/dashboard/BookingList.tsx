@@ -30,13 +30,13 @@ type FilterStatus = "all" | "pending" | "confirmed" | "cancelled";
 const STATUS_FILTERS: { value: FilterStatus; label: string }[] = [
   { value: "all", label: "전체" },
   { value: "pending", label: "입금대기" },
-  { value: "confirmed", label: "참석확정" },
+  { value: "confirmed", label: "입금완료" },
   { value: "cancelled", label: "취소" },
 ];
 
 function StatusBadge({ status }: { status: string }) {
   if (status === "confirmed") {
-    return <Badge variant="default">참석확정</Badge>;
+    return <Badge variant="default">입금완료</Badge>;
   }
   if (status === "cancelled") {
     return <Badge variant="outline">취소</Badge>;
@@ -166,7 +166,7 @@ export function BookingList({ eventId, initialBookings }: BookingListProps) {
                           handleStatusChange(booking.id, "confirmed")
                         }
                       >
-                        확인
+                        입금확인
                       </Button>
                     )}
                     {booking.status === "confirmed" && (
@@ -179,7 +179,7 @@ export function BookingList({ eventId, initialBookings }: BookingListProps) {
                           handleStatusChange(booking.id, "pending")
                         }
                       >
-                        확인취소
+                        입금확인 취소
                       </Button>
                     )}
                     {(booking.status === "pending" ||

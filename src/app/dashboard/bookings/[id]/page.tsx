@@ -11,7 +11,7 @@ import { QRTicket } from "@/components/booking/QRTicket";
 
 const BOOKING_STATUS_MAP = {
   pending: { label: "입금대기", variant: "secondary" },
-  confirmed: { label: "참석확정", variant: "default" },
+  confirmed: { label: "입금완료", variant: "default" },
   cancelled: { label: "취소", variant: "outline" },
 } as const;
 
@@ -94,7 +94,7 @@ export default async function BookingDetailPage({
         )}
         {status === "confirmed" && (
           <p className="text-green-700 dark:text-green-400">
-            참석이 확정되었습니다. QR 코드로 입장하세요.
+            입금이 확인되었습니다. QR 코드로 입장하세요.
           </p>
         )}
         {status === "cancelled" && (

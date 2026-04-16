@@ -112,7 +112,7 @@ export function BookingForm({
           <div>
             <p className="font-medium">예매가 완료되었습니다.</p>
             <p className="text-sm text-muted-foreground mt-0.5">
-              입금 확인 후 참석이 확정됩니다.
+              입금 확인 후 예매가 확정됩니다.
             </p>
           </div>
         </div>
@@ -124,9 +124,16 @@ export function BookingForm({
           <p className="text-sm font-medium">{bankInfo}</p>
         </div>
         <p className="text-xs text-muted-foreground">
-          {isLoggedIn
-            ? "대시보드 → 내 예약에서 예매 현황을 확인하실 수 있습니다."
-            : "이 페이지 하단 '비회원 예약 조회'에서 예매 현황을 확인하실 수 있습니다."}
+          {isLoggedIn ? (
+            <>
+              <a href="/dashboard/bookings" className="text-primary underline underline-offset-2">
+                내 예약
+              </a>
+              에서 예매 현황을 확인하실 수 있습니다.
+            </>
+          ) : (
+            "이 페이지 하단 '비회원 예약 조회'에서 예매 현황을 확인하실 수 있습니다."
+          )}
         </p>
       </div>
     );

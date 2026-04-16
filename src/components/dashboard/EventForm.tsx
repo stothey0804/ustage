@@ -370,7 +370,9 @@ export function EventForm({
           커스텀 필드
         </h2>
         <p className="text-xs text-muted-foreground">
-          이름, 입금자명, 입금시간 외에 추가로 받을 정보를 설정하세요.
+          기본 필수 필드: <span className="font-medium text-foreground">이름, 입금자명, 입금시간</span> (비회원은 비밀번호 추가)
+          <br />
+          아래에서 추가로 받을 정보를 설정하세요.
         </p>
         <CustomFieldEditor
           value={customFields}

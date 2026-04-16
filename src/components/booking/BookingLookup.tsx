@@ -36,7 +36,7 @@ type LookupResult = {
 
 const BOOKING_STATUS_MAP = {
   pending: { label: "입금대기", variant: "secondary" },
-  confirmed: { label: "참석확정", variant: "default" },
+  confirmed: { label: "입금완료", variant: "default" },
   cancelled: { label: "취소", variant: "outline" },
 } as const;
 

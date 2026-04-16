@@ -173,14 +173,23 @@ export default async function EventPublicPage({
         />
       </section>
 
-      {/* 비회원 조회 링크 */}
+      {/* 예약 조회 링크 */}
       <div className="text-center">
-        <Link
-          href={`/e/${slug}/me`}
-          className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
-        >
-          비회원 예약 조회
-        </Link>
+        {user ? (
+          <Link
+            href="/dashboard/bookings"
+            className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+          >
+            내 예약 확인하기
+          </Link>
+        ) : (
+          <Link
+            href={`/e/${slug}/me`}
+            className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+          >
+            비회원 예약 조회
+          </Link>
+        )}
       </div>
     </div>
   );

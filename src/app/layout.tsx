@@ -38,7 +38,7 @@ export default function RootLayout({
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}
     >
       <head>
-        <meta name="theme-color" content="#18181b" />
+        <meta name="theme-color" content="#2b8a8a" />
         <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />

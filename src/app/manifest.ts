@@ -8,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
       "공연자가 링크를 공유하면, 참석자는 그 링크로만 예매할 수 있어요. QR로 입장까지 한 번에.",
     start_url: "/dashboard",
     display: "standalone",
-    background_color: "#ffffff",
-    theme_color: "#18181b",
+    background_color: "#f5fafa",
+    theme_color: "#2b8a8a",
     icons: [
       {
         src: "/icon-192.png",

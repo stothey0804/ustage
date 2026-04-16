@@ -6,7 +6,7 @@ export default function Home() {
     <main className="flex flex-1 items-center justify-center px-6 py-24">
       <section className="flex w-full max-w-xl flex-col items-center gap-8 text-center">
         <div className="flex flex-col gap-3">
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl text-primary">
             어스테이지(US.tage)
           </h1>
           <p className="text-base text-muted-foreground">

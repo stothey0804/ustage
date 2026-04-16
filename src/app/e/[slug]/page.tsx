@@ -16,6 +16,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { BookingForm } from "@/components/booking/BookingForm";
+import { AddToCalendar } from "@/components/booking/AddToCalendar";
 import type { CustomField } from "@/lib/validations/event";
 
 function formatDate(dateStr: string) {
@@ -124,8 +125,18 @@ export default async function EventPublicPage({
 
       {/* 기본 정보 */}
       <div className="grid gap-2.5 text-sm">
-        <InfoRow icon={Calendar} value={formatDate(event.event_date)} />
-        <InfoRow icon={MapPin} value={event.venue} />
+        <div className="flex items-center justify-between gap-2">
+          <InfoRow icon={Calendar} value={formatDate(event.event_date)} />
+          <AddToCalendar
+            title={event.title}
+            date={event.event_date}
+            venue={event.venue}
+            venueAddress={event.venue_address ?? undefined}
+          />
+        </div>
+        {!event.venue_address && (
+          <InfoRow icon={MapPin} value={event.venue} />
+        )}
         <InfoRow
           icon={CreditCard}
           value={event.price === 0 ? "무료" : `${event.price.toLocaleString()}원`}

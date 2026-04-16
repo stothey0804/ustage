@@ -15,12 +15,20 @@ export default function Home() {
           </p>
         </div>
 
-        <Button asChild size="lg">
-          <Link href="/login">공연자 로그인</Link>
-        </Button>
+        <div className="flex flex-col items-center gap-3 sm:flex-row">
+          <Button asChild size="lg">
+            <Link href="/login">로그인</Link>
+          </Button>
+          <Button asChild size="lg" variant="outline">
+            <Link href="/signup">회원가입</Link>
+          </Button>
+        </div>
 
         <p className="text-xs text-muted-foreground">
-          참석자는 공연자가 공유한 예매 링크로 접속해 주세요.
+          예매 링크를 받으셨나요?{" "}
+          <span className="font-medium text-foreground">
+            링크를 직접 열어 예매하세요.
+          </span>
         </p>
       </section>
     </main>

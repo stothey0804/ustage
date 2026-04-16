@@ -77,6 +77,7 @@ export function EventForm({
   });
 
   const description = watch("description");
+  const watchPrice = watch("price") ?? 0;
   const customFields = watch("custom_fields") ?? [];
 
   async function handlePosterChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -320,17 +321,19 @@ export function EventForm({
           결제 & 연락
         </h2>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="bank_info">입금 계좌 *</Label>
-          <Input
-            id="bank_info"
-            {...register("bank_info")}
-            placeholder="예: 카카오뱅크 3333-123-456789 홍길동"
-          />
-          {errors.bank_info && (
-            <p className="text-xs text-destructive">{errors.bank_info.message}</p>
-          )}
-        </div>
+        {watchPrice > 0 && (
+          <div className="space-y-1.5">
+            <Label htmlFor="bank_info">입금 계좌 *</Label>
+            <Input
+              id="bank_info"
+              {...register("bank_info")}
+              placeholder="예: 카카오뱅크 3333-123-456789 홍길동"
+            />
+            {errors.bank_info && (
+              <p className="text-xs text-destructive">{errors.bank_info.message}</p>
+            )}
+          </div>
+        )}
 
         <div className="space-y-1.5">
           <Label htmlFor="contact">연락처 *</Label>

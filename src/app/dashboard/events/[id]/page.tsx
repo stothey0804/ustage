@@ -1,8 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { format } from "date-fns";
-import { ko } from "date-fns/locale";
+import { formatKST } from "@/lib/date";
 import {
   ChevronLeft,
   Edit,
@@ -30,16 +29,6 @@ const STATUS_MAP = {
   open: { label: "티켓 오픈", variant: "default" },
   closed: { label: "마감", variant: "outline" },
 } as const;
-
-function formatDate(dateStr: string) {
-  try {
-    return format(new Date(dateStr), "yyyy년 M월 d일 (EEE) HH:mm", {
-      locale: ko,
-    });
-  } catch {
-    return dateStr;
-  }
-}
 
 export default async function EventDetailPage({
   params,
@@ -155,7 +144,7 @@ export default async function EventDetailPage({
 
           {/* 기본 정보 */}
           <div className="grid gap-3 text-sm">
-            <InfoRow icon={Calendar} label="일시" value={formatDate(event.event_date)} />
+            <InfoRow icon={Calendar} label="일시" value={formatKST(event.event_date)} />
             <InfoRow icon={MapPin} label="장소" value={event.venue} />
             <InfoRow
               icon={CreditCard}
@@ -177,14 +166,14 @@ export default async function EventDetailPage({
               <InfoRow
                 icon={Clock}
                 label="예매 시작"
-                value={formatDate(event.booking_start)}
+                value={formatKST(event.booking_start)}
               />
             )}
             {event.booking_end && (
               <InfoRow
                 icon={Clock}
                 label="예매 종료"
-                value={formatDate(event.booking_end)}
+                value={formatKST(event.booking_end)}
               />
             )}
             <InfoRow icon={CreditCard} label="입금 계좌" value={event.bank_info} />

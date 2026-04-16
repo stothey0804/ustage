@@ -17,7 +17,7 @@ export const eventSchema = z.object({
   event_date: z.string().min(1, "공연 일시를 입력해 주세요."),
   venue: z.string().min(1, "공연 장소를 입력해 주세요."),
   price: z.number().min(0, "가격은 0원 이상이어야 합니다."),
-  bank_info: z.string().min(1, "계좌 정보를 입력해 주세요."),
+  bank_info: z.string(),
   contact: z.string().min(1, "연락처를 입력해 주세요."),
   capacity: z.number().int().min(1, "좌석 수는 1 이상이어야 합니다.").optional(),
   venue_address: z.string().optional(),

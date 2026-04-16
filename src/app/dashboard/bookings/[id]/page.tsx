@@ -1,8 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { format } from "date-fns";
-import { ko } from "date-fns/locale";
 import { ChevronLeft, Calendar, MapPin, CreditCard } from "lucide-react";
+import { formatKST } from "@/lib/date";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -22,14 +21,6 @@ function getStatusVariant(status: string) {
   if (status === "confirmed") return "default";
   if (status === "cancelled") return "outline";
   return "secondary";
-}
-
-function formatDate(dateStr: string) {
-  try {
-    return format(new Date(dateStr), "yyyy년 M월 d일 (EEE) HH:mm", { locale: ko });
-  } catch {
-    return dateStr;
-  }
 }
 
 export default async function BookingDetailPage({
@@ -134,7 +125,7 @@ export default async function BookingDetailPage({
                 <div className="flex items-start gap-3">
                   <Calendar className="size-4 text-muted-foreground shrink-0 mt-0.5" />
                   <span className="text-muted-foreground w-20 shrink-0">일시</span>
-                  <span>{formatDate(event.event_date)}</span>
+                  <span>{formatKST(event.event_date)}</span>
                 </div>
                 <AddToCalendar
                   title={event.title}

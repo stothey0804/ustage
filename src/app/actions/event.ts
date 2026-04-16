@@ -38,6 +38,11 @@ export async function createEvent(
 
   const v = parsed.data;
 
+  // 유료 이벤트는 계좌 필수
+  if (v.price > 0 && !v.bank_info) {
+    return { error: "계좌 정보를 입력해 주세요." };
+  }
+
   const { data, error } = await supabase
     .from("events")
     .insert({
@@ -89,6 +94,10 @@ export async function updateEvent(
   }
 
   const v = parsed.data;
+
+  if (v.price > 0 && !v.bank_info) {
+    return { error: "계좌 정보를 입력해 주세요." };
+  }
 
   const { error } = await supabase
     .from("events")

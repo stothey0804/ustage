@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { format } from "date-fns";
-import { ko } from "date-fns/locale";
 import { Ticket } from "lucide-react";
+import { formatKST } from "@/lib/date";
 
 import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
@@ -18,14 +17,6 @@ function getStatusVariant(status: string) {
   if (status === "confirmed") return "default";
   if (status === "cancelled") return "outline";
   return "secondary";
-}
-
-function formatDate(dateStr: string) {
-  try {
-    return format(new Date(dateStr), "yyyy년 M월 d일 (EEE) HH:mm", { locale: ko });
-  } catch {
-    return dateStr;
-  }
 }
 
 export default async function BookingsPage() {
@@ -86,7 +77,7 @@ export default async function BookingsPage() {
                         </p>
                         {event?.event_date && (
                           <p className="text-sm text-muted-foreground">
-                            {formatDate(event.event_date)}
+                            {formatKST(event.event_date)}
                           </p>
                         )}
                         {event?.venue && (

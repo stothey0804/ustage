@@ -72,7 +72,7 @@ export function DateTimePicker({
           variant="outline"
           disabled={disabled}
           className={cn(
-            "w-full justify-start text-left font-normal",
+            "w-full justify-start text-left font-normal truncate",
             !value && "text-muted-foreground"
           )}
         >
@@ -80,7 +80,7 @@ export function DateTimePicker({
           {displayValue || placeholder}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="w-auto max-w-[calc(100vw-2rem)] p-0" align="start">
         <Calendar
           mode="single"
           selected={selectedDate}

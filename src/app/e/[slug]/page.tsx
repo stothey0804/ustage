@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { format } from "date-fns";
-import { ko } from "date-fns/locale";
+import { formatKST } from "@/lib/date";
 import {
   Calendar,
   MapPin,
@@ -19,16 +18,6 @@ import { BookingForm } from "@/components/booking/BookingForm";
 import { AddToCalendar } from "@/components/booking/AddToCalendar";
 import { VenueMapLinks } from "@/components/booking/VenueMapLinks";
 import type { CustomField } from "@/lib/validations/event";
-
-function formatDate(dateStr: string) {
-  try {
-    return format(new Date(dateStr), "yyyy년 M월 d일 (EEE) HH:mm", {
-      locale: ko,
-    });
-  } catch {
-    return dateStr;
-  }
-}
 
 function getBookingStatus(event: {
   status: string | null;
@@ -48,7 +37,7 @@ function getBookingStatus(event: {
   if (event.booking_start && new Date(event.booking_start) > now) {
     return {
       isOpen: false,
-      reason: `예매는 ${formatDate(event.booking_start)}부터 시작됩니다.`,
+      reason: `예매는 ${formatKST(event.booking_start)}부터 시작됩니다.`,
     };
   }
   if (event.booking_end && new Date(event.booking_end) < now) {
@@ -127,7 +116,7 @@ export default async function EventPublicPage({
       {/* 기본 정보 */}
       <div className="grid gap-2.5 text-sm">
         <div className="flex items-center justify-between gap-2">
-          <InfoRow icon={Calendar} value={formatDate(event.event_date)} />
+          <InfoRow icon={Calendar} value={formatKST(event.event_date)} />
           <AddToCalendar
             title={event.title}
             date={event.event_date}
@@ -149,8 +138,8 @@ export default async function EventPublicPage({
           <InfoRow
             icon={Clock}
             value={[
-              event.booking_start && `예매 시작: ${formatDate(event.booking_start)}`,
-              event.booking_end && `예매 종료: ${formatDate(event.booking_end)}`,
+              event.booking_start && `예매 시작: ${formatKST(event.booking_start)}`,
+              event.booking_end && `예매 종료: ${formatKST(event.booking_end)}`,
             ]
               .filter(Boolean)
               .join(" · ")}

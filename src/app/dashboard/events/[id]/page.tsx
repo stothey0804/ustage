@@ -205,7 +205,12 @@ export default async function EventDetailPage({
 
         {/* 예매 명단 탭 */}
         <TabsContent value="bookings" className="mt-4">
-          <BookingList eventId={id} initialBookings={bookings ?? []} isFree={event.price === 0} />
+          <BookingList
+            eventId={id}
+            initialBookings={bookings ?? []}
+            isFree={event.price === 0}
+            customFields={(event.custom_fields ?? []) as import("@/lib/validations/event").CustomField[]}
+          />
         </TabsContent>
       </Tabs>
     </div>

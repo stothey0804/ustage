@@ -43,6 +43,60 @@ export async function updateBookingStatus(
   return { success: true };
 }
 
+export async function forceCheckIn(
+  bookingId: string,
+  ticketId?: string
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "로그인이 필요합니다." };
+
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("id, event_id, events!inner(performer_id)")
+    .eq("id", bookingId)
+    .single();
+
+  if (
+    !booking ||
+    (booking.events as { performer_id: string }).performer_id !== user.id
+  ) {
+    return { error: "권한이 없습니다." };
+  }
+
+  if (ticketId) {
+    // 개별 티켓 입장 처리
+    const { error } = await supabase
+      .from("booking_tickets")
+      .update({ checked_in: true, checked_in_at: new Date().toISOString() })
+      .eq("id", ticketId)
+      .eq("booking_id", bookingId);
+
+    if (error) {
+      console.error("[forceCheckIn]", error);
+      return { error: "입장 처리에 실패했습니다." };
+    }
+  } else {
+    // 전체 티켓 입장 처리
+    const { error } = await supabase
+      .from("booking_tickets")
+      .update({ checked_in: true, checked_in_at: new Date().toISOString() })
+      .eq("booking_id", bookingId)
+      .eq("checked_in", false);
+
+    if (error) {
+      console.error("[forceCheckIn]", error);
+      return { error: "입장 처리에 실패했습니다." };
+    }
+  }
+
+  revalidatePath(`/dashboard/events/${booking.event_id}`);
+  return { success: true };
+}
+
 export async function deleteBooking(bookingId: string): Promise<ActionResult> {
   const supabase = await createClient();
   const {

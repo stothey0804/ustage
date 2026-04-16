@@ -7,11 +7,14 @@ export default function Home() {
       <section className="flex w-full max-w-xl flex-col items-center gap-8 text-center">
         <div className="flex flex-col gap-3">
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-            소규모 공연을 위한 간단한 예매 · 입장 시스템
+            어스테이지(US.tage)
           </h1>
           <p className="text-base text-muted-foreground">
+            소규모 공연·이벤트를 위한 예매 서비스 어스테이지입니다.
+            <br />
             공연자가 링크를 공유하면, 참석자는 그 링크로만 예매할 수 있어요.
-            QR로 입장까지 한 번에 처리됩니다.
+            <br />
+            티켓 예매부터 QR 입장까지 제공해드려요.
           </p>
         </div>
 

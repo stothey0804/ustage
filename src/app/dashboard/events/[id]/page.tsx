@@ -208,7 +208,7 @@ export default async function EventDetailPage({
 
         {/* 예매 명단 탭 */}
         <TabsContent value="bookings" className="mt-4">
-          <BookingList eventId={id} initialBookings={bookings ?? []} />
+          <BookingList eventId={id} initialBookings={bookings ?? []} isFree={event.price === 0} />
         </TabsContent>
       </Tabs>
     </div>

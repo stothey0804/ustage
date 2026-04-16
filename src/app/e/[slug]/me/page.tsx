@@ -15,7 +15,7 @@ export default async function BookingLookupPage({ params }: Props) {
 
   const { data: event } = await supabase
     .from("events")
-    .select("id, title, slug")
+    .select("id, title, slug, price")
     .eq("slug", slug)
     .single();
 
@@ -35,7 +35,7 @@ export default async function BookingLookupPage({ params }: Props) {
         <p className="mt-1 text-sm text-muted-foreground">{event.title}</p>
       </div>
 
-      <BookingLookup eventId={event.id} />
+      <BookingLookup eventId={event.id} isFree={event.price === 0} />
     </div>
   );
 }

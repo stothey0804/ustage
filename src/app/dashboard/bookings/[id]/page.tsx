@@ -12,11 +12,17 @@ import { QRTicket } from "@/components/booking/QRTicket";
 import { AddToCalendar } from "@/components/booking/AddToCalendar";
 import { VenueMapLinks } from "@/components/booking/VenueMapLinks";
 
-const BOOKING_STATUS_MAP = {
-  pending: { label: "입금대기", variant: "secondary" },
-  confirmed: { label: "입금완료", variant: "default" },
-  cancelled: { label: "취소", variant: "outline" },
-} as const;
+function getStatusLabel(status: string, isFree: boolean) {
+  if (status === "confirmed") return isFree ? "참가확정" : "입금완료";
+  if (status === "cancelled") return "취소";
+  return "입금대기";
+}
+
+function getStatusVariant(status: string) {
+  if (status === "confirmed") return "default";
+  if (status === "cancelled") return "outline";
+  return "secondary";
+}
 
 function formatDate(dateStr: string) {
   try {
@@ -70,8 +76,8 @@ export default async function BookingDetailPage({
     poster_url: string | null;
   } | null;
 
-  const status = booking.status as keyof typeof BOOKING_STATUS_MAP;
-  const statusInfo = BOOKING_STATUS_MAP[status] ?? BOOKING_STATUS_MAP.pending;
+  const status = booking.status;
+  const isFree = event?.price === 0;
   const quantity = booking.quantity ?? 1;
 
   return (
@@ -91,9 +97,9 @@ export default async function BookingDetailPage({
           </h1>
           <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
             <Badge
-              variant={statusInfo.variant as "secondary" | "default" | "outline"}
+              variant={getStatusVariant(status) as "secondary" | "default" | "outline"}
             >
-              {statusInfo.label}
+              {getStatusLabel(status, isFree)}
             </Badge>
             {quantity > 1 && (
               <Badge variant="outline">{quantity}매</Badge>
@@ -111,7 +117,7 @@ export default async function BookingDetailPage({
         )}
         {status === "confirmed" && (
           <p className="text-green-700 dark:text-green-400">
-            입금이 확인되었습니다. QR 코드로 입장하세요.
+            {isFree ? "참가가 확정되었습니다." : "입금이 확인되었습니다."} QR 코드로 입장하세요.
           </p>
         )}
         {status === "cancelled" && (

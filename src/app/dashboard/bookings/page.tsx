@@ -8,11 +8,17 @@ import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
-const BOOKING_STATUS_MAP = {
-  pending: { label: "입금대기", variant: "secondary" },
-  confirmed: { label: "입금완료", variant: "default" },
-  cancelled: { label: "취소", variant: "outline" },
-} as const;
+function getStatusLabel(status: string, isFree: boolean) {
+  if (status === "confirmed") return isFree ? "참가확정" : "입금완료";
+  if (status === "cancelled") return "취소";
+  return "입금대기";
+}
+
+function getStatusVariant(status: string) {
+  if (status === "confirmed") return "default";
+  if (status === "cancelled") return "outline";
+  return "secondary";
+}
 
 function formatDate(dateStr: string) {
   try {
@@ -32,7 +38,7 @@ export default async function BookingsPage() {
 
   const { data: bookings, error } = await supabase
     .from("bookings")
-    .select("*, events(id, title, event_date, venue, slug)")
+    .select("*, events(id, title, event_date, venue, slug, price)")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -60,11 +66,11 @@ export default async function BookingsPage() {
               event_date: string;
               venue: string;
               slug: string;
+              price: number;
             } | null;
 
-            const status = booking.status as keyof typeof BOOKING_STATUS_MAP;
-            const statusInfo =
-              BOOKING_STATUS_MAP[status] ?? BOOKING_STATUS_MAP.pending;
+            const isFree = event?.price === 0;
+            const status = booking.status;
 
             return (
               <Link
@@ -91,14 +97,14 @@ export default async function BookingsPage() {
                       </div>
                       <Badge
                         variant={
-                          statusInfo.variant as
+                          getStatusVariant(status) as
                             | "secondary"
                             | "default"
                             | "outline"
                         }
                         className="shrink-0"
                       >
-                        {statusInfo.label}
+                        {getStatusLabel(status, isFree)}
                       </Badge>
                     </div>
                   </CardContent>

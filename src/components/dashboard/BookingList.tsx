@@ -27,20 +27,23 @@ type BookingWithTickets = Tables<"bookings"> & {
 interface BookingListProps {
   eventId: string;
   initialBookings: BookingWithTickets[];
+  isFree?: boolean;
 }
 
 type FilterStatus = "all" | "pending" | "confirmed" | "cancelled";
 
-const STATUS_FILTERS: { value: FilterStatus; label: string }[] = [
-  { value: "all", label: "전체" },
-  { value: "pending", label: "입금대기" },
-  { value: "confirmed", label: "입금완료" },
-  { value: "cancelled", label: "취소" },
-];
+function getStatusFilters(isFree: boolean): { value: FilterStatus; label: string }[] {
+  return [
+    { value: "all", label: "전체" },
+    ...(!isFree ? [{ value: "pending" as FilterStatus, label: "입금대기" }] : []),
+    { value: "confirmed", label: isFree ? "참가확정" : "입금완료" },
+    { value: "cancelled", label: "취소" },
+  ];
+}
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, isFree }: { status: string; isFree?: boolean }) {
   if (status === "confirmed") {
-    return <Badge variant="default">입금완료</Badge>;
+    return <Badge variant="default">{isFree ? "참가확정" : "입금완료"}</Badge>;
   }
   if (status === "cancelled") {
     return <Badge variant="outline">취소</Badge>;
@@ -57,7 +60,7 @@ function formatCreatedAt(dateStr: string | null): string {
   }
 }
 
-export function BookingList({ eventId, initialBookings }: BookingListProps) {
+export function BookingList({ eventId, initialBookings, isFree = false }: BookingListProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
@@ -114,7 +117,7 @@ export function BookingList({ eventId, initialBookings }: BookingListProps) {
       {/* 필터 + 검색 */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex gap-1">
-          {STATUS_FILTERS.map((f) => (
+          {getStatusFilters(isFree).map((f) => (
             <Button
               key={f.value}
               size="sm"
@@ -175,7 +178,7 @@ export function BookingList({ eventId, initialBookings }: BookingListProps) {
                       )}
                     </span>
                     <div className="flex items-center gap-1.5 mt-1">
-                      <StatusBadge status={booking.status} />
+                      <StatusBadge status={booking.status} isFree={isFree} />
                       {checkedInCount > 0 && (
                         <Badge
                           variant="outline"
@@ -188,7 +191,7 @@ export function BookingList({ eventId, initialBookings }: BookingListProps) {
                   </div>
                   {/* 액션 버튼 */}
                   <div className="flex items-center gap-1 shrink-0">
-                    {booking.status === "pending" && (
+                    {!isFree && booking.status === "pending" && (
                       <Button
                         size="sm"
                         variant="outline"
@@ -201,7 +204,7 @@ export function BookingList({ eventId, initialBookings }: BookingListProps) {
                         입금확인
                       </Button>
                     )}
-                    {booking.status === "confirmed" && (
+                    {!isFree && booking.status === "confirmed" && (
                       <Button
                         size="sm"
                         variant="outline"

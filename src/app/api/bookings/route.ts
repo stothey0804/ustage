@@ -40,7 +40,7 @@ export async function POST(req: Request) {
   // 이벤트 조회
   const { data: event, error: eventError } = await supabase
     .from("events")
-    .select("id, status, capacity, booking_start, booking_end, bank_info")
+    .select("id, status, capacity, booking_start, booking_end, bank_info, price")
     .eq("id", data.event_id)
     .single();
 
@@ -114,11 +114,11 @@ export async function POST(req: Request) {
       user_id: user?.id ?? null,
       name: data.name,
       password_hash,
-      depositor_name: data.depositor_name,
-      deposited_at: data.deposited_at,
+      depositor_name: event.price === 0 ? data.name : data.depositor_name,
+      deposited_at: event.price === 0 ? "무료입장" : data.deposited_at,
       quantity: data.quantity,
       custom_answers: data.custom_answers ?? null,
-      status: "pending",
+      status: event.price === 0 ? "confirmed" : "pending",
     })
     .select("id")
     .single();

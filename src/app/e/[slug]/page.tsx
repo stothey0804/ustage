@@ -182,6 +182,7 @@ export default async function EventPublicPage({
         <h2 className="font-semibold">예매하기</h2>
         <BookingForm
           eventId={event.id}
+          price={event.price}
           bankInfo={event.bank_info}
           customFields={customFields}
           isLoggedIn={!!user}

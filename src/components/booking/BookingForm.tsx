@@ -18,23 +18,26 @@ import type { CustomField } from "@/lib/validations/event";
 
 interface BookingFormProps {
   eventId: string;
+  price: number;
   bankInfo: string;
   customFields: CustomField[];
   isLoggedIn: boolean;
   isOpen: boolean;
-  closedReason?: string; // 예매 불가 이유 (status !== 'open' 일 때)
+  closedReason?: string;
 }
 
 type Step = "idle" | "form" | "success";
 
 export function BookingForm({
   eventId,
+  price,
   bankInfo,
   customFields,
   isLoggedIn,
   isOpen,
   closedReason,
 }: BookingFormProps) {
+  const isFree = price === 0;
   const [step, setStep] = useState<Step>("idle");
   const [serverError, setServerError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -62,6 +65,17 @@ export function BookingForm({
     if (!isLoggedIn && (!values.password || values.password.length < 4)) {
       setError("password", { message: "비밀번호는 4자 이상이어야 합니다." });
       return;
+    }
+    // 유료 이벤트는 입금 정보 필수
+    if (!isFree) {
+      if (!values.depositor_name) {
+        setError("depositor_name", { message: "입금자명을 입력해 주세요." });
+        return;
+      }
+      if (!values.deposited_at) {
+        setError("deposited_at", { message: "입금 시간을 입력해 주세요." });
+        return;
+      }
     }
 
     setServerError(null);
@@ -112,19 +126,27 @@ export function BookingForm({
         <div className="flex items-center gap-3">
           <CheckCircle className="size-6 text-green-600 shrink-0" />
           <div>
-            <p className="font-medium">예매가 완료되었습니다.</p>
+            <p className="font-medium">
+              {isFree ? "참가 신청이 완료되었습니다." : "예매가 완료되었습니다."}
+            </p>
             <p className="text-sm text-muted-foreground mt-0.5">
-              입금 확인 후 예매가 확정됩니다.
+              {isFree
+                ? "참가가 확정되었습니다."
+                : "입금 확인 후 예매가 확정됩니다."}
             </p>
           </div>
         </div>
-        <Separator />
-        <div className="space-y-1">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-            입금 계좌
-          </p>
-          <p className="text-sm font-medium">{bankInfo}</p>
-        </div>
+        {!isFree && (
+          <>
+            <Separator />
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                입금 계좌
+              </p>
+              <p className="text-sm font-medium">{bankInfo}</p>
+            </div>
+          </>
+        )}
         <p className="text-xs text-muted-foreground">
           {isLoggedIn ? (
             <>
@@ -205,38 +227,42 @@ export function BookingForm({
           )}
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="depositor_name">입금자명 *</Label>
-          <Input
-            id="depositor_name"
-            {...register("depositor_name")}
-            placeholder="입금자 이름 (계좌 표시명)"
-          />
-          {errors.depositor_name && (
-            <p className="text-xs text-destructive">
-              {errors.depositor_name.message}
-            </p>
-          )}
-        </div>
+        {!isFree && (
+          <>
+            <div className="space-y-1.5">
+              <Label htmlFor="depositor_name">입금자명 *</Label>
+              <Input
+                id="depositor_name"
+                {...register("depositor_name")}
+                placeholder="입금자 이름 (계좌 표시명)"
+              />
+              {errors.depositor_name && (
+                <p className="text-xs text-destructive">
+                  {errors.depositor_name.message}
+                </p>
+              )}
+            </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="deposited_at">
-            입금 시간 *{" "}
-            <span className="text-muted-foreground font-normal text-xs">
-              (예: 오늘 오후 3시)
-            </span>
-          </Label>
-          <Input
-            id="deposited_at"
-            {...register("deposited_at")}
-            placeholder="예: 오늘 오후 3시 / 내일 오전 11시"
-          />
-          {errors.deposited_at && (
-            <p className="text-xs text-destructive">
-              {errors.deposited_at.message}
-            </p>
-          )}
-        </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="deposited_at">
+                입금 시간 *{" "}
+                <span className="text-muted-foreground font-normal text-xs">
+                  (예: 오늘 오후 3시)
+                </span>
+              </Label>
+              <Input
+                id="deposited_at"
+                {...register("deposited_at")}
+                placeholder="예: 오늘 오후 3시 / 내일 오전 11시"
+              />
+              {errors.deposited_at && (
+                <p className="text-xs text-destructive">
+                  {errors.deposited_at.message}
+                </p>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {/* 커스텀 필드 */}

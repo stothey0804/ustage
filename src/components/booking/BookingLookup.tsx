@@ -14,6 +14,7 @@ import { QRTicket } from "@/components/booking/QRTicket";
 
 interface Props {
   eventId: string;
+  isFree?: boolean;
 }
 
 type LookupTicket = {
@@ -39,11 +40,17 @@ type LookupResult = {
   };
 };
 
-const BOOKING_STATUS_MAP = {
-  pending: { label: "입금대기", variant: "secondary" },
-  confirmed: { label: "입금완료", variant: "default" },
-  cancelled: { label: "취소", variant: "outline" },
-} as const;
+function getStatusLabel(status: string, isFree: boolean) {
+  if (status === "confirmed") return isFree ? "참가확정" : "입금완료";
+  if (status === "cancelled") return "취소";
+  return "입금대기";
+}
+
+function getStatusVariant(status: string) {
+  if (status === "confirmed") return "default";
+  if (status === "cancelled") return "outline";
+  return "secondary";
+}
 
 const lookupFormSchema = z.object({
   name: z.string().min(1, "이름을 입력해 주세요."),
@@ -54,7 +61,7 @@ type LookupFormValues = z.infer<typeof lookupFormSchema>;
 
 type LookupState = "idle" | "loading" | "found" | "notFound";
 
-export function BookingLookup({ eventId }: Props) {
+export function BookingLookup({ eventId, isFree = false }: Props) {
   const [state, setState] = useState<LookupState>("idle");
   const [result, setResult] = useState<LookupResult | null>(null);
 
@@ -93,10 +100,7 @@ export function BookingLookup({ eventId }: Props) {
     }
   };
 
-  const status = result?.status as keyof typeof BOOKING_STATUS_MAP | undefined;
-  const statusInfo = status
-    ? BOOKING_STATUS_MAP[status] ?? BOOKING_STATUS_MAP.pending
-    : null;
+  const status = result?.status;
 
   return (
     <div className="space-y-6">
@@ -142,7 +146,7 @@ export function BookingLookup({ eventId }: Props) {
       )}
 
       {/* 결과 */}
-      {state === "found" && result && statusInfo && (
+      {state === "found" && result && status && (
         <div className="space-y-4">
           <Separator />
 
@@ -157,10 +161,10 @@ export function BookingLookup({ eventId }: Props) {
             </p>
             <Badge
               variant={
-                statusInfo.variant as "secondary" | "default" | "outline"
+                getStatusVariant(status) as "secondary" | "default" | "outline"
               }
             >
-              {statusInfo.label}
+              {getStatusLabel(status, isFree)}
             </Badge>
           </div>
 

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -5,7 +6,7 @@ import { formatKST } from "@/lib/date";
 import {
   Calendar,
   MapPin,
-  CreditCard,
+  Coins,
   Phone,
   Clock,
   Users,
@@ -18,6 +19,10 @@ import { BookingForm } from "@/components/booking/BookingForm";
 import { AddToCalendar } from "@/components/booking/AddToCalendar";
 import { VenueMapLinks } from "@/components/booking/VenueMapLinks";
 import type { CustomField } from "@/lib/validations/event";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 function getBookingStatus(event: {
   status: string | null;
@@ -128,8 +133,8 @@ export default async function EventPublicPage({
           <InfoRow icon={MapPin} value={event.venue} />
         )}
         <InfoRow
-          icon={CreditCard}
-          value={event.price === 0 ? "무료" : `${event.price.toLocaleString()}원`}
+          icon={Coins}
+          value={event.price === 0 ? "무료입장" : `${event.price.toLocaleString()}원`}
         />
         {event.capacity && (
           <InfoRow icon={Users} value={`좌석 ${event.capacity}석`} />
@@ -145,7 +150,7 @@ export default async function EventPublicPage({
               .join(" · ")}
           />
         )}
-        <InfoRow icon={Phone} value={event.contact} />
+        <ContactRow value={event.contact} />
       </div>
 
       {/* 지도 링크 (주소가 있는 경우에만) */}
@@ -213,6 +218,33 @@ function InfoRow({
     <div className="flex items-start gap-2.5">
       <Icon className="size-4 text-muted-foreground shrink-0 mt-0.5" />
       <span>{value}</span>
+    </div>
+  );
+}
+
+function ContactRow({ value }: { value: string }) {
+  const isUrl = /^https?:\/\//.test(value);
+  const isPhone = /^[\d\-+() ]{8,}$/.test(value.trim());
+
+  return (
+    <div className="flex items-start gap-2.5">
+      <Phone className="size-4 text-muted-foreground shrink-0 mt-0.5" />
+      {isUrl ? (
+        <a
+          href={value}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary underline underline-offset-2"
+        >
+          {value}
+        </a>
+      ) : isPhone ? (
+        <a href={`tel:${value.replace(/[^+\d]/g, "")}`} className="text-primary underline underline-offset-2">
+          {value}
+        </a>
+      ) : (
+        <span>{value}</span>
+      )}
     </div>
   );
 }

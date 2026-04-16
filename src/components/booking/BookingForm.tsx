@@ -78,6 +78,14 @@ export function BookingForm({
       }
     }
 
+    // 비회원 수정 불가 안내
+    if (!isLoggedIn) {
+      const confirmed = window.confirm(
+        "비회원 예매는 제출 후 정보를 수정할 수 없습니다. 입력 내용이 정확한지 확인해 주세요.\n\n예매를 진행하시겠습니까?"
+      );
+      if (!confirmed) return;
+    }
+
     setServerError(null);
     startTransition(async () => {
       const res = await fetch("/api/bookings", {

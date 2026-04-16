@@ -30,13 +30,15 @@ interface BookingListProps {
   isFree?: boolean;
 }
 
-type FilterStatus = "all" | "pending" | "confirmed" | "cancelled";
+type FilterStatus = "all" | "pending" | "confirmed" | "cancelled" | "checked_in" | "not_checked_in";
 
 function getStatusFilters(isFree: boolean): { value: FilterStatus; label: string }[] {
   return [
     { value: "all", label: "전체" },
     ...(!isFree ? [{ value: "pending" as FilterStatus, label: "입금대기" }] : []),
     { value: "confirmed", label: isFree ? "참가확정" : "입금완료" },
+    { value: "checked_in", label: "입장완료" },
+    { value: "not_checked_in", label: "미입장" },
     { value: "cancelled", label: "취소" },
   ];
 }
@@ -65,11 +67,19 @@ export function BookingList({ eventId, initialBookings, isFree = false }: Bookin
   const [isPending, startTransition] = useTransition();
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [searchName, setSearchName] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const filtered = initialBookings.filter((b) => {
-    const statusMatch =
-      filterStatus === "all" || b.status === filterStatus;
+    const tickets = (b.booking_tickets ?? []);
+    const allCheckedIn = tickets.length > 0 && tickets.every((t) => t.checked_in);
+    const noneCheckedIn = tickets.length === 0 || tickets.every((t) => !t.checked_in);
+
+    let statusMatch = false;
+    if (filterStatus === "all") statusMatch = true;
+    else if (filterStatus === "checked_in") statusMatch = allCheckedIn && b.status !== "cancelled";
+    else if (filterStatus === "not_checked_in") statusMatch = noneCheckedIn && b.status === "confirmed";
+    else statusMatch = b.status === filterStatus;
+
     const nameMatch =
       searchName.trim() === "" ||
       b.name.includes(searchName.trim()) ||
@@ -99,7 +109,7 @@ export function BookingList({ eventId, initialBookings, isFree = false }: Bookin
 
   function handleDeleteConfirm() {
     if (!deleteTarget) return;
-    const bookingId = deleteTarget;
+    const bookingId = deleteTarget.id;
     setDeleteTarget(null);
     startTransition(async () => {
       const result = await deleteBooking(bookingId);
@@ -184,7 +194,7 @@ export function BookingList({ eventId, initialBookings, isFree = false }: Bookin
                           variant="outline"
                           className="border-green-300 text-green-700 text-[10px]"
                         >
-                          입장 {checkedInCount}/{quantity}
+                          {checkedInCount === quantity ? "입장완료" : `입장 ${checkedInCount}/${quantity}`}
                         </Badge>
                       )}
                     </div>
@@ -236,7 +246,7 @@ export function BookingList({ eventId, initialBookings, isFree = false }: Bookin
                       variant="ghost"
                       className="h-7 w-7 p-0 text-destructive hover:text-destructive"
                       disabled={isPending}
-                      onClick={() => setDeleteTarget(booking.id)}
+                      onClick={() => setDeleteTarget({ id: booking.id, name: booking.name })}
                     >
                       <Trash2 className="size-3.5" />
                     </Button>
@@ -304,7 +314,7 @@ export function BookingList({ eventId, initialBookings, isFree = false }: Bookin
             <DialogTitle>예매 삭제</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            이 예매를 삭제하면 복구할 수 없습니다. 정말 삭제하시겠습니까?
+            <span className="font-medium text-foreground">{deleteTarget?.name}</span>님의 예매를 삭제하면 복구할 수 없습니다. 정말 삭제하시겠습니까?
           </p>
           <DialogFooter>
             <Button

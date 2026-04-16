@@ -14,6 +14,7 @@ import { createEvent, updateEvent } from "@/app/actions/event";
 import { createClient } from "@/lib/supabase/client";
 import { resizeImage } from "@/lib/image";
 import { CustomFieldEditor } from "./CustomFieldEditor";
+import { KakaoAddressSearch } from "./KakaoAddressSearch";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,6 +62,9 @@ export function EventForm({
       poster_url: "",
       event_date: "",
       venue: "",
+      venue_address: undefined,
+      venue_lat: undefined,
+      venue_lng: undefined,
       price: 0,
       bank_info: "",
       contact: "",
@@ -186,11 +190,24 @@ export function EventForm({
 
           <div className="space-y-1.5">
             <Label htmlFor="venue">공연 장소 *</Label>
-            <Input
-              id="venue"
-              {...register("venue")}
-              placeholder="공연 장소를 입력하세요"
-            />
+            <div className="flex gap-2">
+              <Input
+                id="venue"
+                {...register("venue")}
+                placeholder="공연 장소를 입력하세요"
+                className="flex-1"
+              />
+              <KakaoAddressSearch
+                onSelect={(data) => {
+                  setValue("venue", data.venue, { shouldValidate: true });
+                  setValue("venue_address", data.venue_address);
+                  if (data.venue_lat && data.venue_lng) {
+                    setValue("venue_lat", data.venue_lat);
+                    setValue("venue_lng", data.venue_lng);
+                  }
+                }}
+              />
+            </div>
             {errors.venue && (
               <p className="text-xs text-destructive">{errors.venue.message}</p>
             )}

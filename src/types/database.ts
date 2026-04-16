@@ -133,6 +133,9 @@ export type Database = {
           status: string | null
           title: string
           venue: string
+          venue_address: string | null
+          venue_lat: number | null
+          venue_lng: number | null
         }
         Insert: {
           bank_info: string
@@ -152,6 +155,9 @@ export type Database = {
           status?: string | null
           title: string
           venue: string
+          venue_address?: string | null
+          venue_lat?: number | null
+          venue_lng?: number | null
         }
         Update: {
           bank_info?: string
@@ -171,6 +177,9 @@ export type Database = {
           status?: string | null
           title?: string
           venue?: string
+          venue_address?: string | null
+          venue_lat?: number | null
+          venue_lng?: number | null
         }
         Relationships: []
       }

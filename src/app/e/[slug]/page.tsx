@@ -16,6 +16,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { BookingForm } from "@/components/booking/BookingForm";
+import { KakaoMap } from "@/components/booking/KakaoMap";
 import type { CustomField } from "@/lib/validations/event";
 
 function formatDate(dateStr: string) {
@@ -146,6 +147,15 @@ export default async function EventPublicPage({
         )}
         <InfoRow icon={Phone} value={event.contact} />
       </div>
+
+      {/* 지도 (좌표가 있는 경우에만) */}
+      {event.venue_lat && event.venue_lng && event.venue_lat !== 0 && event.venue_lng !== 0 && (
+        <KakaoMap
+          lat={event.venue_lat}
+          lng={event.venue_lng}
+          name={event.venue}
+        />
+      )}
 
       {/* 안내 내용 */}
       {event.description && (

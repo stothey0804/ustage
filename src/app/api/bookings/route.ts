@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { bookingApiSchema } from "@/lib/validations/booking";
 
 export async function POST(req: Request) {
@@ -95,8 +96,9 @@ export async function POST(req: Request) {
     ? ""
     : await bcrypt.hash(data.password!, 10);
 
-  // 예매 생성
-  const { data: booking, error: insertError } = await supabase
+  // 예매 생성 (service_role로 RLS 우회 — 검증은 위에서 완료)
+  const admin = createAdminClient();
+  const { data: booking, error: insertError } = await admin
     .from("bookings")
     .insert({
       event_id: event.id,

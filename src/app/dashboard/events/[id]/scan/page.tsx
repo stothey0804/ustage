@@ -1,8 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, QrCode } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import { QrScanner } from "@/components/dashboard/QrScanner";
 
 export default async function ScanPage({
   params,
@@ -42,12 +43,7 @@ export default async function ScanPage({
         <p className="text-sm text-muted-foreground mt-1">{event.title}</p>
       </div>
 
-      <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-dashed py-16">
-        <QrCode className="size-12 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">
-          QR 스캔 기능은 M6에서 구현됩니다.
-        </p>
-      </div>
+      <QrScanner eventId={id} />
     </div>
   );
 }

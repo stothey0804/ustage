@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, Calendar, MapPin, CreditCard } from "lucide-react";
+import { ChevronLeft, Calendar, MapPin, Banknote } from "lucide-react";
 import { formatKST } from "@/lib/date";
 
 import { createClient } from "@/lib/supabase/server";
@@ -143,7 +143,7 @@ export default async function BookingDetailPage({
               </div>
             )}
             <div className="flex items-start gap-3">
-              <CreditCard className="size-4 text-muted-foreground shrink-0 mt-0.5" />
+              <Banknote className="size-4 text-muted-foreground shrink-0 mt-0.5" />
               <span className="text-muted-foreground w-20 shrink-0">가격</span>
               <span>
                 {event.price === 0

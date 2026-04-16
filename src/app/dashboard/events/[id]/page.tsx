@@ -10,7 +10,7 @@ import {
   Calendar,
   MapPin,
   Users,
-  CreditCard,
+  Banknote,
   Phone,
   Clock,
 } from "lucide-react";
@@ -155,7 +155,7 @@ export default async function EventDetailPage({
             />
             <InfoRow icon={MapPin} label="장소" value={event.venue} />
             <InfoRow
-              icon={CreditCard}
+              icon={Banknote}
               label="가격"
               value={
                 event.price === 0
@@ -184,7 +184,7 @@ export default async function EventDetailPage({
                 value={formatKST(event.booking_end)}
               />
             )}
-            <InfoRow icon={CreditCard} label="입금 계좌" value={event.bank_info} />
+            <InfoRow icon={Banknote} label="입금 계좌" value={event.bank_info} />
             <InfoRow icon={Phone} label="연락처" value={event.contact} />
           </div>
 

@@ -6,7 +6,7 @@ import { formatKST } from "@/lib/date";
 import {
   Calendar,
   MapPin,
-  Coins,
+  Banknote,
   Phone,
   Clock,
   Users,
@@ -141,7 +141,7 @@ export default async function EventPublicPage({
           <InfoRow icon={MapPin} value={event.venue} />
         )}
         <InfoRow
-          icon={Coins}
+          icon={Banknote}
           value={event.price === 0 ? "무료입장" : `${event.price.toLocaleString()}원`}
         />
         {event.capacity && (

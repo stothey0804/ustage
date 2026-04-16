@@ -1,0 +1,202 @@
+import { notFound } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
+import { format } from "date-fns";
+import { ko } from "date-fns/locale";
+import {
+  Calendar,
+  MapPin,
+  CreditCard,
+  Phone,
+  Clock,
+  Users,
+} from "lucide-react";
+
+import { createClient } from "@/lib/supabase/server";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { BookingForm } from "@/components/booking/BookingForm";
+import type { CustomField } from "@/lib/validations/event";
+
+function formatDate(dateStr: string) {
+  try {
+    return format(new Date(dateStr), "yyyy년 M월 d일 (EEE) HH:mm", {
+      locale: ko,
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
+function getBookingStatus(event: {
+  status: string | null;
+  booking_start: string | null;
+  booking_end: string | null;
+}): { isOpen: boolean; reason?: string } {
+  if (event.status !== "open") {
+    return {
+      isOpen: false,
+      reason:
+        event.status === "closed"
+          ? "예매가 마감되었습니다."
+          : "아직 예매를 받지 않습니다.",
+    };
+  }
+  const now = new Date();
+  if (event.booking_start && new Date(event.booking_start) > now) {
+    return {
+      isOpen: false,
+      reason: `예매는 ${formatDate(event.booking_start)}부터 시작됩니다.`,
+    };
+  }
+  if (event.booking_end && new Date(event.booking_end) < now) {
+    return { isOpen: false, reason: "예매 기간이 종료되었습니다." };
+  }
+  return { isOpen: true };
+}
+
+export default async function EventPublicPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const supabase = await createClient();
+
+  // 이벤트 조회 (RLS: 누구나 SELECT 가능)
+  const { data: event } = await supabase
+    .from("events")
+    .select("*")
+    .eq("slug", slug)
+    .single();
+
+  if (!event) notFound();
+
+  // 로그인 사용자 확인 (없어도 됨)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { isOpen, reason } = getBookingStatus(event);
+
+  const customFields = (event.custom_fields ?? []) as CustomField[];
+
+  const STATUS_LABELS: Record<string, string> = {
+    draft: "오픈 전",
+    open: "티켓 오픈",
+    closed: "마감",
+  };
+
+  return (
+    <div className="mx-auto max-w-lg px-4 py-8 space-y-6">
+      {/* 포스터 */}
+      {event.poster_url && (
+        <div className="relative w-full overflow-hidden rounded-xl border">
+          <Image
+            src={event.poster_url}
+            alt={`${event.title} 포스터`}
+            width={600}
+            height={900}
+            className="w-full h-auto object-contain bg-muted"
+            priority
+          />
+        </div>
+      )}
+
+      {/* 제목 + 상태 */}
+      <div className="space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <h1 className="text-2xl font-bold leading-snug">{event.title}</h1>
+          <Badge
+            variant={
+              event.status === "open"
+                ? "default"
+                : event.status === "closed"
+                  ? "outline"
+                  : "secondary"
+            }
+            className="shrink-0 mt-1"
+          >
+            {STATUS_LABELS[event.status ?? "draft"] ?? event.status}
+          </Badge>
+        </div>
+      </div>
+
+      {/* 기본 정보 */}
+      <div className="grid gap-2.5 text-sm">
+        <InfoRow icon={Calendar} value={formatDate(event.event_date)} />
+        <InfoRow icon={MapPin} value={event.venue} />
+        <InfoRow
+          icon={CreditCard}
+          value={event.price === 0 ? "무료" : `${event.price.toLocaleString()}원`}
+        />
+        {event.capacity && (
+          <InfoRow icon={Users} value={`좌석 ${event.capacity}석`} />
+        )}
+        {(event.booking_start || event.booking_end) && (
+          <InfoRow
+            icon={Clock}
+            value={[
+              event.booking_start && `예매 시작: ${formatDate(event.booking_start)}`,
+              event.booking_end && `예매 종료: ${formatDate(event.booking_end)}`,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          />
+        )}
+        <InfoRow icon={Phone} value={event.contact} />
+      </div>
+
+      {/* 안내 내용 */}
+      {event.description && (
+        <>
+          <Separator />
+          <div
+            className="text-sm leading-relaxed [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mt-3 [&_h3]:mb-1 [&_p]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-3 [&_li]:mb-1 [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:text-muted-foreground [&_a]:text-primary [&_a]:underline [&_strong]:font-semibold"
+            dangerouslySetInnerHTML={{ __html: event.description }}
+          />
+        </>
+      )}
+
+      <Separator />
+
+      {/* 예매 섹션 */}
+      <section className="space-y-4">
+        <h2 className="font-semibold">예매하기</h2>
+        <BookingForm
+          eventId={event.id}
+          bankInfo={event.bank_info}
+          customFields={customFields}
+          isLoggedIn={!!user}
+          isOpen={isOpen}
+          closedReason={reason}
+        />
+      </section>
+
+      {/* 비회원 조회 링크 */}
+      <div className="text-center">
+        <Link
+          href={`/e/${slug}/me`}
+          className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+        >
+          비회원 예약 조회
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function InfoRow({
+  icon: Icon,
+  value,
+}: {
+  icon: React.ElementType;
+  value: string;
+}) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <Icon className="size-4 text-muted-foreground shrink-0 mt-0.5" />
+      <span>{value}</span>
+    </div>
+  );
+}

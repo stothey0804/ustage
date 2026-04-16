@@ -24,7 +24,7 @@ export function Header({ userEmail }: Props) {
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
         <div className="flex items-center gap-6">
           <Link href="/dashboard" className="text-lg font-semibold">
-            ustage
+            어스테이지
           </Link>
           <nav className="flex items-center gap-1">
             {NAV_ITEMS.map(({ href, label, icon: Icon }) => (

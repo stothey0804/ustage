@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ustage — 소규모 공연 예매 · 입장 시스템",
+  title: "어스테이지 — 소규모 공연 예매 · 입장 시스템",
   description: "공연자가 링크를 공유하면, 참석자는 그 링크로만 예매할 수 있어요. QR로 입장까지 한 번에.",
   appleWebApp: {
     capable: true,
@@ -39,6 +39,8 @@ export default function RootLayout({
     >
       <head>
         <meta name="theme-color" content="#18181b" />
+        <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body className="min-h-full flex flex-col">

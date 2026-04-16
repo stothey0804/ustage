@@ -178,9 +178,22 @@ export function BookingForm({
 
   return (
     <>
-      <Button size="lg" className="w-full" onClick={() => setStep("form")}>
-        예매하기
-      </Button>
+      {isLoggedIn ? (
+        <Button size="lg" className="w-full" onClick={() => setStep("form")}>
+          예매하기
+        </Button>
+      ) : (
+        <div className="flex gap-3">
+          <Button size="lg" className="flex-1" asChild variant="outline">
+            <a href={`/login?next=${encodeURIComponent(window.location.pathname)}`}>
+              로그인
+            </a>
+          </Button>
+          <Button size="lg" className="flex-1" onClick={() => setStep("form")}>
+            비회원 예매
+          </Button>
+        </div>
+      )}
 
       <Dialog open={step === "form"} onOpenChange={(open) => { if (!open) setStep("idle"); }}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">

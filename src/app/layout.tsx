@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/sonner";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 
-const inter = Inter({subsets:['latin'],variable:'--font-sans'});
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,7 +19,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "어스테이지 — 소규모 공연 예매 · 입장 시스템",
-  description: "공연자가 링크를 공유하면, 참석자는 그 링크로만 예매할 수 있어요. QR로 입장까지 한 번에.",
+  description:
+    "공연자가 링크를 공유하면, 참석자는 그 링크로만 예매할 수 있어요. QR로 입장까지 한 번에.",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -35,11 +36,23 @@ export default function RootLayout({
   return (
     <html
       lang="ko"
-      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}
+      className={cn(
+        "h-full",
+        "antialiased",
+        geistSans.variable,
+        geistMono.variable,
+        "font-sans",
+        inter.variable,
+      )}
     >
       <head>
         <meta name="theme-color" content="#2b8a8a" />
-        <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+        <link
+          rel="icon"
+          type="image/png"
+          sizes="48x48"
+          href="/favicon-48.png"
+        />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>

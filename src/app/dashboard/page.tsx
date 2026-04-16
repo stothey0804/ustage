@@ -10,8 +10,6 @@ import {
 export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold tracking-tight">대시보드</h1>
-
       <div className="grid gap-4 sm:grid-cols-2">
         <Link href="/dashboard/events">
           <Card className="transition-colors hover:border-primary/50">

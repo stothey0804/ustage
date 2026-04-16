@@ -10,10 +10,14 @@ export default function Home() {
             어스테이지(US.tage)
           </h1>
           <p className="text-base text-muted-foreground">
-            소규모 공연·이벤트를 위한 예매 서비스 어스테이지입니다.
-            <br />
-            공연자가 링크를 공유하면, 참석자는 그 링크로만 예매할 수 있어요.
-            <br />
+            소규모 공연·이벤트를 위한 예매 서비스 <br />
+            어스테이지입니다.
+          </p>
+          <p className="text-base text-muted-foreground">
+            공연자가 링크를 공유하면, <br />
+            참석자는 그 링크로만 예매할 수 있어요.
+          </p>
+          <p className="text-base text-muted-foreground">
             티켓 예매부터 QR 입장까지 제공해드려요.
           </p>
         </div>

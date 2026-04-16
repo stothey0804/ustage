@@ -1,0 +1,133 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
+import { eventSchema, type EventFormValues } from "@/lib/validations/event";
+
+type ActionResult = { error?: string; success?: boolean; id?: string };
+
+function generateSlug(): string {
+  return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
+}
+
+export async function createEvent(
+  values: EventFormValues
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "로그인이 필요합니다." };
+
+  const parsed = eventSchema.safeParse(values);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "입력값을 확인해 주세요." };
+  }
+
+  const v = parsed.data;
+
+  const { data, error } = await supabase
+    .from("events")
+    .insert({
+      performer_id: user.id,
+      slug: generateSlug(),
+      title: v.title,
+      description: v.description ?? null,
+      poster_url: v.poster_url ?? null,
+      event_date: v.event_date,
+      venue: v.venue,
+      price: v.price,
+      bank_info: v.bank_info,
+      contact: v.contact,
+      capacity: v.capacity ?? null,
+      booking_start: v.booking_start ?? null,
+      booking_end: v.booking_end ?? null,
+      custom_fields: v.custom_fields ?? null,
+      status: "draft",
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    console.error("[createEvent]", error);
+    return { error: "이벤트 생성에 실패했습니다." };
+  }
+
+  revalidatePath("/dashboard/events");
+  return { success: true, id: data.id };
+}
+
+export async function updateEvent(
+  id: string,
+  values: EventFormValues
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "로그인이 필요합니다." };
+
+  const parsed = eventSchema.safeParse(values);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "입력값을 확인해 주세요." };
+  }
+
+  const v = parsed.data;
+
+  const { error } = await supabase
+    .from("events")
+    .update({
+      title: v.title,
+      description: v.description ?? null,
+      poster_url: v.poster_url ?? null,
+      event_date: v.event_date,
+      venue: v.venue,
+      price: v.price,
+      bank_info: v.bank_info,
+      contact: v.contact,
+      capacity: v.capacity ?? null,
+      booking_start: v.booking_start ?? null,
+      booking_end: v.booking_end ?? null,
+      custom_fields: v.custom_fields ?? null,
+    })
+    .eq("id", id)
+    .eq("performer_id", user.id);
+
+  if (error) {
+    console.error("[updateEvent]", error);
+    return { error: "이벤트 수정에 실패했습니다." };
+  }
+
+  revalidatePath("/dashboard/events");
+  revalidatePath(`/dashboard/events/${id}`);
+  return { success: true, id };
+}
+
+export async function updateEventStatus(
+  id: string,
+  status: "draft" | "open" | "closed"
+): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "로그인이 필요합니다." };
+
+  const { error } = await supabase
+    .from("events")
+    .update({ status })
+    .eq("id", id)
+    .eq("performer_id", user.id);
+
+  if (error) {
+    console.error("[updateEventStatus]", error);
+    return { error: "상태 변경에 실패했습니다." };
+  }
+
+  revalidatePath(`/dashboard/events/${id}`);
+  revalidatePath("/dashboard/events");
+  return { success: true };
+}

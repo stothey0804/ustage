@@ -147,18 +147,32 @@ export default async function EventPublicPage({
         <InfoRow icon={Phone} value={event.contact} />
       </div>
 
-      {/* 카카오맵 링크 (주소가 있는 경우에만) */}
+      {/* 지도 링크 (주소가 있는 경우에만) */}
       {event.venue_address && (
-        <a
-          href={`https://map.kakao.com/link/search/${encodeURIComponent(event.venue_address)}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 rounded-lg border px-4 py-3 text-sm text-muted-foreground hover:bg-muted/50 transition-colors"
-        >
-          <MapPin className="size-4 shrink-0" />
-          <span className="flex-1">{event.venue_address}</span>
-          <span className="text-xs text-primary shrink-0">지도 보기</span>
-        </a>
+        <div className="rounded-lg border overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-3 text-sm">
+            <MapPin className="size-4 text-muted-foreground shrink-0" />
+            <span className="flex-1">{event.venue_address}</span>
+          </div>
+          <div className="flex border-t divide-x">
+            <a
+              href={`https://map.kakao.com/link/search/${encodeURIComponent(event.venue_address)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 py-2.5 text-center text-xs text-primary hover:bg-muted/50 transition-colors"
+            >
+              카카오맵
+            </a>
+            <a
+              href={`https://map.naver.com/p/search/${encodeURIComponent(event.venue_address)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 py-2.5 text-center text-xs text-primary hover:bg-muted/50 transition-colors"
+            >
+              네이버지도
+            </a>
+          </div>
+        </div>
       )}
 
       {/* 안내 내용 */}

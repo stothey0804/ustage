@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { StatusTransition } from "@/components/dashboard/StatusTransition";
 import { BookingLinkButton } from "@/components/dashboard/BookingLinkButton";
+import { BookingList } from "@/components/dashboard/BookingList";
 
 const STATUS_MAP = {
   draft: { label: "오픈 전", variant: "secondary" },
@@ -61,10 +62,13 @@ export default async function EventDetailPage({
 
   if (!event) notFound();
 
-  const { count: bookingCount } = await supabase
+  const { data: bookings } = await supabase
     .from("bookings")
-    .select("*", { count: "exact", head: true })
-    .eq("event_id", id);
+    .select("*")
+    .eq("event_id", id)
+    .order("created_at", { ascending: false });
+
+  const bookingCount = bookings?.length ?? 0;
 
   const status = (event.status ?? "draft") as keyof typeof STATUS_MAP;
   const statusInfo = STATUS_MAP[status] ?? STATUS_MAP.draft;
@@ -190,17 +194,10 @@ export default async function EventDetailPage({
 
       <Separator />
 
-      {/* 예매 명단 (M4 구현 예정) */}
+      {/* 예매 명단 */}
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold">예매 명단</h2>
-          <span className="text-sm text-muted-foreground">
-            총 {bookingCount ?? 0}명
-          </span>
-        </div>
-        <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-          예매 명단 기능은 M4에서 구현됩니다.
-        </div>
+        <h2 className="text-sm font-semibold mb-4">예매 명단</h2>
+        <BookingList eventId={id} initialBookings={bookings ?? []} />
       </div>
     </div>
   );

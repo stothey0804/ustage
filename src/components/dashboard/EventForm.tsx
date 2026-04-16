@@ -201,9 +201,6 @@ export function EventForm({
                 onSelect={(data) => {
                   setValue("venue", data.venue, { shouldValidate: true });
                   setValue("venue_address", data.venue_address);
-                  setValue("venue_lat", data.venue_lat || undefined);
-                  setValue("venue_lng", data.venue_lng || undefined);
-                  console.log("[EventForm] address selected:", data);
                 }}
               />
             </div>

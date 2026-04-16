@@ -16,7 +16,6 @@ import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { BookingForm } from "@/components/booking/BookingForm";
-import { KakaoMap } from "@/components/booking/KakaoMap";
 import type { CustomField } from "@/lib/validations/event";
 
 function formatDate(dateStr: string) {
@@ -148,13 +147,18 @@ export default async function EventPublicPage({
         <InfoRow icon={Phone} value={event.contact} />
       </div>
 
-      {/* 지도 (좌표가 있는 경우에만) */}
-      {event.venue_lat && event.venue_lng && event.venue_lat !== 0 && event.venue_lng !== 0 && (
-        <KakaoMap
-          lat={event.venue_lat}
-          lng={event.venue_lng}
-          name={event.venue}
-        />
+      {/* 카카오맵 링크 (주소가 있는 경우에만) */}
+      {event.venue_address && (
+        <a
+          href={`https://map.kakao.com/link/search/${encodeURIComponent(event.venue_address)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 rounded-lg border px-4 py-3 text-sm text-muted-foreground hover:bg-muted/50 transition-colors"
+        >
+          <MapPin className="size-4 shrink-0" />
+          <span className="flex-1">{event.venue_address}</span>
+          <span className="text-xs text-primary shrink-0">지도 보기</span>
+        </a>
       )}
 
       {/* 안내 내용 */}

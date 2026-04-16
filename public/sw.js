@@ -1,4 +1,4 @@
-const CACHE_NAME = "ustage-v1";
+const CACHE_NAME = "ustage-v2";
 
 // 설치 시 앱 셸 캐싱
 self.addEventListener("install", (event) => {

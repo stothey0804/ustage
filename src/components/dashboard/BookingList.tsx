@@ -226,6 +226,20 @@ export function BookingList({
                     )}
                   </div>
                 </div>
+                {!isFree && booking.status === "pending" && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs shrink-0"
+                    disabled={isPending}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleStatusChange(booking.id, "confirmed");
+                    }}
+                  >
+                    입금확인
+                  </Button>
+                )}
                 <ChevronRight className="size-4 text-muted-foreground shrink-0" />
               </button>
             );

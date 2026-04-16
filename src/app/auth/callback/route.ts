@@ -2,8 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * Kakao OAuth redirect 처리.
- * Supabase가 `?code=...&next=...`로 돌려주면 code를 세션으로 교환한 뒤 next 경로로 이동.
+ * 이메일 확인 링크 처리.
+ * Supabase가 `?code=...`로 리다이렉트하면 code를 세션으로 교환한 뒤 /admin으로 이동.
  */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   const errorDescription = searchParams.get("error_description");
 
   if (error) {
-    console.error("[auth/callback] oauth error", error, errorDescription);
+    console.error("[auth/callback] error", error, errorDescription);
     const failUrl = new URL("/login", origin);
     failUrl.searchParams.set("error", errorDescription ?? error);
     return NextResponse.redirect(failUrl);
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
   if (exchangeError) {
     console.error("[auth/callback] exchange error", exchangeError);
     const failUrl = new URL("/login", origin);
-    failUrl.searchParams.set("error", "세션 교환에 실패했습니다.");
+    failUrl.searchParams.set("error", "인증에 실패했습니다. 다시 시도해 주세요.");
     return NextResponse.redirect(failUrl);
   }
 

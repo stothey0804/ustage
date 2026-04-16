@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { KakaoAuthButton } from "@/components/auth/KakaoAuthButton";
+import { LoginForm } from "@/components/auth/LoginForm";
 import { createClient } from "@/lib/supabase/server";
 
 interface Props {
@@ -25,7 +25,7 @@ export default async function LoginPage({ searchParams }: Props) {
         <header className="flex flex-col gap-2 text-center">
           <h1 className="text-2xl font-semibold tracking-tight">공연자 로그인</h1>
           <p className="text-sm text-muted-foreground">
-            카카오 계정으로 로그인하면 내 공연을 관리할 수 있어요.
+            이메일과 비밀번호로 로그인하세요.
           </p>
         </header>
 
@@ -35,7 +35,7 @@ export default async function LoginPage({ searchParams }: Props) {
           </p>
         ) : null}
 
-        <KakaoAuthButton mode="signin" next={next ?? "/admin"} />
+        <LoginForm next={next ?? "/admin"} />
 
         <p className="text-center text-sm text-muted-foreground">
           아직 계정이 없으신가요?{" "}

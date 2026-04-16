@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { KakaoAuthButton } from "@/components/auth/KakaoAuthButton";
+import { SignupForm } from "@/components/auth/SignupForm";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function SignupPage() {
@@ -19,11 +19,11 @@ export default async function SignupPage() {
         <header className="flex flex-col gap-2 text-center">
           <h1 className="text-2xl font-semibold tracking-tight">공연자 회원가입</h1>
           <p className="text-sm text-muted-foreground">
-            카카오 계정으로 시작하세요. 별도 가입 절차가 없습니다.
+            이메일과 비밀번호로 가입하세요.
           </p>
         </header>
 
-        <KakaoAuthButton mode="signup" />
+        <SignupForm />
 
         <p className="text-center text-sm text-muted-foreground">
           이미 계정이 있으신가요?{" "}

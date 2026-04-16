@@ -153,6 +153,11 @@ export function BookingList({ eventId, initialBookings }: BookingListProps) {
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <span className="font-medium text-sm">{booking.name}</span>
                     <StatusBadge status={booking.status} />
+                    {booking.checked_in && (
+                      <Badge variant="outline" className="border-green-300 text-green-700 text-[10px]">
+                        입장완료
+                      </Badge>
+                    )}
                   </div>
                   {/* 액션 버튼 */}
                   <div className="flex items-center gap-1 shrink-0">

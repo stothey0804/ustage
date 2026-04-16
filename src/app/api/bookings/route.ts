@@ -4,6 +4,8 @@ import bcrypt from "bcryptjs";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { bookingApiSchema } from "@/lib/validations/booking";
+import { sendBookingConfirmation } from "@/lib/email";
+import { formatKST } from "@/lib/date";
 
 export async function POST(req: Request) {
   let body: unknown;
@@ -40,7 +42,7 @@ export async function POST(req: Request) {
   // 이벤트 조회
   const { data: event, error: eventError } = await supabase
     .from("events")
-    .select("id, status, capacity, booking_start, booking_end, bank_info, price")
+    .select("id, title, slug, status, capacity, booking_start, booking_end, bank_info, price, event_date, venue, venue_address")
     .eq("id", data.event_id)
     .single();
 
@@ -185,6 +187,27 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
+
+  // 예매 확인 이메일 발송 (비동기 — 실패해도 예매는 성공)
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : "http://localhost:3000";
+
+  const confirmUrl = user
+    ? `${baseUrl}/dashboard/bookings/${booking.id}`
+    : `${baseUrl}/e/${event.slug}/me`;
+
+  sendBookingConfirmation({
+    to: data.email,
+    name: data.name,
+    quantity: data.quantity,
+    eventTitle: event.title,
+    eventDate: formatKST(event.event_date),
+    eventVenue: event.venue_address || event.venue,
+    isFree: event.price === 0,
+    bankInfo: event.bank_info,
+    confirmUrl,
+  }).catch((err) => console.error("[email]", err));
 
   return NextResponse.json({ bookingId: booking.id }, { status: 201 });
 }

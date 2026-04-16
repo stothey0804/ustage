@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 
 const RichTextEditor = dynamic(
   () => import("./RichTextEditor").then((m) => m.RichTextEditor),
@@ -172,11 +173,11 @@ export function EventForm({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="event_date">공연 일시 *</Label>
-            <Input
-              id="event_date"
-              type="datetime-local"
-              {...register("event_date")}
+            <Label>공연 일시 *</Label>
+            <DateTimePicker
+              value={watch("event_date") || undefined}
+              onChange={(v) => setValue("event_date", v, { shouldValidate: true })}
+              placeholder="공연 날짜·시간 선택"
             />
             {errors.event_date && (
               <p className="text-xs text-destructive">{errors.event_date.message}</p>
@@ -342,24 +343,20 @@ export function EventForm({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="booking_start">예매 시작</Label>
-            <Input
-              id="booking_start"
-              type="datetime-local"
-              {...register("booking_start", {
-                setValueAs: (v: string) => (v === "" ? undefined : v),
-              })}
+            <Label>예매 시작</Label>
+            <DateTimePicker
+              value={watch("booking_start") || undefined}
+              onChange={(v) => setValue("booking_start", v)}
+              placeholder="시작 날짜·시간 선택"
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="booking_end">예매 종료</Label>
-            <Input
-              id="booking_end"
-              type="datetime-local"
-              {...register("booking_end", {
-                setValueAs: (v: string) => (v === "" ? undefined : v),
-              })}
+            <Label>예매 종료</Label>
+            <DateTimePicker
+              value={watch("booking_end") || undefined}
+              onChange={(v) => setValue("booking_end", v)}
+              placeholder="종료 날짜·시간 선택"
             />
           </div>
         </div>

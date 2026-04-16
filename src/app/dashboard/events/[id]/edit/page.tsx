@@ -8,10 +8,12 @@ import type { EventFormValues } from "@/lib/validations/event";
 
 function toDatetimeLocal(isoStr: string | null): string | undefined {
   if (!isoStr) return undefined;
-  // Convert ISO string to "YYYY-MM-DDTHH:mm" for datetime-local input
+  // DB값(UTC timestamptz)을 KST(+9)로 변환하여 "YYYY-MM-DDTHH:mm" 반환
   const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return undefined;
+  const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${kst.getUTCFullYear()}-${pad(kst.getUTCMonth() + 1)}-${pad(kst.getUTCDate())}T${pad(kst.getUTCHours())}:${pad(kst.getUTCMinutes())}`;
 }
 
 export default async function EditEventPage({

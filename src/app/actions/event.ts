@@ -6,6 +6,17 @@ import { eventSchema, type EventFormValues } from "@/lib/validations/event";
 
 type ActionResult = { error?: string; success?: boolean; id?: string };
 
+/**
+ * datetime-local 값("YYYY-MM-DDTHH:mm")을 KST 기준 ISO 문자열로 변환.
+ * 타임존 정보가 없는 값을 그대로 DB에 넣으면 UTC로 해석되어 +9시간 오차 발생.
+ */
+function toKST(v: string | undefined | null): string | null {
+  if (!v) return null;
+  // 이미 타임존 정보가 있으면 그대로 사용
+  if (v.includes("+") || v.endsWith("Z")) return v;
+  return v.length <= 16 ? `${v}:00+09:00` : `${v}+09:00`;
+}
+
 function generateSlug(): string {
   return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
 }
@@ -35,14 +46,14 @@ export async function createEvent(
       title: v.title,
       description: v.description ?? null,
       poster_url: v.poster_url ?? null,
-      event_date: v.event_date,
+      event_date: toKST(v.event_date)!,
       venue: v.venue,
       price: v.price,
       bank_info: v.bank_info,
       contact: v.contact,
       capacity: v.capacity ?? null,
-      booking_start: v.booking_start ?? null,
-      booking_end: v.booking_end ?? null,
+      booking_start: toKST(v.booking_start),
+      booking_end: toKST(v.booking_end),
       custom_fields: v.custom_fields ?? null,
       status: "draft",
     })
@@ -82,14 +93,14 @@ export async function updateEvent(
       title: v.title,
       description: v.description ?? null,
       poster_url: v.poster_url ?? null,
-      event_date: v.event_date,
+      event_date: toKST(v.event_date)!,
       venue: v.venue,
       price: v.price,
       bank_info: v.bank_info,
       contact: v.contact,
       capacity: v.capacity ?? null,
-      booking_start: v.booking_start ?? null,
-      booking_end: v.booking_end ?? null,
+      booking_start: toKST(v.booking_start),
+      booking_end: toKST(v.booking_end),
       custom_fields: v.custom_fields ?? null,
     })
     .eq("id", id)

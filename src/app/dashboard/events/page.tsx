@@ -12,7 +12,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 const STATUS_MAP = {
   draft: { label: "오픈 전", variant: "secondary" },
   open: { label: "티켓 오픈", variant: "default" },
-  closed: { label: "마감", variant: "outline" },
+  closed: { label: "예매 마감", variant: "outline" },
+  ended: { label: "행사 종료", variant: "outline" },
 } as const;
 
 function formatEventDate(dateStr: string) {

@@ -34,9 +34,11 @@ function getBookingStatus(event: {
     return {
       isOpen: false,
       reason:
-        event.status === "closed"
-          ? "예매가 마감되었습니다."
-          : "아직 예매를 받지 않습니다.",
+        event.status === "ended"
+          ? "행사가 종료되었습니다."
+          : event.status === "closed"
+            ? "예매가 마감되었습니다."
+            : "아직 예매를 받지 않습니다.",
     };
   }
   const now = new Date();
@@ -69,9 +71,9 @@ export default async function EventPublicPage({
 
   if (!event) notFound();
 
-  // 자동 상태 전환 (예매기간/행사일 경과 시 open→closed)
-  const statusChanged = await autoTransitionStatus(supabase, event);
-  if (statusChanged) event.status = "closed";
+  // 자동 상태 전환
+  const newStatus = await autoTransitionStatus(supabase, event);
+  if (newStatus) event.status = newStatus;
 
   // 로그인 사용자 확인 (없어도 됨)
   const {
@@ -85,7 +87,8 @@ export default async function EventPublicPage({
   const STATUS_LABELS: Record<string, string> = {
     draft: "오픈 전",
     open: "티켓 오픈",
-    closed: "마감",
+    closed: "예매 마감",
+    ended: "행사 종료",
   };
 
   return (

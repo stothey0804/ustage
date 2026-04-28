@@ -28,7 +28,8 @@ import { BookingList } from "@/components/dashboard/BookingList";
 const STATUS_MAP = {
   draft: { label: "오픈 전", variant: "secondary" },
   open: { label: "티켓 오픈", variant: "default" },
-  closed: { label: "마감", variant: "outline" },
+  closed: { label: "예매 마감", variant: "outline" },
+  ended: { label: "행사 종료", variant: "outline" },
 } as const;
 
 export default async function EventDetailPage({
@@ -53,9 +54,9 @@ export default async function EventDetailPage({
 
   if (!event) notFound();
 
-  // 자동 상태 전환 (예매기간/행사일 경과 시 open→closed)
-  const statusChanged = await autoTransitionStatus(supabase, event);
-  if (statusChanged) event.status = "closed";
+  // 자동 상태 전환
+  const newStatus = await autoTransitionStatus(supabase, event);
+  if (newStatus) event.status = newStatus;
 
   const { data: bookings } = await supabase
     .from("bookings")

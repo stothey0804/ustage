@@ -135,7 +135,7 @@ export async function updateEvent(
 
 export async function updateEventStatus(
   id: string,
-  status: "draft" | "open" | "closed"
+  status: "draft" | "open" | "closed" | "ended"
 ): Promise<ActionResult> {
   const supabase = await createClient();
   const {

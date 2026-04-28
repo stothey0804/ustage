@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import { autoTransitionStatus } from "@/lib/auto-status";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -51,6 +52,10 @@ export default async function EventDetailPage({
     .single();
 
   if (!event) notFound();
+
+  // 자동 상태 전환 (예매기간/행사일 경과 시 open→closed)
+  const statusChanged = await autoTransitionStatus(supabase, event);
+  if (statusChanged) event.status = "closed";
 
   const { data: bookings } = await supabase
     .from("bookings")

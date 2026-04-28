@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import { autoTransitionStatus } from "@/lib/auto-status";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { BookingForm } from "@/components/booking/BookingForm";
@@ -67,6 +68,10 @@ export default async function EventPublicPage({
     .single();
 
   if (!event) notFound();
+
+  // 자동 상태 전환 (예매기간/행사일 경과 시 open→closed)
+  const statusChanged = await autoTransitionStatus(supabase, event);
+  if (statusChanged) event.status = "closed";
 
   // 로그인 사용자 확인 (없어도 됨)
   const {

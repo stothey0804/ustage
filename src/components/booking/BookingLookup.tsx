@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { QRTicket } from "@/components/booking/QRTicket";
+import { CopyButton } from "@/components/ui/copy-button";
 
 interface Props {
   eventId: string;
@@ -187,9 +188,10 @@ export function BookingLookup({ eventId, isFree = false }: Props) {
           {(result.status === "pending" || result.status === "confirmed") && (
             <div className="space-y-2">
               <p className="text-sm font-semibold">입금 계좌</p>
-              <p className="text-sm text-muted-foreground bg-muted rounded-md px-3 py-2">
-                {result.events.bank_info}
-              </p>
+              <div className="flex items-center gap-2 bg-muted rounded-md px-3 py-2">
+                <p className="text-sm text-muted-foreground flex-1">{result.events.bank_info}</p>
+                <CopyButton value={result.events.bank_info} label="계좌복사" />
+              </div>
             </div>
           )}
 

@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { CopyButton } from "@/components/ui/copy-button";
 import type { CustomField } from "@/lib/validations/event";
 
 interface BookingFormProps {
@@ -156,7 +157,10 @@ export function BookingForm({
               <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
                 입금 계좌
               </p>
-              <p className="text-sm font-medium">{bankInfo}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium">{bankInfo}</p>
+                <CopyButton value={bankInfo} label="계좌복사" />
+              </div>
             </div>
           </>
         )}

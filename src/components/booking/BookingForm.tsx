@@ -29,6 +29,7 @@ interface BookingFormProps {
   bankInfo: string;
   customFields: CustomField[];
   isLoggedIn: boolean;
+  userEmail?: string;
   isOpen: boolean;
   closedReason?: string;
 }
@@ -41,6 +42,7 @@ export function BookingForm({
   bankInfo,
   customFields,
   isLoggedIn,
+  userEmail,
   isOpen,
   closedReason,
 }: BookingFormProps) {
@@ -59,7 +61,7 @@ export function BookingForm({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
       name: "",
-      email: "",
+      email: userEmail ?? "",
       depositor_name: "",
       deposited_at: "",
       quantity: 1,
@@ -228,6 +230,8 @@ export function BookingForm({
                   {...register("email")}
                   placeholder="name@example.com"
                   autoComplete="email"
+                  readOnly={isLoggedIn && !!userEmail}
+                  className={isLoggedIn && userEmail ? "bg-muted cursor-not-allowed" : ""}
                 />
                 {errors.email && (
                   <p className="text-xs text-destructive">{errors.email.message}</p>

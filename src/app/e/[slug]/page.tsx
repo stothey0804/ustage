@@ -196,6 +196,7 @@ export default async function EventPublicPage({
           bankInfo={event.bank_info}
           customFields={customFields}
           isLoggedIn={!!user}
+          userEmail={user?.email ?? undefined}
           isOpen={isOpen}
           closedReason={reason}
         />

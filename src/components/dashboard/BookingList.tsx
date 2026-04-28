@@ -4,11 +4,11 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
-import { Trash2, Check, X, ChevronRight, LogIn } from "lucide-react";
+import { Trash2, Check, X, ChevronRight, LogIn, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 
 import type { Tables } from "@/types/database";
-import { updateBookingStatus, deleteBooking, forceCheckIn } from "@/app/actions/booking";
+import { updateBookingStatus, deleteBooking, forceCheckIn, resetBookingPassword } from "@/app/actions/booking";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -83,26 +83,40 @@ export function BookingList({
   const [searchName, setSearchName] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<BookingWithTickets | null>(null);
+  const [sortBy, setSortBy] = useState<"created" | "name" | "email">("created");
 
   const fieldLabelMap = buildFieldLabelMap(customFields);
 
-  const filtered = initialBookings.filter((b) => {
-    const tickets = b.booking_tickets ?? [];
-    const allCheckedIn = tickets.length > 0 && tickets.every((t) => t.checked_in);
-    const noneCheckedIn = tickets.length === 0 || tickets.every((t) => !t.checked_in);
+  const filtered = initialBookings
+    .filter((b) => {
+      const tickets = b.booking_tickets ?? [];
+      const allCheckedIn = tickets.length > 0 && tickets.every((t) => t.checked_in);
+      const noneCheckedIn = tickets.length === 0 || tickets.every((t) => !t.checked_in);
 
-    let statusMatch = false;
-    if (filterStatus === "all") statusMatch = true;
-    else if (filterStatus === "checked_in") statusMatch = allCheckedIn && b.status !== "cancelled";
-    else if (filterStatus === "not_checked_in") statusMatch = noneCheckedIn && b.status === "confirmed";
-    else statusMatch = b.status === filterStatus;
+      let statusMatch = false;
+      if (filterStatus === "all") statusMatch = true;
+      else if (filterStatus === "checked_in") statusMatch = allCheckedIn && b.status !== "cancelled";
+      else if (filterStatus === "not_checked_in") statusMatch = noneCheckedIn && b.status === "confirmed";
+      else statusMatch = b.status === filterStatus;
 
-    const nameMatch =
-      searchName.trim() === "" ||
-      b.name.includes(searchName.trim()) ||
-      b.depositor_name.includes(searchName.trim());
-    return statusMatch && nameMatch;
-  });
+      const q = searchName.trim().toLowerCase();
+      const searchMatch =
+        q === "" ||
+        b.name.toLowerCase().includes(q) ||
+        ((b as BookingWithTickets & { email?: string }).email ?? "").toLowerCase().includes(q) ||
+        b.depositor_name.toLowerCase().includes(q);
+      return statusMatch && searchMatch;
+    })
+    .sort((a, b) => {
+      if (sortBy === "name") return a.name.localeCompare(b.name, "ko");
+      if (sortBy === "email") {
+        const ae = (a as BookingWithTickets & { email?: string }).email ?? "";
+        const be = (b as BookingWithTickets & { email?: string }).email ?? "";
+        return ae.localeCompare(be);
+      }
+      // created (최신순) — 기본
+      return (b.created_at ?? "").localeCompare(a.created_at ?? "");
+    });
 
   const totalTickets = filtered.reduce(
     (sum, b) => sum + (b.quantity ?? 1),
@@ -170,14 +184,33 @@ export function BookingList({
           ))}
         </div>
         <Input
-          className="w-40 h-8 text-sm"
-          placeholder="이름 검색"
+          className="w-48 h-8 text-sm"
+          placeholder="이름 / 이메일 검색"
           value={searchName}
           onChange={(e) => setSearchName(e.target.value)}
         />
         <span className="text-sm text-muted-foreground ml-auto">
           {filtered.length}건 / {totalTickets}매
         </span>
+      </div>
+
+      {/* 정렬 */}
+      <div className="flex gap-1">
+        {([
+          { value: "created", label: "최신순" },
+          { value: "name", label: "이름순" },
+          { value: "email", label: "이메일순" },
+        ] as const).map((s) => (
+          <Button
+            key={s.value}
+            size="sm"
+            variant={sortBy === s.value ? "secondary" : "ghost"}
+            className="h-7 text-xs"
+            onClick={() => setSortBy(s.value)}
+          >
+            {s.label}
+          </Button>
+        ))}
       </div>
 
       {/* 목록 — 간략 카드 */}
@@ -195,6 +228,7 @@ export function BookingList({
               (a, b) => a.ticket_number - b.ticket_number
             );
             const checkedInCount = tickets.filter((t) => t.checked_in).length;
+            const email = (booking as BookingWithTickets & { email?: string }).email;
 
             return (
               <button
@@ -206,9 +240,14 @@ export function BookingList({
                 <div className="flex-1 min-w-0">
                   <span className="font-medium text-sm">
                     {booking.name}
+                    {email && (
+                      <span className="text-muted-foreground font-normal ml-1 text-xs">
+                        ({email})
+                      </span>
+                    )}
                     {quantity > 1 && (
                       <span className="text-muted-foreground ml-1">
-                        ({quantity}매)
+                        {quantity}매
                       </span>
                     )}
                   </span>
@@ -261,6 +300,18 @@ export function BookingList({
         onClose={() => setSelectedBooking(null)}
         onStatusChange={handleStatusChange}
         onForceCheckIn={handleForceCheckIn}
+        onResetPassword={(bookingId) => {
+          const newPw = window.prompt("새 비밀번호를 입력하세요 (4자 이상):");
+          if (!newPw) return;
+          startTransition(async () => {
+            const result = await resetBookingPassword(bookingId, newPw);
+            if (result.error) {
+              toast.error(result.error);
+              return;
+            }
+            toast.success("비밀번호가 초기화되었습니다.");
+          });
+        }}
         onDelete={(id, name) => {
           setSelectedBooking(null);
           setDeleteTarget({ id, name });
@@ -314,6 +365,7 @@ function BookingDetailDialog({
   onClose,
   onStatusChange,
   onForceCheckIn,
+  onResetPassword,
   onDelete,
 }: {
   booking: BookingWithTickets | null;
@@ -323,6 +375,7 @@ function BookingDetailDialog({
   onClose: () => void;
   onStatusChange: (id: string, status: "pending" | "confirmed" | "cancelled") => void;
   onForceCheckIn: (bookingId: string, ticketId?: string) => void;
+  onResetPassword: (bookingId: string) => void;
   onDelete: (id: string, name: string) => void;
 }) {
   if (!booking) return null;
@@ -494,6 +547,18 @@ function BookingDetailDialog({
                 onClick={() => onStatusChange(booking.id, "cancelled")}
               >
                 예매 취소
+              </Button>
+            )}
+            {!booking.user_id && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={isPending}
+                className="gap-1"
+                onClick={() => onResetPassword(booking.id)}
+              >
+                <KeyRound className="size-3.5" />
+                비밀번호 초기화
               </Button>
             )}
             <Button

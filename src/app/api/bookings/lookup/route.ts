@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const lookupSchema = z.object({
   event_id: z.string().uuid(),
-  name: z.string().min(1),
+  email: z.string().email(),
   password: z.string().min(1),
 });
 
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const { event_id, name, password } = parsed.data;
+  const { event_id, email, password } = parsed.data;
 
   const adminSupabase = createAdminClient();
 
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     .from("bookings")
     .select("*, events!inner(id, title, event_date, venue, bank_info, slug)")
     .eq("event_id", event_id)
-    .eq("name", name)
+    .eq("email", email)
     .is("user_id", null);
 
   if (error) {

@@ -54,7 +54,7 @@ function getStatusVariant(status: string) {
 }
 
 const lookupFormSchema = z.object({
-  name: z.string().min(1, "이름을 입력해 주세요."),
+  email: z.string().min(1, "이메일을 입력해 주세요.").email("올바른 이메일 형식이 아닙니다."),
   password: z.string().min(1, "비밀번호를 입력해 주세요."),
 });
 
@@ -84,7 +84,7 @@ export function BookingLookup({ eventId, isFree = false }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           event_id: eventId,
-          name: values.name,
+          email: values.email,
           password: values.password,
         }),
       });
@@ -108,14 +108,15 @@ export function BookingLookup({ eventId, isFree = false }: Props) {
       {/* 조회 폼 */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="name">이름</Label>
+          <Label htmlFor="email">이메일</Label>
           <Input
-            id="name"
-            placeholder="예매 시 입력한 이름"
-            {...register("name")}
+            id="email"
+            type="email"
+            placeholder="예매 시 입력한 이메일"
+            {...register("email")}
           />
-          {errors.name && (
-            <p className="text-xs text-destructive">{errors.name.message}</p>
+          {errors.email && (
+            <p className="text-xs text-destructive">{errors.email.message}</p>
           )}
         </div>
 

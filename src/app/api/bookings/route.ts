@@ -105,38 +105,20 @@ export async function POST(req: Request) {
     }
   }
 
-  // 동일 이름 중복 예매 불가
-  const { data: existingName } = await admin
+  // 동일 이메일 중복 예매 불가
+  const { data: existingEmail } = await admin
     .from("bookings")
     .select("id")
     .eq("event_id", event.id)
-    .eq("name", data.name)
+    .eq("email", data.email)
     .neq("status", "cancelled")
     .limit(1);
 
-  if (existingName && existingName.length > 0) {
+  if (existingEmail && existingEmail.length > 0) {
     return NextResponse.json(
-      { error: "이미 동일한 이름으로 예매된 내역이 있습니다." },
+      { error: "이미 동일한 이메일로 예매된 내역이 있습니다." },
       { status: 409 }
     );
-  }
-
-  // 동일 이메일 중복 예매 불가
-  if (data.email) {
-    const { data: existingEmail } = await admin
-      .from("bookings")
-      .select("id")
-      .eq("event_id", event.id)
-      .eq("email", data.email)
-      .neq("status", "cancelled")
-      .limit(1);
-
-    if (existingEmail && existingEmail.length > 0) {
-      return NextResponse.json(
-        { error: "이미 동일한 이메일로 예매된 내역이 있습니다." },
-        { status: 409 }
-      );
-    }
   }
 
   // 비밀번호 해시 (비회원만)

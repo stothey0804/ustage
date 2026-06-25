@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { LogOut, Calendar, Ticket } from "lucide-react";
-import headerImg from "@/app/images/header.png";
+import { BrandMark } from "@/components/BrandMark";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/app/actions/auth";
 import { cn } from "@/lib/utils";
@@ -25,13 +24,11 @@ export function Header({ userEmail }: Props) {
     <header className="border-b bg-background">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
         <div className="flex items-center gap-6">
-          <Link href="/dashboard">
-            <Image
-              src={headerImg}
-              alt="어스테이지"
-              className="h-8 w-auto"
-              priority
-            />
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <BrandMark className="size-8" />
+            <span className="text-lg font-bold tracking-tight text-primary">
+              어스테이지
+            </span>
           </Link>
           <nav className="flex items-center gap-1">
             {NAV_ITEMS.map(({ href, label, icon: Icon }) => (

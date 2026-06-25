@@ -14,7 +14,7 @@ import {
 
 import { createClient } from "@/lib/supabase/server";
 import { autoTransitionStatus } from "@/lib/auto-status";
-import { Badge } from "@/components/ui/badge";
+import { EventStatusBadge } from "@/components/StatusBadge";
 import { Separator } from "@/components/ui/separator";
 import { BookingForm } from "@/components/booking/BookingForm";
 import { AddToCalendar } from "@/components/booking/AddToCalendar";
@@ -84,13 +84,6 @@ export default async function EventPublicPage({
 
   const customFields = (event.custom_fields ?? []) as CustomField[];
 
-  const STATUS_LABELS: Record<string, string> = {
-    draft: "오픈 전",
-    open: "티켓 오픈",
-    closed: "예매 마감",
-    ended: "행사 종료",
-  };
-
   return (
     <div className="mx-auto max-w-lg px-4 py-8 space-y-6">
       {/* 포스터 */}
@@ -111,18 +104,7 @@ export default async function EventPublicPage({
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-2">
           <h1 className="text-2xl font-bold leading-snug">{event.title}</h1>
-          <Badge
-            variant={
-              event.status === "open"
-                ? "default"
-                : event.status === "closed"
-                  ? "outline"
-                  : "secondary"
-            }
-            className="shrink-0 mt-1"
-          >
-            {STATUS_LABELS[event.status ?? "draft"] ?? event.status}
-          </Badge>
+          <EventStatusBadge status={event.status} className="shrink-0 mt-1" />
         </div>
       </div>
 

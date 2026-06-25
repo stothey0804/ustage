@@ -17,20 +17,13 @@ import {
 
 import { createClient } from "@/lib/supabase/server";
 import { autoTransitionStatus } from "@/lib/auto-status";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { EventStatusBadge } from "@/components/StatusBadge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusTransition } from "@/components/dashboard/StatusTransition";
 import { BookingLinkButton } from "@/components/dashboard/BookingLinkButton";
 import { BookingList } from "@/components/dashboard/BookingList";
-
-const STATUS_MAP = {
-  draft: { label: "오픈 전", variant: "secondary" },
-  open: { label: "티켓 오픈", variant: "default" },
-  closed: { label: "예매 마감", variant: "outline" },
-  ended: { label: "행사 종료", variant: "outline" },
-} as const;
 
 export default async function EventDetailPage({
   params,
@@ -66,8 +59,11 @@ export default async function EventDetailPage({
 
   const bookingCount = bookings?.length ?? 0;
 
-  const status = (event.status ?? "draft") as keyof typeof STATUS_MAP;
-  const statusInfo = STATUS_MAP[status] ?? STATUS_MAP.draft;
+  const status = (event.status ?? "draft") as
+    | "draft"
+    | "open"
+    | "closed"
+    | "ended";
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -84,14 +80,7 @@ export default async function EventDetailPage({
           <h1 className="text-2xl font-semibold tracking-tight leading-snug">
             {event.title}
           </h1>
-          <Badge
-            variant={
-              statusInfo.variant as "secondary" | "default" | "outline"
-            }
-            className="shrink-0 mt-0.5"
-          >
-            {statusInfo.label}
-          </Badge>
+          <EventStatusBadge status={event.status} className="shrink-0 mt-0.5" />
         </div>
       </div>
 
@@ -212,7 +201,6 @@ export default async function EventDetailPage({
         {/* 예매 명단 탭 */}
         <TabsContent value="bookings" className="mt-4">
           <BookingList
-            eventId={id}
             initialBookings={bookings ?? []}
             isFree={event.price === 0}
             customFields={(event.custom_fields ?? []) as import("@/lib/validations/event").CustomField[]}

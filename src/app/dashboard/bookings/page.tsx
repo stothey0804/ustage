@@ -4,20 +4,8 @@ import { Ticket } from "lucide-react";
 import { formatKST } from "@/lib/date";
 
 import { createClient } from "@/lib/supabase/server";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-
-function getStatusLabel(status: string, isFree: boolean) {
-  if (status === "confirmed") return isFree ? "참가확정" : "입금완료";
-  if (status === "cancelled") return "취소";
-  return "입금대기";
-}
-
-function getStatusVariant(status: string) {
-  if (status === "confirmed") return "default";
-  if (status === "cancelled") return "outline";
-  return "secondary";
-}
+import { BookingStatusBadge } from "@/components/StatusBadge";
 
 export default async function BookingsPage() {
   const supabase = await createClient();
@@ -42,11 +30,16 @@ export default async function BookingsPage() {
       <h1 className="text-2xl font-semibold tracking-tight">내 예약</h1>
 
       {!bookings || bookings.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
-          <Ticket className="size-10 text-muted-foreground mb-3" />
-          <p className="text-sm text-muted-foreground">
-            아직 예약한 공연이 없어요.
-          </p>
+        <div className="flex flex-col items-center justify-center gap-3 rounded-4xl border border-dashed py-16 text-center">
+          <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <Ticket className="size-6" />
+          </div>
+          <div className="space-y-1">
+            <p className="font-medium">아직 예매한 공연이 없어요</p>
+            <p className="text-sm text-muted-foreground">
+              공연 링크를 받으면 여기에서 예매 현황과 입장 QR을 볼 수 있어요.
+            </p>
+          </div>
         </div>
       ) : (
         <div className="space-y-3">
@@ -86,17 +79,11 @@ export default async function BookingsPage() {
                           </p>
                         )}
                       </div>
-                      <Badge
-                        variant={
-                          getStatusVariant(status) as
-                            | "secondary"
-                            | "default"
-                            | "outline"
-                        }
+                      <BookingStatusBadge
+                        status={status}
+                        isFree={isFree}
                         className="shrink-0"
-                      >
-                        {getStatusLabel(status, isFree)}
-                      </Badge>
+                      />
                     </div>
                   </CardContent>
                 </Card>

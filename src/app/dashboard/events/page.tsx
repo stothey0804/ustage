@@ -6,15 +6,8 @@ import { ko } from "date-fns/locale";
 
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-const STATUS_MAP = {
-  draft: { label: "오픈 전", variant: "secondary" },
-  open: { label: "티켓 오픈", variant: "default" },
-  closed: { label: "예매 마감", variant: "outline" },
-  ended: { label: "행사 종료", variant: "outline" },
-} as const;
+import { EventStatusBadge } from "@/components/StatusBadge";
 
 function formatEventDate(dateStr: string) {
   try {
@@ -56,19 +49,26 @@ export default async function EventsPage() {
       </div>
 
       {events.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
-          <Calendar className="size-10 text-muted-foreground mb-3" />
-          <p className="text-sm text-muted-foreground">아직 만든 이벤트가 없어요.</p>
-          <Button asChild className="mt-4" variant="outline" size="sm">
-            <Link href="/dashboard/events/new">첫 이벤트 만들기</Link>
+        <div className="flex flex-col items-center justify-center gap-3 rounded-4xl border border-dashed py-16 text-center">
+          <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <Calendar className="size-6" />
+          </div>
+          <div className="space-y-1">
+            <p className="font-medium">아직 만든 이벤트가 없어요</p>
+            <p className="text-sm text-muted-foreground">
+              첫 공연을 등록하고 예매 링크를 공유해 보세요.
+            </p>
+          </div>
+          <Button asChild className="mt-1">
+            <Link href="/dashboard/events/new">
+              <Plus className="size-4" />
+              이벤트 만들기
+            </Link>
           </Button>
         </div>
       ) : (
         <div className="grid gap-4">
           {events.map((event) => {
-            const status = (event.status ?? "draft") as keyof typeof STATUS_MAP;
-            const statusInfo = STATUS_MAP[status] ?? STATUS_MAP.draft;
-
             return (
               <Link key={event.id} href={`/dashboard/events/${event.id}`}>
                 <Card className="transition-colors hover:border-primary/50">
@@ -77,9 +77,7 @@ export default async function EventsPage() {
                       <CardTitle className="text-base leading-snug">
                         {event.title}
                       </CardTitle>
-                      <Badge variant={statusInfo.variant as "secondary" | "default" | "outline"}>
-                        {statusInfo.label}
-                      </Badge>
+                      <EventStatusBadge status={event.status} className="mt-0.5" />
                     </div>
                   </CardHeader>
                   <CardContent className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">

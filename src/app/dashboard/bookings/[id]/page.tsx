@@ -11,18 +11,7 @@ import { QRTicket } from "@/components/booking/QRTicket";
 import { AddToCalendar } from "@/components/booking/AddToCalendar";
 import { VenueMapLinks } from "@/components/booking/VenueMapLinks";
 import { CopyButton } from "@/components/ui/copy-button";
-
-function getStatusLabel(status: string, isFree: boolean) {
-  if (status === "confirmed") return isFree ? "참가확정" : "입금완료";
-  if (status === "cancelled") return "취소";
-  return "입금대기";
-}
-
-function getStatusVariant(status: string) {
-  if (status === "confirmed") return "default";
-  if (status === "cancelled") return "outline";
-  return "secondary";
-}
+import { BookingStatusBadge } from "@/components/StatusBadge";
 
 export default async function BookingDetailPage({
   params,
@@ -88,11 +77,7 @@ export default async function BookingDetailPage({
             {event?.title ?? "예약 상세"}
           </h1>
           <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
-            <Badge
-              variant={getStatusVariant(status) as "secondary" | "default" | "outline"}
-            >
-              {getStatusLabel(status, isFree)}
-            </Badge>
+            <BookingStatusBadge status={status} isFree={isFree} />
             {quantity > 1 && (
               <Badge variant="outline">{quantity}매</Badge>
             )}

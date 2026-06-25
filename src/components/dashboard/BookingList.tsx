@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
-import { Trash2, Check, X, ChevronRight, LogIn, KeyRound } from "lucide-react";
+import { Trash2, Check, ChevronRight, LogIn, KeyRound } from "lucide-react";
 import { toast } from "sonner";
 
 import type { Tables } from "@/types/database";
@@ -12,6 +12,7 @@ import { updateBookingStatus, deleteBooking, forceCheckIn, resetBookingPassword 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { BookingStatusBadge } from "@/components/StatusBadge";
 import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
@@ -27,7 +28,6 @@ type BookingWithTickets = Tables<"bookings"> & {
 };
 
 interface BookingListProps {
-  eventId: string;
   initialBookings: BookingWithTickets[];
   isFree?: boolean;
   customFields?: CustomField[];
@@ -46,16 +46,6 @@ function getStatusFilters(isFree: boolean): { value: FilterStatus; label: string
   ];
 }
 
-function StatusBadge({ status, isFree }: { status: string; isFree?: boolean }) {
-  if (status === "confirmed") {
-    return <Badge variant="default">{isFree ? "참가확정" : "입금완료"}</Badge>;
-  }
-  if (status === "cancelled") {
-    return <Badge variant="outline">취소</Badge>;
-  }
-  return <Badge variant="secondary">입금대기</Badge>;
-}
-
 function formatCreatedAt(dateStr: string | null): string {
   if (!dateStr) return "-";
   try {
@@ -72,7 +62,6 @@ function buildFieldLabelMap(fields?: CustomField[]): Record<string, string> {
 }
 
 export function BookingList({
-  eventId,
   initialBookings,
   isFree = false,
   customFields,
@@ -252,7 +241,7 @@ export function BookingList({
                     )}
                   </span>
                   <div className="flex items-center gap-1.5 mt-1">
-                    <StatusBadge status={booking.status} isFree={isFree} />
+                    <BookingStatusBadge status={booking.status} isFree={isFree} />
                     {checkedInCount > 0 && (
                       <Badge
                         variant="outline"
@@ -411,7 +400,7 @@ function BookingDetailDialog({
         <div className="space-y-4">
           {/* 상태 */}
           <div className="flex items-center gap-1.5">
-            <StatusBadge status={booking.status} isFree={isFree} />
+            <BookingStatusBadge status={booking.status} isFree={isFree} />
             {checkedInCount > 0 && (
               <Badge
                 variant="outline"

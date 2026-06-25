@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle, Loader2 } from "lucide-react";
@@ -169,9 +170,9 @@ export function BookingForm({
         <p className="text-xs text-muted-foreground">
           {isLoggedIn ? (
             <>
-              <a href="/dashboard/bookings" className="text-primary underline underline-offset-2">
+              <Link href="/dashboard/bookings" className="text-primary underline underline-offset-2">
                 내 예약
-              </a>
+              </Link>
               에서 예매 현황을 확인하실 수 있습니다.
             </>
           ) : (

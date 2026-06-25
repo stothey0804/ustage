@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Home() {
@@ -21,6 +22,14 @@ export default function Home() {
             티켓 예매부터 QR 입장까지 제공해드려요.
           </p>
         </div>
+
+        <Link
+          href="/guide"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline underline-offset-4 hover:text-primary/80"
+        >
+          <Sparkles className="size-4" />
+          어스테이지 사용방법
+        </Link>
 
         <div className="flex flex-col items-center gap-3 sm:flex-row">
           <Button asChild size="lg">

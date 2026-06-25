@@ -160,19 +160,23 @@ export default async function BookingDetailPage({
             <span className="text-muted-foreground w-20 shrink-0">매수</span>
             <span>{quantity}매</span>
           </div>
-          <div className="flex gap-3">
-            <span className="text-muted-foreground w-20 shrink-0">입금자명</span>
-            <span>{booking.depositor_name}</span>
-          </div>
-          <div className="flex gap-3">
-            <span className="text-muted-foreground w-20 shrink-0">입금시간</span>
-            <span>{booking.deposited_at}</span>
-          </div>
+          {!isFree && (
+            <>
+              <div className="flex gap-3">
+                <span className="text-muted-foreground w-20 shrink-0">입금자명</span>
+                <span>{booking.depositor_name}</span>
+              </div>
+              <div className="flex gap-3">
+                <span className="text-muted-foreground w-20 shrink-0">입금시간</span>
+                <span>{booking.deposited_at}</span>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
       {/* 입금 계좌 */}
-      {event && (status === "pending" || status === "confirmed") && (
+      {event && !isFree && (status === "pending" || status === "confirmed") && (
         <>
           <Separator />
           <div className="space-y-2">

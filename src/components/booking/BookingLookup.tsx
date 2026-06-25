@@ -170,23 +170,25 @@ export function BookingLookup({ eventId, isFree = false }: Props) {
             </Badge>
           </div>
 
-          <div className="grid gap-2 text-sm">
-            <div className="flex gap-3">
-              <span className="text-muted-foreground w-20 shrink-0">
-                입금자명
-              </span>
-              <span>{result.depositor_name}</span>
+          {!isFree && (
+            <div className="grid gap-2 text-sm">
+              <div className="flex gap-3">
+                <span className="text-muted-foreground w-20 shrink-0">
+                  입금자명
+                </span>
+                <span>{result.depositor_name}</span>
+              </div>
+              <div className="flex gap-3">
+                <span className="text-muted-foreground w-20 shrink-0">
+                  입금시간
+                </span>
+                <span>{result.deposited_at}</span>
+              </div>
             </div>
-            <div className="flex gap-3">
-              <span className="text-muted-foreground w-20 shrink-0">
-                입금시간
-              </span>
-              <span>{result.deposited_at}</span>
-            </div>
-          </div>
+          )}
 
           {/* 입금 계좌 */}
-          {(result.status === "pending" || result.status === "confirmed") && (
+          {!isFree && (result.status === "pending" || result.status === "confirmed") && (
             <div className="space-y-2">
               <p className="text-sm font-semibold">입금 계좌</p>
               <div className="flex items-center gap-2 bg-muted rounded-md px-3 py-2">

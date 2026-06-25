@@ -209,6 +209,15 @@ export function BookingForm({
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div className="space-y-4">
+              {!isLoggedIn && (
+                <p className="rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+                  예매 후에는 입력하신{" "}
+                  <span className="font-medium text-foreground">
+                    이메일과 비밀번호
+                  </span>
+                  로만 예약을 조회할 수 있어요. 정확히 입력하고 꼭 기억해 주세요.
+                </p>
+              )}
               <div className="space-y-1.5">
                 <Label htmlFor="name">이름 *</Label>
                 <Input

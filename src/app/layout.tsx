@@ -47,6 +47,7 @@ export default function RootLayout({
     >
       <head>
         <meta name="theme-color" content="#2b8a8a" />
+        <link rel="icon" type="image/svg+xml" href="/icon.svg" />
         <link
           rel="icon"
           type="image/png"

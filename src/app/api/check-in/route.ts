@@ -119,17 +119,32 @@ export async function POST(req: Request) {
     );
   }
 
-  // 입장 성공
-  const { error: updateError } = await admin
+  // 입장 성공 — checked_in=false 조건부 갱신으로 동시 스캔 시 한 기기만 성공
+  const { data: updated, error: updateError } = await admin
     .from("booking_tickets")
     .update({ checked_in: true, checked_in_at: new Date().toISOString() })
-    .eq("id", ticket.id);
+    .eq("id", ticket.id)
+    .eq("checked_in", false)
+    .select("id");
 
   if (updateError) {
     console.error("[check-in]", updateError);
     return NextResponse.json(
       { error: "입장 처리 중 오류가 발생했습니다." },
       { status: 500 }
+    );
+  }
+
+  if (!updated || updated.length === 0) {
+    // 조회와 갱신 사이에 다른 기기가 먼저 입장 처리한 경우
+    return NextResponse.json(
+      {
+        result: "already_checked_in",
+        name: ticketLabel,
+        checked_in_at: ticket.checked_in_at,
+        message: "이미 입장 처리된 티켓입니다.",
+      },
+      { status: 200 }
     );
   }
 

@@ -3,12 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 
 /**
  * 이메일 확인 링크 처리.
- * Supabase가 `?code=...`로 리다이렉트하면 code를 세션으로 교환한 뒤 /admin으로 이동.
+ * Supabase가 `?code=...`로 리다이렉트하면 code를 세션으로 교환한 뒤 /dashboard로 이동.
  */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/admin";
+  const next = searchParams.get("next") ?? "/dashboard";
   const error = searchParams.get("error");
   const errorDescription = searchParams.get("error_description");
 
@@ -34,6 +34,6 @@ export async function GET(request: NextRequest) {
   }
 
   // Open redirect 방지: 내부 경로만 허용.
-  const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/admin";
+  const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
   return NextResponse.redirect(new URL(safeNext, origin));
 }

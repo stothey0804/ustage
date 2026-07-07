@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 
 import { createClient } from "@/lib/supabase/server";
+import { deriveAutoStatus } from "@/lib/auto-status";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EventStatusBadge } from "@/components/StatusBadge";
@@ -27,7 +28,7 @@ export default async function EventsPage() {
 
   const { data: events, error } = await supabase
     .from("events")
-    .select("id, title, event_date, venue, status, capacity, slug")
+    .select("id, title, event_date, venue, status, capacity, slug, booking_end")
     .eq("performer_id", user.id)
     .order("created_at", { ascending: false });
 
@@ -77,7 +78,11 @@ export default async function EventsPage() {
                       <CardTitle className="text-base leading-snug">
                         {event.title}
                       </CardTitle>
-                      <EventStatusBadge status={event.status} className="mt-0.5" />
+                      {/* 목록에서는 DB를 갱신하지 않고 표시용 파생 상태만 계산 (상세 진입 시 실제 반영) */}
+                      <EventStatusBadge
+                        status={deriveAutoStatus(event) ?? event.status}
+                        className="mt-0.5"
+                      />
                     </div>
                   </CardHeader>
                   <CardContent className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">

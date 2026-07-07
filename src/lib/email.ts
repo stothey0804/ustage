@@ -6,6 +6,15 @@ const resend = process.env.RESEND_API_KEY
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "어스테이지 <onboarding@resend.dev>";
 
+/** 사용자 입력이 이메일 HTML에 삽입될 때 마크업으로 해석되지 않도록 이스케이프 */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 interface BookingConfirmationParams {
   to: string;
   name: string;
@@ -37,6 +46,11 @@ export async function sendBookingConfirmation({
 
   const subject = `[어스테이지] ${eventTitle} 예매 확인`;
 
+  const safeTitle = escapeHtml(eventTitle);
+  const safeVenue = escapeHtml(eventVenue);
+  const safeName = escapeHtml(name);
+  const safeBankInfo = escapeHtml(bankInfo);
+
   const html = `
 <div style="max-width:480px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a1a;">
   <div style="padding:32px 24px;border:1px solid #e5e5e5;border-radius:12px;">
@@ -45,7 +59,7 @@ export async function sendBookingConfirmation({
     <table style="width:100%;border-collapse:collapse;font-size:14px;">
       <tr>
         <td style="padding:8px 0;color:#666;width:80px;">공연</td>
-        <td style="padding:8px 0;font-weight:600;">${eventTitle}</td>
+        <td style="padding:8px 0;font-weight:600;">${safeTitle}</td>
       </tr>
       <tr>
         <td style="padding:8px 0;color:#666;">일시</td>
@@ -53,11 +67,11 @@ export async function sendBookingConfirmation({
       </tr>
       <tr>
         <td style="padding:8px 0;color:#666;">장소</td>
-        <td style="padding:8px 0;">${eventVenue}</td>
+        <td style="padding:8px 0;">${safeVenue}</td>
       </tr>
       <tr>
         <td style="padding:8px 0;color:#666;">예약자</td>
-        <td style="padding:8px 0;">${name} (${quantity}매)</td>
+        <td style="padding:8px 0;">${safeName} (${quantity}매)</td>
       </tr>
     </table>
 
@@ -66,7 +80,7 @@ export async function sendBookingConfirmation({
         ? `
     <div style="margin:20px 0;padding:16px;background:#f5f5f5;border-radius:8px;">
       <p style="margin:0 0 4px;font-size:12px;color:#666;">입금 계좌</p>
-      <p style="margin:0;font-size:14px;font-weight:600;">${bankInfo}</p>
+      <p style="margin:0;font-size:14px;font-weight:600;">${safeBankInfo}</p>
     </div>
     <p style="font-size:13px;color:#666;">입금 확인 후 예매가 확정됩니다.</p>
     `

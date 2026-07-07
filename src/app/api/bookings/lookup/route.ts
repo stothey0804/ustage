@@ -10,6 +10,11 @@ const lookupSchema = z.object({
   password: z.string().min(1),
 });
 
+// 매칭되는 예약이 없을 때도 bcrypt 비교 1회를 수행해
+// 응답 시간으로 이메일 존재 여부를 판별하는 것을 어렵게 한다.
+const DUMMY_HASH =
+  "$2b$10$oTQzYOh9/OwmdGkVxQ0CFeN15copdbNHCuOKsxkQNrRUsOjoFwgyG";
+
 export async function POST(req: Request) {
   let body: unknown;
   try {
@@ -29,7 +34,10 @@ export async function POST(req: Request) {
     );
   }
 
-  const { event_id, email, password } = parsed.data;
+  const { event_id, password } = parsed.data;
+  // 기존 데이터에 대소문자가 혼재할 수 있어 ilike로 매칭 (와일드카드 이스케이프)
+  const email = parsed.data.email.trim().toLowerCase();
+  const emailPattern = email.replace(/([\\%_])/g, "\\$1");
 
   const adminSupabase = createAdminClient();
 
@@ -37,8 +45,9 @@ export async function POST(req: Request) {
     .from("bookings")
     .select("*, events!inner(id, title, event_date, venue, bank_info, slug)")
     .eq("event_id", event_id)
-    .eq("email", email)
-    .is("user_id", null);
+    .ilike("email", emailPattern)
+    .is("user_id", null)
+    .order("created_at", { ascending: false });
 
   if (error) {
     console.error(error);
@@ -48,7 +57,21 @@ export async function POST(req: Request) {
     );
   }
 
-  for (const booking of bookings ?? []) {
+  // 취소 후 재예매한 경우 유효한 예약이 먼저 매칭되도록 cancelled를 후순위로
+  const candidates = [...(bookings ?? [])].sort(
+    (a, b) =>
+      Number(a.status === "cancelled") - Number(b.status === "cancelled")
+  );
+
+  if (candidates.length === 0) {
+    await bcrypt.compare(password, DUMMY_HASH);
+    return NextResponse.json(
+      { error: "예약 정보를 찾을 수 없습니다." },
+      { status: 404 }
+    );
+  }
+
+  for (const booking of candidates) {
     const hash = booking.password_hash;
     if (hash && (await bcrypt.compare(password, hash))) {
       // 티켓 조회

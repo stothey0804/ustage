@@ -100,6 +100,25 @@ export async function updateEvent(
     return { error: "계좌 정보를 입력해 주세요." };
   }
 
+  // 정원을 이미 예매된 좌석 수 아래로 줄이는 것을 차단
+  if (v.capacity != null) {
+    const { data: bookings } = await supabase
+      .from("bookings")
+      .select("quantity, status")
+      .eq("event_id", id)
+      .neq("status", "cancelled");
+
+    const seatCount = (bookings ?? []).reduce(
+      (sum, b) => sum + (b.quantity ?? 1),
+      0
+    );
+    if (v.capacity < seatCount) {
+      return {
+        error: `이미 ${seatCount}석이 예매되어 좌석 수를 ${v.capacity}석으로 줄일 수 없습니다.`,
+      };
+    }
+  }
+
   const { error } = await supabase
     .from("events")
     .update({
@@ -143,6 +162,44 @@ export async function updateEventStatus(
   } = await supabase.auth.getUser();
 
   if (!user) return { error: "로그인이 필요합니다." };
+
+  const { data: event } = await supabase
+    .from("events")
+    .select("id, status, booking_start, booking_end, event_date, capacity")
+    .eq("id", id)
+    .eq("performer_id", user.id)
+    .single();
+
+  if (!event) return { error: "이벤트를 찾을 수 없거나 권한이 없습니다." };
+
+  // 오픈(재오픈 포함) 조건 서버 검증 — 클라이언트 검증 우회 대비
+  if (status === "open") {
+    if (!event.booking_start || !event.booking_end) {
+      return { error: "예매 시작/종료 일시를 먼저 설정해 주세요." };
+    }
+    const now = new Date();
+    if (event.event_date && new Date(event.event_date) < now) {
+      return { error: "이미 종료된 행사는 오픈할 수 없습니다." };
+    }
+    if (new Date(event.booking_end) < now) {
+      return { error: "예매 종료 일시가 지났습니다. 예매 기간을 수정해 주세요." };
+    }
+    if (event.capacity) {
+      const { data: bookings } = await supabase
+        .from("bookings")
+        .select("quantity, status")
+        .eq("event_id", id)
+        .neq("status", "cancelled");
+
+      const seatCount = (bookings ?? []).reduce(
+        (sum, b) => sum + (b.quantity ?? 1),
+        0
+      );
+      if (seatCount >= event.capacity) {
+        return { error: "좌석이 모두 차서 오픈할 수 없습니다." };
+      }
+    }
+  }
 
   const { error } = await supabase
     .from("events")

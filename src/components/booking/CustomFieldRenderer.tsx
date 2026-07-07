@@ -101,7 +101,12 @@ export function CustomFieldRenderer({
               <Controller
                 control={control}
                 name={`custom_answers.${field.id}`}
-                rules={{ required: field.required ? `${field.label}에 동의해 주세요.` : false }}
+                rules={{
+                  // 해제 시 값이 "false" 문자열이라 required 룰로는 못 거른다
+                  validate: field.required
+                    ? (v) => v === "true" || `${field.label}에 동의해 주세요.`
+                    : undefined,
+                }}
                 render={({ field: f }) => (
                   <label className="flex items-center gap-2 text-sm cursor-pointer">
                     <input

@@ -17,6 +17,7 @@ import {
 
 import { createClient } from "@/lib/supabase/server";
 import { autoTransitionStatus } from "@/lib/auto-status";
+import { sanitizeEventHtml } from "@/lib/sanitize";
 import { Button } from "@/components/ui/button";
 import { EventStatusBadge } from "@/components/StatusBadge";
 import { Separator } from "@/components/ui/separator";
@@ -48,7 +49,7 @@ export default async function EventDetailPage({
   if (!event) notFound();
 
   // 자동 상태 전환
-  const newStatus = await autoTransitionStatus(supabase, event);
+  const newStatus = await autoTransitionStatus(event);
   if (newStatus) event.status = newStatus;
 
   const { data: bookings } = await supabase
@@ -58,6 +59,10 @@ export default async function EventDetailPage({
     .order("created_at", { ascending: false });
 
   const bookingCount = bookings?.length ?? 0;
+  // 좌석 점유는 예매 API와 같은 기준으로: 취소 제외, 매수(quantity) 합산
+  const seatCount = (bookings ?? [])
+    .filter((b) => b.status !== "cancelled")
+    .reduce((sum, b) => sum + (b.quantity ?? 1), 0);
 
   const status = (event.status ?? "draft") as
     | "draft"
@@ -162,7 +167,7 @@ export default async function EventDetailPage({
               <InfoRow
                 icon={Users}
                 label="좌석"
-                value={`${event.capacity}석 (현재 ${bookingCount ?? 0}건 예매)`}
+                value={`${event.capacity}석 (예매 ${seatCount}석)`}
               />
             )}
             {event.booking_start && (
@@ -191,7 +196,7 @@ export default async function EventDetailPage({
                 <h2 className="text-sm font-semibold mb-3">공연 안내</h2>
                 <div
                   className="ck-content text-sm leading-relaxed [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:mt-3 [&_h3]:mb-1 [&_p]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-3 [&_li]:mb-1 [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:text-muted-foreground [&_a]:text-primary [&_a]:underline [&_strong]:font-semibold [&_em]:italic"
-                  dangerouslySetInnerHTML={{ __html: event.description }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeEventHtml(event.description) }}
                 />
               </div>
             </>

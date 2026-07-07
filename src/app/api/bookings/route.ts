@@ -6,6 +6,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { bookingApiSchema } from "@/lib/validations/booking";
 import { sendBookingConfirmation } from "@/lib/email";
 import { formatKST } from "@/lib/date";
+import { deriveAutoStatus } from "@/lib/auto-status";
+import type { CustomField } from "@/lib/validations/event";
 
 export async function POST(req: Request) {
   let body: unknown;
@@ -31,18 +33,21 @@ export async function POST(req: Request) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // 비회원은 비밀번호 필수
-  if (!user && !data.password) {
+  // 비회원은 비밀번호 필수 (조회 시 사용 — 서버에서도 최소 길이 강제)
+  if (!user && (!data.password || data.password.length < 4)) {
     return NextResponse.json(
-      { error: "비밀번호를 입력해 주세요." },
+      { error: "비밀번호는 4자 이상이어야 합니다." },
       { status: 400 }
     );
   }
 
+  // 로그인 사용자는 세션 이메일을 강제 사용 (임의 이메일 지정 차단)
+  const email = (user?.email ?? data.email).trim().toLowerCase();
+
   // 이벤트 조회
   const { data: event, error: eventError } = await supabase
     .from("events")
-    .select("id, title, slug, status, capacity, booking_start, booking_end, bank_info, price, event_date, venue, venue_address")
+    .select("id, title, slug, status, capacity, booking_start, booking_end, bank_info, price, event_date, venue, venue_address, custom_fields")
     .eq("id", data.event_id)
     .single();
 
@@ -54,9 +59,16 @@ export async function POST(req: Request) {
   }
 
   // 예매 가능 조건 1: 상태 확인
-  if (event.status !== "open") {
+  // 저장된 status가 갱신되지 않았어도(자동 전환은 lazy) 시각 기준 파생 상태로 판정
+  const effectiveStatus = deriveAutoStatus(event) ?? event.status;
+  if (effectiveStatus !== "open") {
     return NextResponse.json(
-      { error: "현재 예매를 받지 않는 이벤트입니다." },
+      {
+        error:
+          effectiveStatus === "ended"
+            ? "이미 종료된 행사입니다."
+            : "현재 예매를 받지 않는 이벤트입니다.",
+      },
       { status: 409 }
     );
   }
@@ -74,6 +86,40 @@ export async function POST(req: Request) {
       { error: "예매 기간이 종료되었습니다." },
       { status: 409 }
     );
+  }
+
+  // 유료 이벤트 필수값 서버 검증 (클라이언트 검증 우회 대비)
+  if (
+    event.price > 0 &&
+    (!data.depositor_name.trim() || !data.deposited_at.trim())
+  ) {
+    return NextResponse.json(
+      { error: "입금자명과 입금 시간을 입력해 주세요." },
+      { status: 400 }
+    );
+  }
+
+  // 커스텀 필드 서버 검증: 정의되지 않은 필드 제거 + required 확인
+  const customFields = (event.custom_fields ?? []) as CustomField[];
+  const knownFieldIds = new Set(customFields.map((f) => f.id));
+  const customAnswers = Object.fromEntries(
+    Object.entries(data.custom_answers ?? {}).filter(([key]) =>
+      knownFieldIds.has(key)
+    )
+  );
+  for (const field of customFields) {
+    if (!field.required) continue;
+    const value = customAnswers[field.id];
+    const missing =
+      field.type === "checkbox"
+        ? String(value) !== "true" && value !== true
+        : value === undefined || String(value).trim() === "";
+    if (missing) {
+      return NextResponse.json(
+        { error: `'${field.label}' 항목을 입력해 주세요.` },
+        { status: 400 }
+      );
+    }
   }
 
   // 예매 가능 조건 3: 좌석 여유 확인 (quantity 기반)
@@ -110,7 +156,7 @@ export async function POST(req: Request) {
     .from("bookings")
     .select("id")
     .eq("event_id", event.id)
-    .eq("email", data.email)
+    .eq("email", email)
     .neq("status", "cancelled")
     .limit(1);
 
@@ -131,12 +177,13 @@ export async function POST(req: Request) {
       event_id: event.id,
       user_id: user?.id ?? null,
       name: data.name,
-      email: data.email,
+      email,
       password_hash,
       depositor_name: event.price === 0 ? data.name : data.depositor_name,
       deposited_at: event.price === 0 ? "무료입장" : data.deposited_at,
       quantity: data.quantity,
-      custom_answers: data.custom_answers ?? null,
+      custom_answers:
+        Object.keys(customAnswers).length > 0 ? customAnswers : null,
       status: event.price === 0 ? "confirmed" : "pending",
     })
     .select("id")
@@ -171,16 +218,18 @@ export async function POST(req: Request) {
   }
 
   // 예매 확인 이메일 발송 (비동기 — 실패해도 예매는 성공)
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "http://localhost:3000";
+  const baseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    (process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "http://localhost:3000");
 
   const confirmUrl = user
     ? `${baseUrl}/dashboard/bookings/${booking.id}`
     : `${baseUrl}/e/${event.slug}/me`;
 
   sendBookingConfirmation({
-    to: data.email,
+    to: email,
     name: data.name,
     quantity: data.quantity,
     eventTitle: event.title,

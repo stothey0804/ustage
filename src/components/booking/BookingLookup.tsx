@@ -142,8 +142,11 @@ export function BookingLookup({ eventId, isFree = false }: Props) {
 
       {/* 예약 없음 */}
       {state === "notFound" && (
-        <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-          예약 정보를 찾을 수 없습니다. 이메일과 비밀번호를 확인해 주세요.
+        <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground space-y-1">
+          <p>예약 정보를 찾을 수 없습니다. 이메일과 비밀번호를 확인해 주세요.</p>
+          <p className="text-xs">
+            비밀번호를 잊으셨다면 이벤트 주최자에게 초기화를 요청할 수 있어요.
+          </p>
         </div>
       )}
 

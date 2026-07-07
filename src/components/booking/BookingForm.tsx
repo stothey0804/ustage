@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle, Loader2 } from "lucide-react";
@@ -48,6 +49,7 @@ export function BookingForm({
   closedReason,
 }: BookingFormProps) {
   const isFree = price === 0;
+  const pathname = usePathname();
   const [step, setStep] = useState<Step>("idle");
   const [serverError, setServerError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -192,7 +194,7 @@ export function BookingForm({
       ) : (
         <div className="flex gap-3">
           <Button size="lg" className="flex-1" asChild>
-            <a href={`/login?next=${encodeURIComponent(window.location.pathname)}`}>
+            <a href={`/login?next=${encodeURIComponent(pathname)}`}>
               로그인
             </a>
           </Button>

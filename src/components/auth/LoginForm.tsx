@@ -43,7 +43,7 @@ export function LoginForm({ next = "/dashboard" }: Props) {
     }
 
     // 로그인 성공 — 세션 쿠키가 세팅됨. 페이지 이동.
-    window.location.href = next;
+    window.location.assign(next);
   }
 
   return (

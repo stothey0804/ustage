@@ -310,7 +310,7 @@ export function EventForm({
                 <>
                   <ImageIcon className="size-6 text-muted-foreground" />
                   <p className="mt-1 text-xs text-muted-foreground">
-                    클릭하여 이미지 업로드 (최대 5MB)
+                    클릭하여 이미지 업로드 (최대 20MB)
                   </p>
                 </>
               )}

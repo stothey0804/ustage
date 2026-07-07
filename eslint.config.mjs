@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // 에이전트 워크트리 등 도구 산출물
+    ".claude/**",
   ]),
 ]);
 

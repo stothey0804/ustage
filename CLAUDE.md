@@ -154,6 +154,9 @@ checked_in_at   timestamptz nullable
 - `events`: 소유자(performer_id)는 자신의 이벤트만 CUD, 모든 사람이 SELECT 가능 (slug 기반 접근)
 - `bookings`: 소유자는 자기 이벤트의 예매만 조회/수정, 로그인 사용자는 자신의 예매(user_id) SELECT 가능, INSERT는 누구나 가능 (예매 제출)
 - 비밀번호 검증과 QR 토큰 조회는 **service_role**을 쓰는 API Route에서만 처리
+- 예매 생성은 `create_booking` RPC(이벤트 행 잠금 + 단일 트랜잭션)로 정원 초과를 방지하고,
+  `(event_id, lower(email))` 부분 유니크 인덱스가 중복 예매를 차단 — `supabase/migrations/` 참고.
+  RPC 미적용 환경에서는 API가 비원자 경로로 폴백하며 경고 로그를 남긴다.
 
 ### 타입 재생성 명령어
 

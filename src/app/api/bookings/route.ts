@@ -9,6 +9,156 @@ import { formatKST } from "@/lib/date";
 import { deriveAutoStatus } from "@/lib/auto-status";
 import type { CustomField } from "@/lib/validations/event";
 
+type AdminClient = ReturnType<typeof createAdminClient>;
+
+type NewBooking = {
+  event_id: string;
+  user_id: string | null;
+  name: string;
+  email: string;
+  password_hash: string;
+  depositor_name: string;
+  deposited_at: string;
+  quantity: number;
+  custom_answers: Record<string, string | number | boolean> | null;
+  status: "pending" | "confirmed";
+};
+
+type CreateResult = { bookingId: string } | { status: number; error: string };
+
+const DUPLICATE_EMAIL_ERROR = "이미 동일한 이메일로 예매된 내역이 있습니다.";
+
+function capacityError(remaining: number): string {
+  return remaining <= 0
+    ? "좌석이 모두 찼습니다."
+    : `잔여 좌석이 ${remaining}석입니다. 수량을 조정해 주세요.`;
+}
+
+/**
+ * 정원 검사 + 예매 + 티켓 생성을 DB 트랜잭션(create_booking RPC)으로 원자 처리.
+ * 이벤트 행 잠금으로 동시 제출을 직렬화해 정원 초과를 막고,
+ * (event_id, email) 부분 유니크 인덱스가 중복 예매의 최종 방어선.
+ * 마이그레이션 미적용 환경에서는 기존 비원자 경로로 폴백한다.
+ */
+async function createBookingAtomic(
+  admin: AdminClient,
+  capacity: number | null,
+  row: NewBooking
+): Promise<CreateResult> {
+  // database.ts 재생성 전까지 RPC 타입 부재 — 이 지점에서만 우회 캐스팅
+  const rpc = admin.rpc.bind(admin) as unknown as (
+    fn: string,
+    args: Record<string, unknown>
+  ) => PromiseLike<{
+    data: unknown;
+    error: { code?: string; message?: string } | null;
+  }>;
+
+  const { data, error } = await rpc("create_booking", {
+    p_event_id: row.event_id,
+    p_user_id: row.user_id,
+    p_name: row.name,
+    p_email: row.email,
+    p_password_hash: row.password_hash,
+    p_depositor_name: row.depositor_name,
+    p_deposited_at: row.deposited_at,
+    p_quantity: row.quantity,
+    p_custom_answers: row.custom_answers,
+    p_status: row.status,
+  });
+
+  if (!error) return { bookingId: data as string };
+
+  const message = error.message ?? "";
+
+  if (error.code === "23505") {
+    return { status: 409, error: DUPLICATE_EMAIL_ERROR };
+  }
+
+  const capacityMatch = message.match(/CAPACITY_EXCEEDED:(\d+)/);
+  if (capacityMatch) {
+    return { status: 409, error: capacityError(Number(capacityMatch[1])) };
+  }
+
+  if (message.includes("EVENT_NOT_OPEN")) {
+    return { status: 409, error: "현재 예매를 받지 않는 이벤트입니다." };
+  }
+  if (message.includes("EVENT_NOT_FOUND")) {
+    return { status: 404, error: "이벤트를 찾을 수 없습니다." };
+  }
+  if (message.includes("INVALID_QUANTITY")) {
+    return { status: 400, error: "최대 10매까지 예매할 수 있습니다." };
+  }
+
+  // 함수 미존재 = 마이그레이션 미적용 — 비원자 경로로 폴백
+  if (error.code === "PGRST202" || message.includes("create_booking")) {
+    console.warn(
+      "[bookings POST] create_booking RPC가 없어 비원자 경로로 처리합니다. " +
+        "supabase/migrations/20260707120000_booking_race_guards.sql을 적용하세요."
+    );
+    return legacyCreateBooking(admin, capacity, row);
+  }
+
+  console.error("[bookings POST] create_booking RPC", error);
+  return { status: 500, error: "예매 처리 중 오류가 발생했습니다." };
+}
+
+/** 마이그레이션 이전의 read-then-insert 경로. 동시 제출 시 정원 초과 가능. */
+async function legacyCreateBooking(
+  admin: AdminClient,
+  capacity: number | null,
+  row: NewBooking
+): Promise<CreateResult> {
+  if (capacity) {
+    const { data: sumResult } = await admin
+      .from("bookings")
+      .select("quantity")
+      .eq("event_id", row.event_id)
+      .neq("status", "cancelled");
+
+    const totalBooked = (sumResult ?? []).reduce(
+      (sum, b) => sum + (b.quantity ?? 1),
+      0
+    );
+
+    if (totalBooked + row.quantity > capacity) {
+      return { status: 409, error: capacityError(capacity - totalBooked) };
+    }
+  }
+
+  const { data: booking, error: insertError } = await admin
+    .from("bookings")
+    .insert(row)
+    .select("id")
+    .single();
+
+  if (insertError || !booking) {
+    if (insertError?.code === "23505") {
+      return { status: 409, error: DUPLICATE_EMAIL_ERROR };
+    }
+    console.error("[bookings POST]", insertError);
+    return { status: 500, error: "예매 처리 중 오류가 발생했습니다." };
+  }
+
+  const tickets = Array.from({ length: row.quantity }, (_, i) => ({
+    booking_id: booking.id,
+    ticket_number: i + 1,
+  }));
+
+  const { error: ticketError } = await admin
+    .from("booking_tickets")
+    .insert(tickets);
+
+  if (ticketError) {
+    console.error("[bookings POST] ticket creation error", ticketError);
+    // 예매는 생성됐지만 티켓 생성 실패 — 삭제 후 에러
+    await admin.from("bookings").delete().eq("id", booking.id);
+    return { status: 500, error: "티켓 생성 중 오류가 발생했습니다." };
+  }
+
+  return { bookingId: booking.id };
+}
+
 export async function POST(req: Request) {
   let body: unknown;
   try {
@@ -122,36 +272,10 @@ export async function POST(req: Request) {
     }
   }
 
-  // 예매 가능 조건 3: 좌석 여유 확인 (quantity 기반)
   const admin = createAdminClient();
 
-  if (event.capacity) {
-    const { data: sumResult } = await admin
-      .from("bookings")
-      .select("quantity")
-      .eq("event_id", event.id)
-      .neq("status", "cancelled");
-
-    const totalBooked = (sumResult ?? []).reduce(
-      (sum, b) => sum + (b.quantity ?? 1),
-      0
-    );
-
-    if (totalBooked + data.quantity > event.capacity) {
-      const remaining = event.capacity - totalBooked;
-      return NextResponse.json(
-        {
-          error:
-            remaining <= 0
-              ? "좌석이 모두 찼습니다."
-              : `잔여 좌석이 ${remaining}석입니다. 수량을 조정해 주세요.`,
-        },
-        { status: 409 }
-      );
-    }
-  }
-
-  // 동일 이메일 중복 예매 불가
+  // 동일 이메일 중복 예매 사전 체크 (친절한 메시지용 —
+  // 동시 제출은 DB 유니크 인덱스가 23505로 최종 차단)
   const { data: existingEmail } = await admin
     .from("bookings")
     .select("id")
@@ -162,7 +286,7 @@ export async function POST(req: Request) {
 
   if (existingEmail && existingEmail.length > 0) {
     return NextResponse.json(
-      { error: "이미 동일한 이메일로 예매된 내역이 있습니다." },
+      { error: DUPLICATE_EMAIL_ERROR },
       { status: 409 }
     );
   }
@@ -170,52 +294,29 @@ export async function POST(req: Request) {
   // 비밀번호 해시 (비회원만)
   const password_hash = user ? "" : await bcrypt.hash(data.password!, 10);
 
-  // 예매 생성 (service_role로 RLS 우회)
-  const { data: booking, error: insertError } = await admin
-    .from("bookings")
-    .insert({
-      event_id: event.id,
-      user_id: user?.id ?? null,
-      name: data.name,
-      email,
-      password_hash,
-      depositor_name: event.price === 0 ? data.name : data.depositor_name,
-      deposited_at: event.price === 0 ? "무료입장" : data.deposited_at,
-      quantity: data.quantity,
-      custom_answers:
-        Object.keys(customAnswers).length > 0 ? customAnswers : null,
-      status: event.price === 0 ? "confirmed" : "pending",
-    })
-    .select("id")
-    .single();
+  // 정원 검사 + 예매 + 티켓 생성 (원자적 — service_role로 RLS 우회)
+  const created = await createBookingAtomic(admin, event.capacity, {
+    event_id: event.id,
+    user_id: user?.id ?? null,
+    name: data.name,
+    email,
+    password_hash,
+    depositor_name: event.price === 0 ? data.name : data.depositor_name,
+    deposited_at: event.price === 0 ? "무료입장" : data.deposited_at,
+    quantity: data.quantity,
+    custom_answers:
+      Object.keys(customAnswers).length > 0 ? customAnswers : null,
+    status: event.price === 0 ? "confirmed" : "pending",
+  });
 
-  if (insertError || !booking) {
-    console.error("[bookings POST]", insertError);
+  if ("error" in created) {
     return NextResponse.json(
-      { error: "예매 처리 중 오류가 발생했습니다." },
-      { status: 500 }
+      { error: created.error },
+      { status: created.status }
     );
   }
 
-  // 개별 티켓 생성 (quantity 만큼)
-  const tickets = Array.from({ length: data.quantity }, (_, i) => ({
-    booking_id: booking.id,
-    ticket_number: i + 1,
-  }));
-
-  const { error: ticketError } = await admin
-    .from("booking_tickets")
-    .insert(tickets);
-
-  if (ticketError) {
-    console.error("[bookings POST] ticket creation error", ticketError);
-    // 예매는 생성됐지만 티켓 생성 실패 — 삭제 후 에러
-    await admin.from("bookings").delete().eq("id", booking.id);
-    return NextResponse.json(
-      { error: "티켓 생성 중 오류가 발생했습니다." },
-      { status: 500 }
-    );
-  }
+  const bookingId = created.bookingId;
 
   // 예매 확인 이메일 발송 (비동기 — 실패해도 예매는 성공)
   const baseUrl =
@@ -225,7 +326,7 @@ export async function POST(req: Request) {
       : "http://localhost:3000");
 
   const confirmUrl = user
-    ? `${baseUrl}/dashboard/bookings/${booking.id}`
+    ? `${baseUrl}/dashboard/bookings/${bookingId}`
     : `${baseUrl}/e/${event.slug}/me`;
 
   sendBookingConfirmation({
@@ -240,5 +341,5 @@ export async function POST(req: Request) {
     confirmUrl,
   }).catch((err) => console.error("[email]", err));
 
-  return NextResponse.json({ bookingId: booking.id }, { status: 201 });
+  return NextResponse.json({ bookingId }, { status: 201 });
 }

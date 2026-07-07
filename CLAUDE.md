@@ -157,6 +157,8 @@ checked_in_at   timestamptz nullable
 - 예매 생성은 `create_booking` RPC(이벤트 행 잠금 + 단일 트랜잭션)로 정원 초과를 방지하고,
   `(event_id, lower(email))` 부분 유니크 인덱스가 중복 예매를 차단 — `supabase/migrations/` 참고.
   RPC 미적용 환경에서는 API가 비원자 경로로 폴백하며 경고 로그를 남긴다.
+- 공개 API(예매 제출, 비회원 조회)는 `hit_rate_limit` RPC 기반 rate limit 적용
+  (`lib/rate-limit.ts`, fail-open). 비회원 조회는 IP당 분당 10회 + 계정당 15분 5회.
 
 ### 타입 재생성 명령어
 

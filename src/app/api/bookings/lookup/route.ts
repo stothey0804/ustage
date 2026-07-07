@@ -3,6 +3,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 const lookupSchema = z.object({
   event_id: z.string().uuid(),
@@ -38,6 +39,19 @@ export async function POST(req: Request) {
   // 기존 데이터에 대소문자가 혼재할 수 있어 ilike로 매칭 (와일드카드 이스케이프)
   const email = parsed.data.email.trim().toLowerCase();
   const emailPattern = email.replace(/([\\%_])/g, "\\$1");
+
+  // 브루트포스 방지: IP당 분당 10회 + 계정(이벤트+이메일)당 15분에 5회
+  const ip = getClientIp(req);
+  const [ipAllowed, accountAllowed] = await Promise.all([
+    checkRateLimit(`lookup:ip:${ip}`, 10, 60),
+    checkRateLimit(`lookup:acct:${event_id}:${email}`, 5, 900),
+  ]);
+  if (!ipAllowed || !accountAllowed) {
+    return NextResponse.json(
+      { error: "시도가 너무 많습니다. 잠시 후 다시 시도해 주세요." },
+      { status: 429 }
+    );
+  }
 
   const adminSupabase = createAdminClient();
 

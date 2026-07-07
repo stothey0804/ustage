@@ -60,11 +60,12 @@ const lookupFormSchema = z.object({
 
 type LookupFormValues = z.infer<typeof lookupFormSchema>;
 
-type LookupState = "idle" | "loading" | "found" | "notFound";
+type LookupState = "idle" | "loading" | "found" | "notFound" | "error";
 
 export function BookingLookup({ eventId, isFree = false }: Props) {
   const [state, setState] = useState<LookupState>("idle");
   const [result, setResult] = useState<LookupResult | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const {
     register,
@@ -93,11 +94,19 @@ export function BookingLookup({ eventId, isFree = false }: Props) {
         const data = (await res.json()) as { booking: LookupResult };
         setResult(data.booking);
         setState("found");
-      } else {
+      } else if (res.status === 404) {
         setState("notFound");
+      } else {
+        // rate limit(429) 등 — 서버 메시지를 그대로 안내
+        const json = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        setErrorMessage(json?.error ?? "조회 중 오류가 발생했습니다.");
+        setState("error");
       }
     } catch {
-      setState("notFound");
+      setErrorMessage("조회 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+      setState("error");
     }
   };
 
@@ -139,6 +148,13 @@ export function BookingLookup({ eventId, isFree = false }: Props) {
           {state === "loading" ? "조회 중..." : "예약 조회"}
         </Button>
       </form>
+
+      {/* 조회 오류 (rate limit 등) */}
+      {state === "error" && errorMessage && (
+        <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+          {errorMessage}
+        </div>
+      )}
 
       {/* 예약 없음 */}
       {state === "notFound" && (

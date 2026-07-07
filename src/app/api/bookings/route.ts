@@ -7,6 +7,7 @@ import { bookingApiSchema } from "@/lib/validations/booking";
 import { sendBookingConfirmation } from "@/lib/email";
 import { formatKST } from "@/lib/date";
 import { deriveAutoStatus } from "@/lib/auto-status";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import type { CustomField } from "@/lib/validations/event";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
@@ -176,6 +177,16 @@ export async function POST(req: Request) {
   }
 
   const data = parsed.data;
+
+  // 스팸 예매(정원 소진 공격) 완화: IP당 분당 5회
+  const ip = getClientIp(req);
+  if (!(await checkRateLimit(`booking:ip:${ip}`, 5, 60))) {
+    return NextResponse.json(
+      { error: "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요." },
+      { status: 429 }
+    );
+  }
+
   const supabase = await createClient();
 
   // 현재 로그인 사용자 확인 (없으면 null)

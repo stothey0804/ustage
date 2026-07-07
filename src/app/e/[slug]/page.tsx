@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { autoTransitionStatus } from "@/lib/auto-status";
 import { sanitizeEventHtml } from "@/lib/sanitize";
 import { EventStatusBadge } from "@/components/StatusBadge";
@@ -81,7 +82,28 @@ export default async function EventPublicPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { isOpen, reason } = getBookingStatus(event);
+  // 잔여석 계산 (취소 제외, 매수 합산 — 예매 API와 동일 기준)
+  // bookings는 RLS로 익명 조회가 막혀 있어 service_role로 합산만 읽는다
+  let remainingSeats: number | null = null;
+  if (event.capacity) {
+    const admin = createAdminClient();
+    const { data: seatRows } = await admin
+      .from("bookings")
+      .select("quantity")
+      .eq("event_id", event.id)
+      .neq("status", "cancelled");
+    const booked = (seatRows ?? []).reduce(
+      (sum, b) => sum + (b.quantity ?? 1),
+      0
+    );
+    remainingSeats = Math.max(event.capacity - booked, 0);
+  }
+
+  let { isOpen, reason } = getBookingStatus(event);
+  if (isOpen && remainingSeats !== null && remainingSeats <= 0) {
+    isOpen = false;
+    reason = "좌석이 모두 차서 예매가 마감되었습니다.";
+  }
 
   const customFields = (event.custom_fields ?? []) as CustomField[];
 
@@ -136,7 +158,16 @@ export default async function EventPublicPage({
           value={event.price === 0 ? "무료입장" : `${event.price.toLocaleString()}원`}
         />
         {event.capacity && (
-          <InfoRow icon={Users} value={`좌석 ${event.capacity}석`} />
+          <InfoRow
+            icon={Users}
+            value={
+              remainingSeats === null
+                ? `좌석 ${event.capacity}석`
+                : remainingSeats <= 0
+                  ? `좌석 ${event.capacity}석 · 매진`
+                  : `좌석 ${event.capacity}석 · 잔여 ${remainingSeats}석`
+            }
+          />
         )}
         {(event.booking_start || event.booking_end) && (
           <InfoRow
@@ -182,6 +213,9 @@ export default async function EventPublicPage({
           userEmail={user?.email ?? undefined}
           isOpen={isOpen}
           closedReason={reason}
+          maxQuantity={
+            remainingSeats === null ? 10 : Math.max(Math.min(10, remainingSeats), 1)
+          }
         />
       </section>
 

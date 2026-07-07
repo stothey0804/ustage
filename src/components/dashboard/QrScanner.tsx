@@ -114,6 +114,16 @@ export function QrScanner({ eventId }: QrScannerProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 입장 성공은 2초 후 자동으로 다음 스캔 시작 (경고 결과는 수동 확인 필요)
+  useEffect(() => {
+    if (state !== "result" || scanResult?.result !== "success") return;
+    const timer = setTimeout(() => {
+      startScanner();
+    }, 2000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, scanResult]);
+
   const handleReset = () => {
     startScanner();
   };
@@ -150,7 +160,11 @@ export function QrScanner({ eventId }: QrScannerProps) {
       )}
 
       {state === "result" && scanResult && (
-        <ScanResult data={scanResult} onReset={handleReset} />
+        <ScanResult
+          data={scanResult}
+          onReset={handleReset}
+          autoNext={scanResult.result === "success"}
+        />
       )}
     </div>
   );

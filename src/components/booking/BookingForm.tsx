@@ -34,6 +34,8 @@ interface BookingFormProps {
   userEmail?: string;
   isOpen: boolean;
   closedReason?: string;
+  /** 잔여석 기준 최대 예매 매수 (기본 10) */
+  maxQuantity?: number;
 }
 
 type Step = "idle" | "form" | "success";
@@ -47,6 +49,7 @@ export function BookingForm({
   userEmail,
   isOpen,
   closedReason,
+  maxQuantity = 10,
 }: BookingFormProps) {
   const isFree = price === 0;
   const pathname = usePathname();
@@ -274,13 +277,26 @@ export function BookingForm({
               )}
 
               <div className="space-y-1.5">
-                <Label htmlFor="quantity">매수 *</Label>
+                <Label htmlFor="quantity">
+                  매수 *{" "}
+                  {maxQuantity < 10 && (
+                    <span className="text-muted-foreground font-normal text-xs">
+                      (잔여석 기준 최대 {maxQuantity}매)
+                    </span>
+                  )}
+                </Label>
                 <Input
                   id="quantity"
                   type="number"
                   min={1}
-                  max={10}
-                  {...register("quantity", { valueAsNumber: true })}
+                  max={maxQuantity}
+                  {...register("quantity", {
+                    valueAsNumber: true,
+                    max: {
+                      value: maxQuantity,
+                      message: `최대 ${maxQuantity}매까지 예매할 수 있습니다.`,
+                    },
+                  })}
                 />
                 {errors.quantity && (
                   <p className="text-xs text-destructive">{errors.quantity.message}</p>

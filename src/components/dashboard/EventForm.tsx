@@ -32,6 +32,8 @@ interface EventFormProps {
   eventId?: string;
   defaultValues?: Partial<EventFormValues>;
   userId: string;
+  /** 유효(미취소) 예매 건수 — 수정 모드에서 주의 배너 표시용 */
+  activeBookingCount?: number;
 }
 
 export function EventForm({
@@ -39,6 +41,7 @@ export function EventForm({
   eventId,
   defaultValues,
   userId,
+  activeBookingCount = 0,
 }: EventFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -163,6 +166,14 @@ export function EventForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+      {mode === "edit" && activeBookingCount > 0 && (
+        <div className="rounded-md border border-amber-300/60 bg-amber-50 px-3 py-2.5 text-xs leading-relaxed text-amber-800 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-300">
+          이미 예매 {activeBookingCount}건이 있는 이벤트예요. 일시·장소·가격을
+          바꾸면 기존 예매자가 안내받은 내용과 달라지니 변경 시 참석자에게 직접
+          알려주세요. 유료/무료 전환과 예매 좌석보다 적은 정원은 저장되지
+          않습니다.
+        </div>
+      )}
       {/* 기본 정보 */}
       <section className="space-y-4">
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">

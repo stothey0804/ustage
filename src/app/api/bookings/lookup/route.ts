@@ -57,7 +57,7 @@ export async function POST(req: Request) {
 
   const { data: bookings, error } = await adminSupabase
     .from("bookings")
-    .select("*, events!inner(id, title, event_date, venue, bank_info, slug)")
+    .select("*, events!inner(id, title, event_date, venue, bank_info, slug, contact)")
     .eq("event_id", event_id)
     .ilike("email", emailPattern)
     .is("user_id", null)

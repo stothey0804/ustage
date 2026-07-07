@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import bcrypt from "bcryptjs";
 
 import { createClient } from "@/lib/supabase/server";
@@ -340,17 +340,20 @@ export async function POST(req: Request) {
     ? `${baseUrl}/dashboard/bookings/${bookingId}`
     : `${baseUrl}/e/${event.slug}/me`;
 
-  sendBookingConfirmation({
-    to: email,
-    name: data.name,
-    quantity: data.quantity,
-    eventTitle: event.title,
-    eventDate: formatKST(event.event_date),
-    eventVenue: event.venue_address || event.venue,
-    isFree: event.price === 0,
-    bankInfo: event.bank_info,
-    confirmUrl,
-  }).catch((err) => console.error("[email]", err));
+  // after(): 응답 반환 후 실행 보장 — 서버리스에서 fire-and-forget 유실 방지
+  after(() =>
+    sendBookingConfirmation({
+      to: email,
+      name: data.name,
+      quantity: data.quantity,
+      eventTitle: event.title,
+      eventDate: formatKST(event.event_date),
+      eventVenue: event.venue_address || event.venue,
+      isFree: event.price === 0,
+      bankInfo: event.bank_info,
+      confirmUrl,
+    }).catch((err) => console.error("[email]", err))
+  );
 
   return NextResponse.json({ bookingId }, { status: 201 });
 }

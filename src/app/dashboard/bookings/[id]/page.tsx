@@ -29,7 +29,7 @@ export default async function BookingDetailPage({
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "*, events(id, title, event_date, venue, venue_address, price, bank_info, slug, poster_url)"
+      "*, events(id, title, event_date, venue, venue_address, price, bank_info, slug, poster_url, contact)"
     )
     .eq("id", id)
     .eq("user_id", user.id)
@@ -55,6 +55,7 @@ export default async function BookingDetailPage({
     bank_info: string;
     slug: string;
     poster_url: string | null;
+    contact: string;
   } | null;
 
   const status = booking.status;
@@ -98,7 +99,14 @@ export default async function BookingDetailPage({
           </p>
         )}
         {status === "cancelled" && (
-          <p className="text-muted-foreground">취소된 예약입니다.</p>
+          <div className="space-y-1 text-muted-foreground">
+            <p>취소된 예약입니다.</p>
+            {event?.contact && (
+              <p className="text-xs">
+                환불 등 문의는 주최자에게 연락해 주세요: {event.contact}
+              </p>
+            )}
+          </div>
         )}
       </div>
 

@@ -100,23 +100,40 @@ export async function updateEvent(
     return { error: "계좌 정보를 입력해 주세요." };
   }
 
-  // 정원을 이미 예매된 좌석 수 아래로 줄이는 것을 차단
-  if (v.capacity != null) {
-    const { data: bookings } = await supabase
-      .from("bookings")
-      .select("quantity, status")
-      .eq("event_id", id)
-      .neq("status", "cancelled");
+  const { data: current } = await supabase
+    .from("events")
+    .select("id, price")
+    .eq("id", id)
+    .eq("performer_id", user.id)
+    .single();
 
-    const seatCount = (bookings ?? []).reduce(
-      (sum, b) => sum + (b.quantity ?? 1),
-      0
-    );
-    if (v.capacity < seatCount) {
-      return {
-        error: `이미 ${seatCount}석이 예매되어 좌석 수를 ${v.capacity}석으로 줄일 수 없습니다.`,
-      };
-    }
+  if (!current) return { error: "이벤트를 찾을 수 없거나 권한이 없습니다." };
+
+  const { data: activeBookings } = await supabase
+    .from("bookings")
+    .select("quantity, status")
+    .eq("event_id", id)
+    .neq("status", "cancelled");
+
+  const activeCount = activeBookings?.length ?? 0;
+  const seatCount = (activeBookings ?? []).reduce(
+    (sum, b) => sum + (b.quantity ?? 1),
+    0
+  );
+
+  // 유료↔무료 전환은 기존 예매의 입금 흐름(pending/confirmed 판정)을 깨뜨림
+  if (activeCount > 0 && (current.price === 0) !== (v.price === 0)) {
+    return {
+      error:
+        "예매가 있는 이벤트는 유료/무료를 변경할 수 없습니다. 기존 예매를 먼저 취소 처리해 주세요.",
+    };
+  }
+
+  // 정원을 이미 예매된 좌석 수 아래로 줄이는 것을 차단
+  if (v.capacity != null && v.capacity < seatCount) {
+    return {
+      error: `이미 ${seatCount}석이 예매되어 좌석 수를 ${v.capacity}석으로 줄일 수 없습니다.`,
+    };
   }
 
   const { error } = await supabase
@@ -150,6 +167,67 @@ export async function updateEvent(
   revalidatePath("/dashboard/events");
   revalidatePath(`/dashboard/events/${id}`);
   return { success: true, id };
+}
+
+export async function deleteEvent(id: string): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "로그인이 필요합니다." };
+
+  const { data: event } = await supabase
+    .from("events")
+    .select("id, poster_url")
+    .eq("id", id)
+    .eq("performer_id", user.id)
+    .single();
+
+  if (!event) return { error: "이벤트를 찾을 수 없거나 권한이 없습니다." };
+
+  // 취소된 예매를 포함해 예매 이력이 하나라도 있으면 삭제 불가 (기록 보존)
+  const { count } = await supabase
+    .from("bookings")
+    .select("id", { count: "exact", head: true })
+    .eq("event_id", id);
+
+  if ((count ?? 0) > 0) {
+    return {
+      error:
+        "예매 내역이 있는 이벤트는 삭제할 수 없습니다. 대신 상태를 마감으로 변경해 주세요.",
+    };
+  }
+
+  const { error } = await supabase
+    .from("events")
+    .delete()
+    .eq("id", id)
+    .eq("performer_id", user.id);
+
+  if (error) {
+    console.error("[deleteEvent]", error);
+    return { error: "이벤트 삭제에 실패했습니다." };
+  }
+
+  // 포스터 파일 정리 (실패해도 무시 — 고아 파일만 남음)
+  if (event.poster_url) {
+    const marker = "/object/public/posters/";
+    const idx = event.poster_url.indexOf(marker);
+    if (idx !== -1) {
+      try {
+        const path = decodeURIComponent(
+          event.poster_url.slice(idx + marker.length)
+        );
+        await supabase.storage.from("posters").remove([path]);
+      } catch (err) {
+        console.error("[deleteEvent] poster cleanup", err);
+      }
+    }
+  }
+
+  revalidatePath("/dashboard/events");
+  return { success: true };
 }
 
 export async function updateEventStatus(

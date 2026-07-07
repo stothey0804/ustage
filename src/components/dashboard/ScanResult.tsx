@@ -20,6 +20,8 @@ export interface ScanResultData {
 interface ScanResultProps {
   data: ScanResultData;
   onReset: () => void;
+  /** true면 잠시 후 자동으로 다음 스캔이 시작됨을 안내 */
+  autoNext?: boolean;
 }
 
 const RESULT_CONFIG: Record<
@@ -58,7 +60,7 @@ const RESULT_CONFIG: Record<
   },
 };
 
-export function ScanResult({ data, onReset }: ScanResultProps) {
+export function ScanResult({ data, onReset, autoNext = false }: ScanResultProps) {
   const config = RESULT_CONFIG[data.result];
   const Icon = config.icon;
 
@@ -96,8 +98,13 @@ export function ScanResult({ data, onReset }: ScanResultProps) {
         size="sm"
       >
         <RefreshCw className="size-4" />
-        다음 QR 스캔
+        {autoNext ? "바로 다음 QR 스캔" : "다음 QR 스캔"}
       </Button>
+      {autoNext && (
+        <p className="text-center text-xs text-muted-foreground">
+          잠시 후 자동으로 다음 스캔이 시작됩니다.
+        </p>
+      )}
     </div>
   );
 }

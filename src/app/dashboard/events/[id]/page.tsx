@@ -25,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusTransition } from "@/components/dashboard/StatusTransition";
 import { BookingLinkButton } from "@/components/dashboard/BookingLinkButton";
 import { BookingList } from "@/components/dashboard/BookingList";
+import { DeleteEventButton } from "@/components/dashboard/DeleteEventButton";
 
 export default async function EventDetailPage({
   params,
@@ -110,6 +111,7 @@ export default async function EventDetailPage({
           </Link>
         </Button>
         <BookingLinkButton slug={event.slug} />
+        <DeleteEventButton eventId={id} hasBookings={bookingCount > 0} />
       </div>
 
       {/* 상태 전환 */}

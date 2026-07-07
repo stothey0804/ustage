@@ -38,6 +38,7 @@ type LookupResult = {
     venue: string;
     bank_info: string;
     slug: string;
+    contact: string;
   };
 };
 
@@ -204,6 +205,13 @@ export function BookingLookup({ eventId, isFree = false }: Props) {
                 <span>{result.deposited_at}</span>
               </div>
             </div>
+          )}
+
+          {/* 취소 안내 */}
+          {status === "cancelled" && result.events.contact && (
+            <p className="rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+              환불 등 문의는 주최자에게 연락해 주세요: {result.events.contact}
+            </p>
           )}
 
           {/* 입금 계좌 */}

@@ -38,6 +38,13 @@ export default async function EditEventPage({
 
   if (!event) notFound();
 
+  // 유효 예매 수 — 수정 폼의 주의 배너용
+  const { count: activeBookingCount } = await supabase
+    .from("bookings")
+    .select("id", { count: "exact", head: true })
+    .eq("event_id", id)
+    .neq("status", "cancelled");
+
   const defaultValues: Partial<EventFormValues> = {
     title: event.title,
     description: event.description ?? "",
@@ -77,6 +84,7 @@ export default async function EditEventPage({
         eventId={id}
         userId={user.id}
         defaultValues={defaultValues}
+        activeBookingCount={activeBookingCount ?? 0}
       />
     </div>
   );

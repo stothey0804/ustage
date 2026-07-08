@@ -194,13 +194,6 @@ export function BookingForm({
                 )}
               </p>
             </div>
-            <p className="rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-              입금하실 때 보내는 분 표시(적요)에{" "}
-              <span className="font-medium text-foreground">
-                휴대폰번호 뒤 4자리
-              </span>
-              를 함께 적어 주세요. (예: 홍길동1234)
-            </p>
           </>
         )}
         <p className="text-xs text-muted-foreground">

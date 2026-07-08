@@ -213,12 +213,6 @@ export default async function BookingDetailPage({
               </p>
               <CopyButton value={maskBankInfo(event.bank_info)} label="계좌복사" />
             </div>
-            {status === "pending" && (
-              <p className="text-xs text-muted-foreground">
-                입금하실 때 보내는 분 표시(적요)에 휴대폰번호 뒤 4자리를 함께
-                적어 주세요. (예: 홍길동1234)
-              </p>
-            )}
           </div>
         </>
       )}

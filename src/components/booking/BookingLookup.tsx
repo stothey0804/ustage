@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -39,6 +40,7 @@ type LookupResult = {
     bank_info: string;
     slug: string;
     contact: string;
+    price: number;
   };
 };
 
@@ -172,6 +174,13 @@ export function BookingLookup({ eventId, isFree = false }: Props) {
         <div className="space-y-4">
           <Separator />
 
+          <Link
+            href={`/e/${result.events.slug}`}
+            className="block text-sm font-medium text-primary underline underline-offset-2 hover:opacity-80"
+          >
+            {result.events.title}
+          </Link>
+
           <div className="flex items-center justify-between">
             <p className="font-medium">
               {result.name}
@@ -200,11 +209,31 @@ export function BookingLookup({ eventId, isFree = false }: Props) {
               </div>
               <div className="flex gap-3">
                 <span className="text-muted-foreground w-20 shrink-0">
-                  입금시간
+                  입금예상시간
                 </span>
                 <span>{result.deposited_at}</span>
               </div>
+              <div className="flex gap-3">
+                <span className="text-muted-foreground w-20 shrink-0">
+                  입금 금액
+                </span>
+                <span>
+                  {(result.events.price * result.quantity).toLocaleString()}원
+                  {result.quantity > 1 &&
+                    ` (${result.events.price.toLocaleString()}원 × ${result.quantity}매)`}
+                </span>
+              </div>
             </div>
+          )}
+
+          {/* 입금대기 안내 */}
+          {status === "pending" && result.events.contact && (
+            <p className="rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+              입금 확인은 아래 연락처로 문의해 주세요:{" "}
+              <span className="font-medium text-foreground">
+                {result.events.contact}
+              </span>
+            </p>
           )}
 
           {/* 취소 안내 */}
@@ -222,6 +251,12 @@ export function BookingLookup({ eventId, isFree = false }: Props) {
                 <p className="text-sm text-muted-foreground flex-1">{result.events.bank_info}</p>
                 <CopyButton value={result.events.bank_info} label="계좌복사" />
               </div>
+              {result.status === "pending" && (
+                <p className="text-xs text-muted-foreground">
+                  입금하실 때 보내는 분 표시(적요)에 휴대폰번호 뒤 4자리를 함께
+                  적어 주세요. (예: 홍길동1234)
+                </p>
+              )}
             </div>
           )}
 

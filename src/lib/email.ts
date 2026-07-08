@@ -24,6 +24,8 @@ interface BookingConfirmationParams {
   eventVenue: string;
   isFree: boolean;
   bankInfo: string;
+  /** 총 입금액 (가격 × 매수, 무료면 0) */
+  totalAmount: number;
   /** 예약 확인 페이지 URL */
   confirmUrl: string;
 }
@@ -37,6 +39,7 @@ export async function sendBookingConfirmation({
   eventVenue,
   isFree,
   bankInfo,
+  totalAmount,
   confirmUrl,
 }: BookingConfirmationParams): Promise<void> {
   if (!resend) {
@@ -81,7 +84,10 @@ export async function sendBookingConfirmation({
     <div style="margin:20px 0;padding:16px;background:#f5f5f5;border-radius:8px;">
       <p style="margin:0 0 4px;font-size:12px;color:#666;">입금 계좌</p>
       <p style="margin:0;font-size:14px;font-weight:600;">${safeBankInfo}</p>
+      <p style="margin:8px 0 0;font-size:12px;color:#666;">입금 금액</p>
+      <p style="margin:0;font-size:14px;font-weight:600;">${totalAmount.toLocaleString()}원${quantity > 1 ? ` (${quantity}매)` : ""}</p>
     </div>
+    <p style="font-size:13px;color:#666;">입금하실 때 보내는 분 표시(적요)에 휴대폰번호 뒤 4자리를 함께 적어 주세요. (예: 홍길동1234)</p>
     <p style="font-size:13px;color:#666;">입금 확인 후 예매가 확정됩니다.</p>
     `
         : `
@@ -101,12 +107,20 @@ export async function sendBookingConfirmation({
   `.trim();
 
   try {
-    await resend.emails.send({
+    // Resend SDK는 API 오류 시 throw하지 않고 { error }를 반환한다 —
+    // 확인하지 않으면 발송 실패(도메인 미검증 403 등)가 조용히 사라짐
+    const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to,
       subject,
       html,
     });
+
+    if (error) {
+      console.error("[email] send failed", { to, from: FROM_EMAIL, error });
+      return;
+    }
+    console.log("[email] sent", data?.id, "→", to);
   } catch (err) {
     console.error("[email] send failed", err);
   }

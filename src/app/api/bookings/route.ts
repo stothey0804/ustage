@@ -8,6 +8,7 @@ import { sendBookingConfirmation } from "@/lib/email";
 import { formatKST } from "@/lib/date";
 import { deriveAutoStatus } from "@/lib/auto-status";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { maskBankInfo } from "@/lib/utils";
 import type { CustomField } from "@/lib/validations/event";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
@@ -88,7 +89,7 @@ async function createBookingAtomic(
     return { status: 404, error: "이벤트를 찾을 수 없습니다." };
   }
   if (message.includes("INVALID_QUANTITY")) {
-    return { status: 400, error: "최대 10매까지 예매할 수 있습니다." };
+    return { status: 400, error: "최대 20매까지 예매할 수 있습니다." };
   }
 
   // 함수 미존재 = 마이그레이션 미적용 — 비원자 경로로 폴백
@@ -350,7 +351,8 @@ export async function POST(req: Request) {
       eventDate: formatKST(event.event_date),
       eventVenue: event.venue_address || event.venue,
       isFree: event.price === 0,
-      bankInfo: event.bank_info,
+      bankInfo: maskBankInfo(event.bank_info),
+      totalAmount: event.price * data.quantity,
       confirmUrl,
     }).catch((err) => console.error("[email]", err))
   );

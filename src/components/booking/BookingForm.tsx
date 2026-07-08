@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle, Loader2 } from "lucide-react";
 
@@ -16,6 +16,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -34,7 +41,7 @@ interface BookingFormProps {
   userEmail?: string;
   isOpen: boolean;
   closedReason?: string;
-  /** 잔여석 기준 최대 예매 매수 (기본 10) */
+  /** 잔여석 기준 최대 예매 매수 (기본 20) */
   maxQuantity?: number;
 }
 
@@ -49,7 +56,7 @@ export function BookingForm({
   userEmail,
   isOpen,
   closedReason,
-  maxQuantity = 10,
+  maxQuantity = 20,
 }: BookingFormProps) {
   const isFree = price === 0;
   const pathname = usePathname();
@@ -62,6 +69,7 @@ export function BookingForm({
     handleSubmit,
     control,
     setError,
+    watch,
     formState: { errors },
   } = useForm<BookingFormValues>({
     resolver: zodResolver(bookingFormSchema),
@@ -76,6 +84,9 @@ export function BookingForm({
     },
   });
 
+  const quantityValue = watch("quantity") || 1;
+  const totalAmount = price * quantityValue;
+
   const onSubmit = (values: BookingFormValues) => {
     if (!isLoggedIn && (!values.password || values.password.length < 4)) {
       setError("password", { message: "비밀번호는 4자 이상이어야 합니다." });
@@ -87,7 +98,7 @@ export function BookingForm({
         return;
       }
       if (!values.deposited_at) {
-        setError("deposited_at", { message: "입금 시간을 입력해 주세요." });
+        setError("deposited_at", { message: "입금 예상 시간을 입력해 주세요." });
         return;
       }
     }
@@ -170,6 +181,26 @@ export function BookingForm({
                 <CopyButton value={bankInfo} label="계좌복사" />
               </div>
             </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                입금 금액
+              </p>
+              <p className="text-sm font-medium">
+                {totalAmount.toLocaleString()}원
+                {quantityValue > 1 && (
+                  <span className="text-muted-foreground font-normal ml-1">
+                    ({price.toLocaleString()}원 × {quantityValue}매)
+                  </span>
+                )}
+              </p>
+            </div>
+            <p className="rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+              입금하실 때 보내는 분 표시(적요)에{" "}
+              <span className="font-medium text-foreground">
+                휴대폰번호 뒤 4자리
+              </span>
+              를 함께 적어 주세요. (예: 홍길동1234)
+            </p>
           </>
         )}
         <p className="text-xs text-muted-foreground">
@@ -279,25 +310,45 @@ export function BookingForm({
               <div className="space-y-1.5">
                 <Label htmlFor="quantity">
                   매수 *{" "}
-                  {maxQuantity < 10 && (
+                  {maxQuantity < 20 && (
                     <span className="text-muted-foreground font-normal text-xs">
                       (잔여석 기준 최대 {maxQuantity}매)
                     </span>
                   )}
                 </Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  min={1}
-                  max={maxQuantity}
-                  {...register("quantity", {
-                    valueAsNumber: true,
-                    max: {
-                      value: maxQuantity,
-                      message: `최대 ${maxQuantity}매까지 예매할 수 있습니다.`,
-                    },
-                  })}
+                <Controller
+                  control={control}
+                  name="quantity"
+                  render={({ field }) => (
+                    <Select
+                      value={String(field.value ?? 1)}
+                      onValueChange={(v) => field.onChange(Number(v))}
+                    >
+                      <SelectTrigger id="quantity" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: maxQuantity }, (_, i) => i + 1).map(
+                          (n) => (
+                            <SelectItem key={n} value={String(n)}>
+                              {n}매
+                            </SelectItem>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )}
                 />
+                {!isFree && (
+                  <p className="text-xs text-muted-foreground">
+                    총 입금액{" "}
+                    <span className="font-medium text-foreground">
+                      {totalAmount.toLocaleString()}원
+                    </span>
+                    {quantityValue > 1 &&
+                      ` (${price.toLocaleString()}원 × ${quantityValue}매)`}
+                  </p>
+                )}
                 {errors.quantity && (
                   <p className="text-xs text-destructive">{errors.quantity.message}</p>
                 )}
@@ -321,7 +372,7 @@ export function BookingForm({
 
                   <div className="space-y-1.5">
                     <Label htmlFor="deposited_at">
-                      입금 시간 *{" "}
+                      입금 예상 시간 *{" "}
                       <span className="text-muted-foreground font-normal text-xs">
                         (예: 오늘 오후 3시)
                       </span>

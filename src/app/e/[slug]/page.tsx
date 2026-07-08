@@ -16,6 +16,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { autoTransitionStatus } from "@/lib/auto-status";
 import { sanitizeEventHtml } from "@/lib/sanitize";
+import { maskBankInfo } from "@/lib/utils";
 import { EventStatusBadge } from "@/components/StatusBadge";
 import { Separator } from "@/components/ui/separator";
 import { BookingForm } from "@/components/booking/BookingForm";
@@ -207,14 +208,14 @@ export default async function EventPublicPage({
         <BookingForm
           eventId={event.id}
           price={event.price}
-          bankInfo={event.bank_info}
+          bankInfo={maskBankInfo(event.bank_info)}
           customFields={customFields}
           isLoggedIn={!!user}
           userEmail={user?.email ?? undefined}
           isOpen={isOpen}
           closedReason={reason}
           maxQuantity={
-            remainingSeats === null ? 10 : Math.max(Math.min(10, remainingSeats), 1)
+            remainingSeats === null ? 20 : Math.max(Math.min(20, remainingSeats), 1)
           }
         />
       </section>

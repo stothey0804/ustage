@@ -30,6 +30,8 @@ type BookingWithTickets = Tables<"bookings"> & {
 interface BookingListProps {
   initialBookings: BookingWithTickets[];
   isFree?: boolean;
+  /** 1매 가격 (원) — 예매별 입금액 표시용 */
+  price?: number;
   customFields?: CustomField[];
 }
 
@@ -64,6 +66,7 @@ function buildFieldLabelMap(fields?: CustomField[]): Record<string, string> {
 export function BookingList({
   initialBookings,
   isFree = false,
+  price = 0,
   customFields,
 }: BookingListProps) {
   const router = useRouter();
@@ -255,7 +258,12 @@ export function BookingList({
                   </div>
                   <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
                     {!isFree && <span>입금자: {booking.depositor_name}</span>}
-                    {!isFree && <span>입금시간: {booking.deposited_at}</span>}
+                    {!isFree && <span>입금예상: {booking.deposited_at}</span>}
+                    {!isFree && price > 0 && (
+                      <span className="font-medium text-foreground">
+                        입금액: {(price * quantity).toLocaleString()}원
+                      </span>
+                    )}
                     <span>예약: {formatCreatedAt(booking.created_at)}</span>
                   </div>
                 </div>
@@ -284,6 +292,7 @@ export function BookingList({
       <BookingDetailDialog
         booking={selectedBooking}
         isFree={isFree}
+        price={price}
         isPending={isPending}
         fieldLabelMap={fieldLabelMap}
         onClose={() => setSelectedBooking(null)}
@@ -349,6 +358,7 @@ export function BookingList({
 function BookingDetailDialog({
   booking,
   isFree,
+  price,
   isPending,
   fieldLabelMap,
   onClose,
@@ -359,6 +369,7 @@ function BookingDetailDialog({
 }: {
   booking: BookingWithTickets | null;
   isFree: boolean;
+  price: number;
   isPending: boolean;
   fieldLabelMap: Record<string, string>;
   onClose: () => void;
@@ -421,7 +432,13 @@ function BookingDetailDialog({
             {!isFree && (
               <>
                 <DetailRow label="입금자명" value={booking.depositor_name} />
-                <DetailRow label="입금시간" value={booking.deposited_at} />
+                <DetailRow label="입금예상시간" value={booking.deposited_at} />
+                {price > 0 && (
+                  <DetailRow
+                    label="입금 금액"
+                    value={`${(price * quantity).toLocaleString()}원${quantity > 1 ? ` (${price.toLocaleString()}원 × ${quantity}매)` : ""}`}
+                  />
+                )}
               </>
             )}
             <DetailRow label="예약일시" value={formatCreatedAt(booking.created_at)} />

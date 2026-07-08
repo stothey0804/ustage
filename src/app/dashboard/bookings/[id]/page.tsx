@@ -12,6 +12,7 @@ import { AddToCalendar } from "@/components/booking/AddToCalendar";
 import { VenueMapLinks } from "@/components/booking/VenueMapLinks";
 import { CopyButton } from "@/components/ui/copy-button";
 import { BookingStatusBadge } from "@/components/StatusBadge";
+import { maskBankInfo } from "@/lib/utils";
 
 export default async function BookingDetailPage({
   params,
@@ -75,7 +76,16 @@ export default async function BookingDetailPage({
         </Link>
         <div className="mt-2 flex items-start justify-between gap-3">
           <h1 className="text-xl font-semibold leading-snug">
-            {event?.title ?? "예약 상세"}
+            {event ? (
+              <Link
+                href={`/e/${event.slug}`}
+                className="hover:underline underline-offset-4"
+              >
+                {event.title}
+              </Link>
+            ) : (
+              "예약 상세"
+            )}
           </h1>
           <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
             <BookingStatusBadge status={status} isFree={isFree} />
@@ -89,9 +99,17 @@ export default async function BookingDetailPage({
       {/* 상태 설명 */}
       <div className="rounded-lg border p-4 text-sm">
         {status === "pending" && (
-          <p className="text-muted-foreground">
-            입금 확인 대기 중입니다. 입금 후 아래 계좌로 확인 요청해 주세요.
-          </p>
+          <div className="space-y-1 text-muted-foreground">
+            <p>입금 확인 대기 중입니다. 입금 확인은 아래 연락처로 문의해 주세요.</p>
+            {event?.contact && (
+              <p className="text-xs">
+                문의:{" "}
+                <span className="font-medium text-foreground">
+                  {event.contact}
+                </span>
+              </p>
+            )}
+          </div>
         )}
         {status === "confirmed" && (
           <p className="text-green-700 dark:text-green-400">
@@ -175,7 +193,7 @@ export default async function BookingDetailPage({
                 <span>{booking.depositor_name}</span>
               </div>
               <div className="flex gap-3">
-                <span className="text-muted-foreground w-20 shrink-0">입금시간</span>
+                <span className="text-muted-foreground w-20 shrink-0">입금예상시간</span>
                 <span>{booking.deposited_at}</span>
               </div>
             </>
@@ -190,9 +208,17 @@ export default async function BookingDetailPage({
           <div className="space-y-2">
             <h2 className="text-sm font-semibold">입금 계좌</h2>
             <div className="flex items-center gap-2 bg-muted rounded-md px-3 py-2">
-              <p className="text-sm text-muted-foreground flex-1">{event.bank_info}</p>
-              <CopyButton value={event.bank_info} label="계좌복사" />
+              <p className="text-sm text-muted-foreground flex-1">
+                {maskBankInfo(event.bank_info)}
+              </p>
+              <CopyButton value={maskBankInfo(event.bank_info)} label="계좌복사" />
             </div>
+            {status === "pending" && (
+              <p className="text-xs text-muted-foreground">
+                입금하실 때 보내는 분 표시(적요)에 휴대폰번호 뒤 4자리를 함께
+                적어 주세요. (예: 홍길동1234)
+              </p>
+            )}
           </div>
         </>
       )}

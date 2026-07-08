@@ -210,6 +210,7 @@ export default async function EventDetailPage({
           <BookingList
             initialBookings={bookings ?? []}
             isFree={event.price === 0}
+            price={event.price}
             customFields={(event.custom_fields ?? []) as import("@/lib/validations/event").CustomField[]}
           />
         </TabsContent>

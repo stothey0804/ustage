@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { bookingApiSchema } from "@/lib/validations/booking";
-import { sendBookingConfirmation } from "@/lib/email";
+import { sendBookingConfirmation, getBaseUrl } from "@/lib/email";
 import { formatKST } from "@/lib/date";
 import { deriveAutoStatus } from "@/lib/auto-status";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
@@ -26,7 +26,9 @@ type NewBooking = {
   status: "pending" | "confirmed";
 };
 
-type CreateResult = { bookingId: string } | { status: number; error: string };
+type CreateResult =
+  | { bookingId: string }
+  | { status: number; error: string; code?: string };
 
 const DUPLICATE_EMAIL_ERROR = "이미 동일한 이메일로 예매된 내역이 있습니다.";
 
@@ -39,13 +41,14 @@ function capacityError(remaining: number): string {
 /**
  * 정원 검사 + 예매 + 티켓 생성을 DB 트랜잭션(create_booking RPC)으로 원자 처리.
  * 이벤트 행 잠금으로 동시 제출을 직렬화해 정원 초과를 막고,
- * (event_id, email) 부분 유니크 인덱스가 중복 예매의 최종 방어선.
+ * 동일 이메일 중복도 함수 내부에서 검사한다 (allowDuplicate=추가 구매만 예외).
  * 마이그레이션 미적용 환경에서는 기존 비원자 경로로 폴백한다.
  */
 async function createBookingAtomic(
   admin: AdminClient,
   capacity: number | null,
-  row: NewBooking
+  row: NewBooking,
+  allowDuplicate: boolean
 ): Promise<CreateResult> {
   // database.ts 재생성 전까지 RPC 타입 부재 — 이 지점에서만 우회 캐스팅
   const rpc = admin.rpc.bind(admin) as unknown as (
@@ -67,14 +70,19 @@ async function createBookingAtomic(
     p_quantity: row.quantity,
     p_custom_answers: row.custom_answers,
     p_status: row.status,
+    p_allow_duplicate: allowDuplicate,
   });
 
   if (!error) return { bookingId: data as string };
 
   const message = error.message ?? "";
 
-  if (error.code === "23505") {
-    return { status: 409, error: DUPLICATE_EMAIL_ERROR };
+  if (error.code === "23505" || message.includes("DUPLICATE_EMAIL")) {
+    return {
+      status: 409,
+      error: DUPLICATE_EMAIL_ERROR,
+      code: "duplicate_email",
+    };
   }
 
   const capacityMatch = message.match(/CAPACITY_EXCEEDED:(\d+)/);
@@ -195,10 +203,25 @@ export async function POST(req: Request) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // 비회원은 비밀번호 필수 (조회 시 사용 — 서버에서도 최소 길이 강제)
-  if (!user && (!data.password || data.password.length < 4)) {
+  // 신규 예매는 이름 필수 (추가 구매는 기존 예약에서 상속)
+  if (!data.additional && !data.name.trim()) {
+    return NextResponse.json(
+      { error: "이름을 입력해 주세요." },
+      { status: 400 }
+    );
+  }
+
+  // 비회원 신규 예매는 비밀번호 필수 (조회 시 사용 — 서버에서도 최소 길이 강제)
+  if (!user && !data.additional && (!data.password || data.password.length < 4)) {
     return NextResponse.json(
       { error: "비밀번호는 4자 이상이어야 합니다." },
+      { status: 400 }
+    );
+  }
+  // 비회원 추가 구매는 기존 예약 비밀번호로 본인 확인
+  if (!user && data.additional && !data.password) {
+    return NextResponse.json(
+      { error: "비밀번호를 입력해 주세요." },
       { status: 400 }
     );
   }
@@ -262,6 +285,7 @@ export async function POST(req: Request) {
   }
 
   // 커스텀 필드 서버 검증: 정의되지 않은 필드 제거 + required 확인
+  // (추가 구매는 기존 예약의 답변을 상속하므로 검증하지 않음)
   const customFields = (event.custom_fields ?? []) as CustomField[];
   const knownFieldIds = new Set(customFields.map((f) => f.id));
   const customAnswers = Object.fromEntries(
@@ -269,74 +293,159 @@ export async function POST(req: Request) {
       knownFieldIds.has(key)
     )
   );
-  for (const field of customFields) {
-    if (!field.required) continue;
-    const value = customAnswers[field.id];
-    const missing =
-      field.type === "checkbox"
-        ? String(value) !== "true" && value !== true
-        : value === undefined || String(value).trim() === "";
-    if (missing) {
-      return NextResponse.json(
-        { error: `'${field.label}' 항목을 입력해 주세요.` },
-        { status: 400 }
-      );
+  if (!data.additional) {
+    for (const field of customFields) {
+      if (!field.required) continue;
+      const value = customAnswers[field.id];
+      const missing =
+        field.type === "checkbox"
+          ? String(value) !== "true" && value !== true
+          : value === undefined || String(value).trim() === "";
+      if (missing) {
+        return NextResponse.json(
+          { error: `'${field.label}' 항목을 입력해 주세요.` },
+          { status: 400 }
+        );
+      }
     }
   }
 
   const admin = createAdminClient();
 
-  // 동일 이메일 중복 예매 사전 체크 (친절한 메시지용 —
-  // 동시 제출은 DB 유니크 인덱스가 23505로 최종 차단)
-  const { data: existingEmail } = await admin
-    .from("bookings")
-    .select("id")
-    .eq("event_id", event.id)
-    .eq("email", email)
-    .neq("status", "cancelled")
-    .limit(1);
+  // 추가 구매: 이 이벤트에 대한 기존 예약의 본인임을 확인하고 정보를 상속
+  // (회원 = 세션 user_id 일치, 비회원 = 이메일 + 비밀번호 bcrypt 대조)
+  let original: {
+    name: string;
+    password_hash: string;
+    custom_answers: NewBooking["custom_answers"];
+  } | null = null;
 
-  if (existingEmail && existingEmail.length > 0) {
-    return NextResponse.json(
-      { error: DUPLICATE_EMAIL_ERROR },
-      { status: 409 }
-    );
+  if (data.additional) {
+    if (user) {
+      const { data: mine } = await admin
+        .from("bookings")
+        .select("name, password_hash, custom_answers")
+        .eq("event_id", event.id)
+        .eq("user_id", user.id)
+        .neq("status", "cancelled")
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (mine?.[0]) {
+        original = {
+          name: mine[0].name,
+          password_hash: mine[0].password_hash,
+          custom_answers:
+            (mine[0].custom_answers as NewBooking["custom_answers"]) ?? null,
+        };
+      }
+    } else {
+      const emailPattern = email.replace(/([\\%_])/g, "\\$1");
+      const { data: candidates } = await admin
+        .from("bookings")
+        .select("name, password_hash, custom_answers")
+        .eq("event_id", event.id)
+        .ilike("email", emailPattern)
+        .is("user_id", null)
+        .neq("status", "cancelled")
+        .order("created_at", { ascending: false });
+
+      for (const candidate of candidates ?? []) {
+        if (
+          candidate.password_hash &&
+          (await bcrypt.compare(data.password!, candidate.password_hash))
+        ) {
+          original = {
+            name: candidate.name,
+            password_hash: candidate.password_hash,
+            custom_answers:
+              (candidate.custom_answers as NewBooking["custom_answers"]) ??
+              null,
+          };
+          break;
+        }
+      }
+    }
+
+    if (!original) {
+      return NextResponse.json(
+        {
+          error:
+            "기존 예약을 확인할 수 없습니다. 예약 조회에서 본인 확인 후 다시 시도해 주세요.",
+        },
+        { status: 403 }
+      );
+    }
+  } else {
+    // 신규 예매: 동일 이메일 중복 사전 체크 (친절한 안내용 —
+    // 동시 제출 레이스는 create_booking RPC 내부 검사가 최종 차단)
+    const { data: existingEmail } = await admin
+      .from("bookings")
+      .select("id")
+      .eq("event_id", event.id)
+      .eq("email", email)
+      .neq("status", "cancelled")
+      .limit(1);
+
+    if (existingEmail && existingEmail.length > 0) {
+      return NextResponse.json(
+        { error: DUPLICATE_EMAIL_ERROR, code: "duplicate_email" },
+        { status: 409 }
+      );
+    }
   }
 
-  // 비밀번호 해시 (비회원만)
-  const password_hash = user ? "" : await bcrypt.hash(data.password!, 10);
+  // 비밀번호 해시 — 비회원 신규는 새로 해시, 비회원 추가 구매는 기존 해시 상속
+  // (같은 비밀번호로 모든 예약이 함께 조회되도록)
+  const password_hash = user
+    ? ""
+    : (original?.password_hash ?? (await bcrypt.hash(data.password!, 10)));
+
+  const bookerName = original?.name ?? data.name;
 
   // 정원 검사 + 예매 + 티켓 생성 (원자적 — service_role로 RLS 우회)
-  const created = await createBookingAtomic(admin, event.capacity, {
-    event_id: event.id,
-    user_id: user?.id ?? null,
-    name: data.name,
-    email,
-    password_hash,
-    depositor_name: event.price === 0 ? data.name : data.depositor_name,
-    deposited_at: event.price === 0 ? "무료입장" : data.deposited_at,
-    quantity: data.quantity,
-    custom_answers:
-      Object.keys(customAnswers).length > 0 ? customAnswers : null,
-    status: event.price === 0 ? "confirmed" : "pending",
-  });
+  const created = await createBookingAtomic(
+    admin,
+    event.capacity,
+    {
+      event_id: event.id,
+      user_id: user?.id ?? null,
+      name: bookerName,
+      email,
+      password_hash,
+      depositor_name: event.price === 0 ? bookerName : data.depositor_name,
+      deposited_at: event.price === 0 ? "무료입장" : data.deposited_at,
+      quantity: data.quantity,
+      custom_answers: data.additional
+        ? original?.custom_answers ?? null
+        : Object.keys(customAnswers).length > 0
+          ? customAnswers
+          : null,
+      status: event.price === 0 ? "confirmed" : "pending",
+    },
+    data.additional
+  );
 
   if ("error" in created) {
     return NextResponse.json(
-      { error: created.error },
+      { error: created.error, code: created.code },
       { status: created.status }
     );
   }
 
   const bookingId = created.bookingId;
 
-  // 예매 확인 이메일 발송 (비동기 — 실패해도 예매는 성공)
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    (process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : "http://localhost:3000");
+  // 무료 이벤트는 즉시 확정 — 신청완료 메일에 입장 QR을 포함
+  let emailTickets: { ticket_number: number; qr_token: string }[] | undefined;
+  if (event.price === 0) {
+    const { data: tickets } = await admin
+      .from("booking_tickets")
+      .select("ticket_number, qr_token")
+      .eq("booking_id", bookingId)
+      .order("ticket_number", { ascending: true });
+    emailTickets = tickets ?? undefined;
+  }
 
+  const baseUrl = getBaseUrl();
   const confirmUrl = user
     ? `${baseUrl}/dashboard/bookings/${bookingId}`
     : `${baseUrl}/e/${event.slug}/me`;
@@ -345,7 +454,7 @@ export async function POST(req: Request) {
   after(() =>
     sendBookingConfirmation({
       to: email,
-      name: data.name,
+      name: bookerName,
       quantity: data.quantity,
       eventTitle: event.title,
       eventDate: formatKST(event.event_date),
@@ -354,6 +463,7 @@ export async function POST(req: Request) {
       bankInfo: maskBankInfo(event.bank_info),
       totalAmount: event.price * data.quantity,
       confirmUrl,
+      tickets: emailTickets,
     }).catch((err) => console.error("[email]", err))
   );
 

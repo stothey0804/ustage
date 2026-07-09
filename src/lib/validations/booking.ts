@@ -2,7 +2,8 @@ import { z } from "zod";
 
 export const bookingApiSchema = z.object({
   event_id: z.string().uuid("올바른 이벤트 ID가 아닙니다."),
-  name: z.string().min(1, "이름을 입력해 주세요."),
+  // 추가 구매(additional)에서는 기존 예약에서 상속하므로 선택 — 신규 예매는 라우트에서 필수 검증
+  name: z.string().optional().default(""),
   email: z.string().min(1, "이메일을 입력해 주세요.").email("올바른 이메일 형식이 아닙니다."),
   depositor_name: z.string().optional().default(""),
   deposited_at: z.string().optional().default(""),
@@ -11,6 +12,8 @@ export const bookingApiSchema = z.object({
   custom_answers: z
     .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
     .optional(),
+  /** true면 추가 구매 — 기존 예약 본인 확인 후 같은 이메일로 예약을 하나 더 생성 */
+  additional: z.boolean().optional().default(false),
 });
 
 export type BookingApiInput = z.infer<typeof bookingApiSchema>;

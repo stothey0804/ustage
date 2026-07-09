@@ -62,7 +62,11 @@ export function BookingForm({
   const pathname = usePathname();
   const [step, setStep] = useState<Step>("idle");
   const [serverError, setServerError] = useState<string | null>(null);
+  const [duplicateOpen, setDuplicateOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  // 이미 예매한 이메일 → 추가 구매는 본인 확인이 되는 예약 조회에서만
+  const lookupHref = isLoggedIn ? "/dashboard/bookings" : `${pathname}/me`;
 
   const {
     register,
@@ -133,6 +137,10 @@ export function BookingForm({
       const json = await res.json();
 
       if (!res.ok) {
+        if (res.status === 409 && json.code === "duplicate_email") {
+          setDuplicateOpen(true);
+          return;
+        }
         setServerError(json.error ?? "예매 처리 중 오류가 발생했습니다.");
         return;
       }
@@ -418,6 +426,35 @@ export function BookingForm({
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* 중복 예매 안내 — 추가 구매는 예약 조회에서만 */}
+      <Dialog open={duplicateOpen} onOpenChange={setDuplicateOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>이미 예매하신 내역이 있어요</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            이 이메일로 예매한 내역이 이미 있습니다. 추가 구매를 원하시면{" "}
+            {isLoggedIn ? "내 예약" : "예약 조회"}에서 본인 확인 후 &lsquo;추가
+            구매&rsquo; 버튼을 이용해 주세요.
+          </p>
+          <div className="flex gap-3 pt-1">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={() => setDuplicateOpen(false)}
+            >
+              닫기
+            </Button>
+            <Button asChild className="flex-1">
+              <Link href={lookupHref}>
+                {isLoggedIn ? "내 예약으로 이동" : "예약 조회로 이동"}
+              </Link>
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </>

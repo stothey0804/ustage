@@ -72,7 +72,7 @@ export async function POST(req: Request) {
     );
   }
 
-  // 취소 후 재예매한 경우 유효한 예약이 먼저 매칭되도록 cancelled를 후순위로
+  // 유효(미취소) 예약을 먼저, 각 그룹 내에서는 최신순으로
   const candidates = [...(bookings ?? [])].sort(
     (a, b) =>
       Number(a.status === "cancelled") - Number(b.status === "cancelled")
@@ -86,10 +86,28 @@ export async function POST(req: Request) {
     );
   }
 
+  // 추가 구매로 같은 이메일에 예약이 여러 건일 수 있으므로 비밀번호가
+  // 일치하는 예약을 전부 반환한다 (추가 구매는 기존 해시를 상속해 함께 매칭됨)
+  const matched: typeof candidates = [];
+  const verifiedHashes = new Set<string>();
   for (const booking of candidates) {
     const hash = booking.password_hash;
-    if (hash && (await bcrypt.compare(password, hash))) {
-      // 티켓 조회
+    if (!hash) continue;
+    if (verifiedHashes.has(hash) || (await bcrypt.compare(password, hash))) {
+      verifiedHashes.add(hash);
+      matched.push(booking);
+    }
+  }
+
+  if (matched.length === 0) {
+    return NextResponse.json(
+      { error: "예약 정보를 찾을 수 없습니다." },
+      { status: 404 }
+    );
+  }
+
+  const safeBookings = await Promise.all(
+    matched.map(async (booking) => {
       const { data: tickets } = await adminSupabase
         .from("booking_tickets")
         .select("qr_token, ticket_number, checked_in")
@@ -99,18 +117,16 @@ export async function POST(req: Request) {
       const { password_hash, ...safeBooking } = booking;
       void password_hash;
       // 예금주명은 마스킹해서 반환 (원본 이름이 클라이언트에 내려가지 않도록)
-      const safeEvents = {
-        ...safeBooking.events,
-        bank_info: maskBankInfo(safeBooking.events.bank_info),
+      return {
+        ...safeBooking,
+        events: {
+          ...safeBooking.events,
+          bank_info: maskBankInfo(safeBooking.events.bank_info),
+        },
+        tickets: tickets ?? [],
       };
-      return NextResponse.json({
-        booking: { ...safeBooking, events: safeEvents, tickets: tickets ?? [] },
-      });
-    }
-  }
-
-  return NextResponse.json(
-    { error: "예약 정보를 찾을 수 없습니다." },
-    { status: 404 }
+    })
   );
+
+  return NextResponse.json({ bookings: safeBookings });
 }

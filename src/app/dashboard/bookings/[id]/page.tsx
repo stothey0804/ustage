@@ -8,6 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { QRTicket } from "@/components/booking/QRTicket";
+import { AdditionalPurchase } from "@/components/booking/AdditionalPurchase";
 import { AddToCalendar } from "@/components/booking/AddToCalendar";
 import { VenueMapLinks } from "@/components/booking/VenueMapLinks";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -127,6 +128,17 @@ export default async function BookingDetailPage({
           </div>
         )}
       </div>
+
+      {/* 추가 구매 — 같은 이벤트에 별도 예약으로 추가 */}
+      {event && status !== "cancelled" && booking.email && (
+        <div className="flex justify-end">
+          <AdditionalPurchase
+            eventId={event.id}
+            price={event.price}
+            email={booking.email}
+          />
+        </div>
+      )}
 
       {/* 이벤트 정보 */}
       {event && (

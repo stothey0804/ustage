@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { QRTicket } from "@/components/booking/QRTicket";
+import { AdditionalPurchase } from "@/components/booking/AdditionalPurchase";
 import { CopyButton } from "@/components/ui/copy-button";
 
 interface Props {
@@ -32,6 +33,7 @@ type LookupResult = {
   quantity: number;
   depositor_name: string;
   deposited_at: string;
+  created_at: string | null;
   tickets: LookupTicket[];
   events: {
     title: string;
@@ -67,8 +69,10 @@ type LookupState = "idle" | "loading" | "found" | "notFound" | "error";
 
 export function BookingLookup({ eventId, isFree = false }: Props) {
   const [state, setState] = useState<LookupState>("idle");
-  const [result, setResult] = useState<LookupResult | null>(null);
+  const [results, setResults] = useState<LookupResult[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // 조회에 성공한 자격증명 — 추가 구매·재조회에 사용
+  const [credentials, setCredentials] = useState<LookupFormValues | null>(null);
 
   const {
     register,
@@ -78,9 +82,8 @@ export function BookingLookup({ eventId, isFree = false }: Props) {
     resolver: zodResolver(lookupFormSchema),
   });
 
-  const onSubmit = async (values: LookupFormValues) => {
+  const runLookup = async (values: LookupFormValues) => {
     setState("loading");
-    setResult(null);
 
     try {
       const res = await fetch("/api/bookings/lookup", {
@@ -94,10 +97,12 @@ export function BookingLookup({ eventId, isFree = false }: Props) {
       });
 
       if (res.ok) {
-        const data = (await res.json()) as { booking: LookupResult };
-        setResult(data.booking);
+        const data = (await res.json()) as { bookings: LookupResult[] };
+        setResults(data.bookings);
+        setCredentials(values);
         setState("found");
       } else if (res.status === 404) {
+        setResults([]);
         setState("notFound");
       } else {
         // rate limit(429) 등 — 서버 메시지를 그대로 안내
@@ -113,12 +118,12 @@ export function BookingLookup({ eventId, isFree = false }: Props) {
     }
   };
 
-  const status = result?.status;
+  const eventInfo = results[0]?.events;
 
   return (
     <div className="space-y-6">
       {/* 조회 폼 */}
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(runLookup)} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="email">이메일</Label>
           <Input
@@ -170,95 +175,136 @@ export function BookingLookup({ eventId, isFree = false }: Props) {
       )}
 
       {/* 결과 */}
-      {state === "found" && result && status && (
+      {state === "found" && results.length > 0 && eventInfo && (
         <div className="space-y-4">
           <Separator />
 
-          <Link
-            href={`/e/${result.events.slug}`}
-            className="block text-sm font-medium text-primary underline underline-offset-2 hover:opacity-80"
-          >
-            {result.events.title}
-          </Link>
-
-          <div className="flex items-center justify-between">
-            <p className="font-medium">
-              {result.name}
-              {result.quantity > 1 && (
-                <span className="text-muted-foreground ml-1">
-                  ({result.quantity}매)
-                </span>
-              )}
-            </p>
-            <Badge
-              variant={
-                getStatusVariant(status) as "secondary" | "default" | "outline"
-              }
+          <div className="flex items-center justify-between gap-2">
+            <Link
+              href={`/e/${eventInfo.slug}`}
+              className="text-sm font-medium text-primary underline underline-offset-2 hover:opacity-80"
             >
-              {getStatusLabel(status, isFree)}
-            </Badge>
+              {eventInfo.title}
+            </Link>
+            {credentials && (
+              <AdditionalPurchase
+                eventId={eventId}
+                price={eventInfo.price}
+                email={credentials.email}
+                password={credentials.password}
+                onSuccess={() => runLookup(credentials)}
+              />
+            )}
           </div>
 
-          {!isFree && (
-            <div className="grid gap-2 text-sm">
-              <div className="flex gap-3">
-                <span className="text-muted-foreground w-20 shrink-0">
-                  입금자명
-                </span>
-                <span>{result.depositor_name}</span>
-              </div>
-              <div className="flex gap-3">
-                <span className="text-muted-foreground w-20 shrink-0">
-                  입금예상시간
-                </span>
-                <span>{result.deposited_at}</span>
-              </div>
-              <div className="flex gap-3">
-                <span className="text-muted-foreground w-20 shrink-0">
-                  입금 금액
-                </span>
-                <span>
-                  {(result.events.price * result.quantity).toLocaleString()}원
-                  {result.quantity > 1 &&
-                    ` (${result.events.price.toLocaleString()}원 × ${result.quantity}매)`}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* 입금대기 안내 */}
-          {status === "pending" && result.events.contact && (
-            <p className="rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-              입금 확인은 아래 연락처로 문의해 주세요:{" "}
-              <span className="font-medium text-foreground">
-                {result.events.contact}
-              </span>
-            </p>
-          )}
-
-          {/* 취소 안내 */}
-          {status === "cancelled" && result.events.contact && (
-            <p className="rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-              환불 등 문의는 주최자에게 연락해 주세요: {result.events.contact}
-            </p>
-          )}
-
-          {/* 입금 계좌 */}
-          {!isFree && (result.status === "pending" || result.status === "confirmed") && (
-            <div className="space-y-2">
-              <p className="text-sm font-semibold">입금 계좌</p>
-              <div className="flex items-center gap-2 bg-muted rounded-md px-3 py-2">
-                <p className="text-sm text-muted-foreground flex-1">{result.events.bank_info}</p>
-                <CopyButton value={result.events.bank_info} label="계좌복사" />
-              </div>
-            </div>
-          )}
-
-          {/* QR 코드 */}
-          {result.status === "confirmed" && result.tickets.length > 0 && (
-            <QRTicket name={result.name} tickets={result.tickets} />
-          )}
+          {results.map((result, index) => (
+            <BookingResultCard
+              key={result.id}
+              result={result}
+              isFree={isFree}
+              label={results.length > 1 ? `예약 ${results.length - index}` : undefined}
+            />
+          ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+function BookingResultCard({
+  result,
+  isFree,
+  label,
+}: {
+  result: LookupResult;
+  isFree: boolean;
+  label?: string;
+}) {
+  const status = result.status;
+
+  return (
+    <div className="rounded-lg border p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="font-medium">
+          {label && (
+            <span className="text-muted-foreground text-xs mr-2">{label}</span>
+          )}
+          {result.name}
+          {result.quantity > 1 && (
+            <span className="text-muted-foreground ml-1">
+              ({result.quantity}매)
+            </span>
+          )}
+        </p>
+        <Badge
+          variant={
+            getStatusVariant(status) as "secondary" | "default" | "outline"
+          }
+        >
+          {getStatusLabel(status, isFree)}
+        </Badge>
+      </div>
+
+      {!isFree && (
+        <div className="grid gap-2 text-sm">
+          <div className="flex gap-3">
+            <span className="text-muted-foreground w-20 shrink-0">
+              입금자명
+            </span>
+            <span>{result.depositor_name}</span>
+          </div>
+          <div className="flex gap-3">
+            <span className="text-muted-foreground w-20 shrink-0">
+              입금예상시간
+            </span>
+            <span>{result.deposited_at}</span>
+          </div>
+          <div className="flex gap-3">
+            <span className="text-muted-foreground w-20 shrink-0">
+              입금 금액
+            </span>
+            <span>
+              {(result.events.price * result.quantity).toLocaleString()}원
+              {result.quantity > 1 &&
+                ` (${result.events.price.toLocaleString()}원 × ${result.quantity}매)`}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* 입금대기 안내 */}
+      {status === "pending" && result.events.contact && (
+        <p className="rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+          입금 확인은 아래 연락처로 문의해 주세요:{" "}
+          <span className="font-medium text-foreground">
+            {result.events.contact}
+          </span>
+        </p>
+      )}
+
+      {/* 취소 안내 */}
+      {status === "cancelled" && result.events.contact && (
+        <p className="rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+          환불 등 문의는 주최자에게 연락해 주세요: {result.events.contact}
+        </p>
+      )}
+
+      {/* 입금 계좌 */}
+      {!isFree && (status === "pending" || status === "confirmed") && (
+        <div className="space-y-2">
+          <p className="text-sm font-semibold">입금 계좌</p>
+          <div className="flex items-center gap-2 bg-muted rounded-md px-3 py-2">
+            <p className="text-sm text-muted-foreground flex-1">
+              {result.events.bank_info}
+            </p>
+            <CopyButton value={result.events.bank_info} label="계좌복사" />
+          </div>
+        </div>
+      )}
+
+      {/* QR 코드 */}
+      {status === "confirmed" && result.tickets.length > 0 && (
+        <QRTicket name={result.name} tickets={result.tickets} />
       )}
     </div>
   );

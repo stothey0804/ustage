@@ -1,9 +1,15 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { BookingLookup } from "@/components/booking/BookingLookup";
+
+// 폐쇄형 페이지 — 검색 노출 금지
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 interface Props {
   params: Promise<{ slug: string }>;

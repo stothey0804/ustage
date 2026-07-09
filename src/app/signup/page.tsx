@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SignupForm } from "@/components/auth/SignupForm";
 import { createClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = {
+  title: "회원가입",
+  robots: { index: false, follow: true },
+};
 
 export default async function SignupPage() {
   const supabase = await createClient();

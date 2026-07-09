@@ -28,6 +28,7 @@ export const metadata: Metadata = {
   title: "어스테이지 사용 방법",
   description:
     "링크 하나로 예매부터 QR 입장까지 — 어스테이지 사용 가이드. 공연자와 참석자의 흐름을 단계별로 안내합니다.",
+  alternates: { canonical: "/guide" },
 };
 
 type IconType = ComponentType<{ className?: string }>;
@@ -184,9 +185,29 @@ function InfoCard({
   );
 }
 
+// 검색엔진·AI 검색(GEO)용 구조화 데이터 — 공연자 흐름을 HowTo로 제공
+const HOWTO_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  name: "어스테이지로 소규모 공연 예매 운영하기",
+  description:
+    "이벤트 생성부터 예매 링크 공유, 계좌이체 입금 확인, QR 입장 확인까지 어스테이지 운영 절차.",
+  inLanguage: "ko-KR",
+  step: STEPS.map((s, i) => ({
+    "@type": "HowToStep",
+    position: i + 1,
+    name: s.title,
+    text: s.desc,
+  })),
+};
+
 export default function GuidePage() {
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-10 sm:py-14">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(HOWTO_JSON_LD) }}
+      />
       <Link
         href="/"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"

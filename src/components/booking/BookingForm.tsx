@@ -63,10 +63,12 @@ export function BookingForm({
   const [step, setStep] = useState<Step>("idle");
   const [serverError, setServerError] = useState<string | null>(null);
   const [duplicateOpen, setDuplicateOpen] = useState(false);
+  // 중복 감지 시 보관해 두는 제출값 — "추가 예약" 확인 시 additional로 재제출
+  const [pendingValues, setPendingValues] = useState<BookingFormValues | null>(
+    null
+  );
+  const [modalError, setModalError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-
-  // 이미 예매한 이메일 → 추가 구매는 본인 확인이 되는 예약 조회에서만
-  const lookupHref = isLoggedIn ? "/dashboard/bookings" : `${pathname}/me`;
 
   const {
     register,
@@ -114,6 +116,10 @@ export function BookingForm({
       if (!confirmed) return;
     }
 
+    submitBooking(values, false);
+  };
+
+  const submitBooking = (values: BookingFormValues, additional: boolean) => {
     setServerError(null);
     startTransition(async () => {
       const res = await fetch("/api/bookings", {
@@ -131,20 +137,30 @@ export function BookingForm({
             Object.keys(values.custom_answers ?? {}).length > 0
               ? values.custom_answers
               : undefined,
+          additional,
         }),
       });
 
       const json = await res.json();
 
       if (!res.ok) {
-        if (res.status === 409 && json.code === "duplicate_email") {
+        // 이미 예매한 이메일 → 추가 예약 여부 확인 모달
+        if (!additional && res.status === 409 && json.code === "duplicate_email") {
+          setPendingValues(values);
+          setModalError(null);
           setDuplicateOpen(true);
           return;
         }
-        setServerError(json.error ?? "예매 처리 중 오류가 발생했습니다.");
+        const message = json.error ?? "예매 처리 중 오류가 발생했습니다.";
+        if (additional) {
+          setModalError(message);
+        } else {
+          setServerError(message);
+        }
         return;
       }
 
+      setDuplicateOpen(false);
       setStep("success");
     });
   };
@@ -429,30 +445,54 @@ export function BookingForm({
         </DialogContent>
       </Dialog>
 
-      {/* 중복 예매 안내 — 추가 구매는 예약 조회에서만 */}
+      {/* 중복 예매 → 추가 예약 확인 */}
       <Dialog open={duplicateOpen} onOpenChange={setDuplicateOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>이미 예매하신 내역이 있어요</DialogTitle>
+            <DialogTitle>이미 예매한 내역이 있습니다</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            이 이메일로 예매한 내역이 이미 있습니다. 추가 구매를 원하시면{" "}
-            {isLoggedIn ? "내 예약" : "예약 조회"}에서 본인 확인 후 &lsquo;추가
-            구매&rsquo; 버튼을 이용해 주세요.
-          </p>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              이 이메일로 예매한 내역이 이미 있어요. 추가 예약을 하시겠어요?
+              추가 예약은 기존 예약과 별도의 예약으로 생성됩니다.
+            </p>
+            {!isLoggedIn && (
+              <p className="text-xs text-muted-foreground">
+                본인 확인을 위해 기존 예약과{" "}
+                <span className="font-medium text-foreground">
+                  같은 비밀번호
+                </span>
+                를 입력했을 때만 추가 예약이 가능해요.
+              </p>
+            )}
+          </div>
+
+          {modalError && (
+            <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {modalError}
+            </p>
+          )}
+
           <div className="flex gap-3 pt-1">
             <Button
               type="button"
               variant="outline"
               className="flex-1"
               onClick={() => setDuplicateOpen(false)}
+              disabled={isPending}
             >
-              닫기
+              취소
             </Button>
-            <Button asChild className="flex-1">
-              <Link href={lookupHref}>
-                {isLoggedIn ? "내 예약으로 이동" : "예약 조회로 이동"}
-              </Link>
+            <Button
+              type="button"
+              className="flex-1"
+              disabled={isPending || !pendingValues}
+              onClick={() => {
+                if (pendingValues) submitBooking(pendingValues, true);
+              }}
+            >
+              {isPending && <Loader2 className="size-4 mr-2 animate-spin" />}
+              추가 예약하기
             </Button>
           </div>
         </DialogContent>

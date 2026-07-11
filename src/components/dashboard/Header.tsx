@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut, Calendar, Ticket, ChevronDown } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
+import { Wordmark } from "@/components/Wordmark";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -34,9 +35,7 @@ export function Header({ userEmail }: Props) {
         <div className="flex items-center gap-3">
           <Link href="/dashboard" className="flex items-center gap-2">
             <BrandMark className="size-8" />
-            <span className="text-lg font-bold tracking-tight text-primary">
-              어스테이지
-            </span>
+            <Wordmark className="text-xl" />
           </Link>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

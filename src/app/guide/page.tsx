@@ -185,20 +185,44 @@ function InfoCard({
   );
 }
 
-// 검색엔진·AI 검색(GEO)용 구조화 데이터 — 공연자 흐름을 HowTo로 제공
-const HOWTO_JSON_LD = {
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://privateustage.com";
+
+// 검색엔진·AI 검색(GEO)용 구조화 데이터 — HowTo(운영 절차) + BreadcrumbList(경로)
+const GUIDE_JSON_LD = {
   "@context": "https://schema.org",
-  "@type": "HowTo",
-  name: "어스테이지로 소규모 공연 예매 운영하기",
-  description:
-    "이벤트 생성부터 예매 링크 공유, 계좌이체 입금 확인, QR 입장 확인까지 어스테이지 운영 절차.",
-  inLanguage: "ko-KR",
-  step: STEPS.map((s, i) => ({
-    "@type": "HowToStep",
-    position: i + 1,
-    name: s.title,
-    text: s.desc,
-  })),
+  "@graph": [
+    {
+      "@type": "HowTo",
+      name: "어스테이지로 소규모 공연 예매 운영하기",
+      description:
+        "이벤트 생성부터 예매 링크 공유, 계좌이체 입금 확인, QR 입장 확인까지 어스테이지 운영 절차.",
+      inLanguage: "ko-KR",
+      step: STEPS.map((s, i) => ({
+        "@type": "HowToStep",
+        position: i + 1,
+        name: s.title,
+        text: s.desc,
+      })),
+    },
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: "홈",
+          item: SITE_URL,
+        },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: "사용 방법",
+          item: `${SITE_URL}/guide`,
+        },
+      ],
+    },
+  ],
 };
 
 export default function GuidePage() {
@@ -206,7 +230,7 @@ export default function GuidePage() {
     <main className="mx-auto w-full max-w-3xl px-4 py-10 sm:py-14">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(HOWTO_JSON_LD) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(GUIDE_JSON_LD) }}
       />
       <Link
         href="/"

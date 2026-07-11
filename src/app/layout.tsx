@@ -19,37 +19,59 @@ const geistMono = Geist_Mono({
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://privateustage.com";
 
+// 검색엔진 소유확인(Search Console / 네이버 서치어드바이저 등) — 값이 설정된 것만 노출
+const GOOGLE_SITE_VERIFICATION = process.env.GOOGLE_SITE_VERIFICATION;
+const NAVER_SITE_VERIFICATION = process.env.NAVER_SITE_VERIFICATION;
+
+const verificationOther: Record<string, string> = {};
+if (NAVER_SITE_VERIFICATION) {
+  verificationOther["naver-site-verification"] = NAVER_SITE_VERIFICATION;
+}
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "어스테이지 — 소규모 공연 예매 · QR 입장 시스템",
-    template: "%s | 어스테이지",
+    default: "어스테이지(us.tage) — 소규모 공연 예매 · QR 입장 시스템",
+    template: "%s | 어스테이지 us.tage",
   },
   description:
-    "소규모 공연·강연을 위한 링크 공유형 예매 서비스. 공연자가 링크를 공유하면 참석자는 그 링크로만 예매하고, 계좌이체 입금 확인 후 QR 코드로 입장합니다.",
+    "어스테이지(us.tage)는 소규모 공연·강연을 위한 링크 공유형 예매 서비스입니다. 공연자가 예매 링크를 공유하면 참석자는 그 링크로만 예매하고, 계좌이체 입금 확인 후 QR 코드로 입장합니다. 비회원도 이메일과 비밀번호로 예매·조회할 수 있습니다.",
+  applicationName: "어스테이지",
+  category: "business",
   keywords: [
+    "어스테이지",
+    "us.tage",
+    "ustage",
     "공연 예매",
-    "소규모 공연",
+    "소규모 공연 예매",
+    "강연 예매",
     "티켓 예매",
     "QR 입장",
+    "QR 티켓",
     "예매 시스템",
-    "공연 티켓",
+    "예매 링크",
+    "계좌이체 예매",
     "비공개 예매",
-    "어스테이지",
-    "UStage",
+    "무료 예매 시스템",
+    "선착순 예매",
   ],
+  authors: [{ name: "어스테이지" }],
+  creator: "어스테이지",
+  publisher: "어스테이지",
+  formatDetection: { telephone: false, email: false, address: false },
+  alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     locale: "ko_KR",
     url: SITE_URL,
-    siteName: "어스테이지",
-    title: "어스테이지 — 소규모 공연 예매 · QR 입장 시스템",
+    siteName: "어스테이지 (us.tage)",
+    title: "어스테이지(us.tage) — 소규모 공연 예매 · QR 입장 시스템",
     description:
       "공연자가 링크를 공유하면, 참석자는 그 링크로만 예매할 수 있어요. 계좌이체 확인부터 QR 입장까지 한 번에.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "어스테이지 — 소규모 공연 예매 · QR 입장 시스템",
+    title: "어스테이지(us.tage) — 소규모 공연 예매 · QR 입장 시스템",
     description:
       "공연자가 링크를 공유하면, 참석자는 그 링크로만 예매할 수 있어요. 계좌이체 확인부터 QR 입장까지 한 번에.",
   },
@@ -57,6 +79,12 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "default",
     title: "어스테이지",
+  },
+  verification: {
+    ...(GOOGLE_SITE_VERIFICATION ? { google: GOOGLE_SITE_VERIFICATION } : {}),
+    ...(Object.keys(verificationOther).length
+      ? { other: verificationOther }
+      : {}),
   },
 };
 

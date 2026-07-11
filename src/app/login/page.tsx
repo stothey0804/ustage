@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { createClient } from "@/lib/supabase/server";
+import { safeInternalPath } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "로그인",
@@ -22,7 +23,7 @@ export default async function LoginPage({ searchParams }: Props) {
   } = await supabase.auth.getUser();
 
   if (user) {
-    redirect(next && next.startsWith("/") ? next : "/dashboard");
+    redirect(safeInternalPath(next));
   }
 
   return (
@@ -41,7 +42,7 @@ export default async function LoginPage({ searchParams }: Props) {
           </p>
         ) : null}
 
-        <LoginForm next={next ?? "/dashboard"} />
+        <LoginForm next={safeInternalPath(next)} />
 
         <div className="flex flex-col gap-3 text-center text-sm text-muted-foreground">
           <p>

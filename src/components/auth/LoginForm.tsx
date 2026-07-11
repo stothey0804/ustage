@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createClient } from "@/lib/supabase/client";
+import { safeInternalPath } from "@/lib/utils";
 import { loginSchema, type LoginValues } from "@/lib/validations/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,8 +43,8 @@ export function LoginForm({ next = "/dashboard" }: Props) {
       return;
     }
 
-    // 로그인 성공 — 세션 쿠키가 세팅됨. 페이지 이동.
-    window.location.assign(next);
+    // 로그인 성공 — 세션 쿠키가 세팅됨. 내부 경로로만 이동(open redirect 방지).
+    window.location.assign(safeInternalPath(next));
   }
 
   return (

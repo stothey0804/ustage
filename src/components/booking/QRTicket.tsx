@@ -21,7 +21,7 @@ export function QRTicket({ name, tickets }: QRTicketProps) {
       {tickets.map((ticket) => (
         <div
           key={ticket.qr_token}
-          className="flex flex-col items-center gap-3 rounded-xl border bg-white p-6 text-center"
+          className="flex flex-col items-center gap-3 rounded-2xl border bg-white p-6 text-center"
         >
           <p className="text-sm font-semibold text-gray-800">
             {name}

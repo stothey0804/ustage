@@ -80,7 +80,11 @@ export function DateTimePicker({
           {displayValue || placeholder}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto max-w-[calc(100vw-2rem)] p-0" align="start">
+      <PopoverContent
+        className="w-auto max-w-[calc(100vw-2rem)] gap-0 overflow-hidden p-0"
+        align="start"
+        collisionPadding={8}
+      >
         <Calendar
           mode="single"
           selected={selectedDate}

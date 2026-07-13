@@ -1,7 +1,18 @@
-import { format } from "date-fns";
+import { format, parse, isValid } from "date-fns";
 import { ko } from "date-fns/locale";
 
 const KST_OFFSET = 9 * 60 * 60 * 1000;
+
+/**
+ * DateTimePicker가 만든 "YYYY-MM-DDTHH:mm"(로컬 벽시계 시각)을
+ * 사람이 읽기 좋은 한국어 문자열로 변환해 저장/표시한다.
+ * 파싱 불가하면 원본을 그대로 반환(자유 입력 하위호환).
+ */
+export function formatDepositTime(v: string): string {
+  if (!v) return v;
+  const d = parse(v, "yyyy-MM-dd'T'HH:mm", new Date());
+  return isValid(d) ? format(d, "M월 d일 (EEE) HH:mm", { locale: ko }) : v;
+}
 
 /**
  * ISO 문자열을 KST 기준으로 포맷.

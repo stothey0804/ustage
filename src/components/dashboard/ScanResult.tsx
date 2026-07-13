@@ -65,7 +65,7 @@ export function ScanResult({ data, onReset, autoNext = false }: ScanResultProps)
   const Icon = config.icon;
 
   return (
-    <div className={`rounded-xl border-2 p-6 space-y-4 ${config.bg}`}>
+    <div className={`rounded-2xl border-2 p-6 space-y-4 ${config.bg}`}>
       <div className="flex items-start gap-3">
         <Icon className={`size-8 shrink-0 ${config.iconColor}`} />
         <div className="flex-1 min-w-0">

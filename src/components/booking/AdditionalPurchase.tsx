@@ -4,9 +4,11 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Plus, Loader2 } from "lucide-react";
 
+import { formatDepositTime } from "@/lib/date";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import {
   Dialog,
   DialogContent,
@@ -72,7 +74,7 @@ export function AdditionalPurchase({
           password: password || undefined,
           quantity,
           depositor_name: depositorName,
-          deposited_at: depositedAt,
+          deposited_at: formatDepositTime(depositedAt),
         }),
       });
 
@@ -166,17 +168,11 @@ export function AdditionalPurchase({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="add-deposited-at">
-                    입금 예상 시간 *{" "}
-                    <span className="text-muted-foreground font-normal text-xs">
-                      (예: 오늘 오후 3시)
-                    </span>
-                  </Label>
-                  <Input
-                    id="add-deposited-at"
+                  <Label htmlFor="add-deposited-at">입금 예상 시간 *</Label>
+                  <DateTimePicker
                     value={depositedAt}
-                    onChange={(e) => setDepositedAt(e.target.value)}
-                    placeholder="예: 오늘 오후 3시 / 내일 오전 11시"
+                    onChange={setDepositedAt}
+                    placeholder="입금 예상 날짜·시간 선택"
                   />
                 </div>
               </>

@@ -306,6 +306,7 @@ export function EventForm({
                 size="icon"
                 className="absolute -top-2 -right-2 size-6"
                 onClick={removePoster}
+                aria-label="포스터 이미지 삭제"
               >
                 <X className="size-3" />
               </Button>

@@ -42,7 +42,7 @@ export default async function BookingsPage() {
           </div>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           {bookings.map((booking) => {
             const event = booking.events as {
               id: string;

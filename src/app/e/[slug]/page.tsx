@@ -16,7 +16,6 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { autoTransitionStatus } from "@/lib/auto-status";
 import { sanitizeEventHtml } from "@/lib/sanitize";
-import { maskBankInfo } from "@/lib/utils";
 import { EventStatusBadge } from "@/components/StatusBadge";
 import { Separator } from "@/components/ui/separator";
 import { BookingForm } from "@/components/booking/BookingForm";
@@ -112,7 +111,7 @@ export default async function EventPublicPage({
     <div className="mx-auto max-w-lg px-4 py-8 space-y-6">
       {/* 포스터 */}
       {event.poster_url && (
-        <div className="relative w-full overflow-hidden rounded-xl border">
+        <div className="relative w-full overflow-hidden rounded-2xl border">
           <Image
             src={event.poster_url}
             alt={`${event.title} 포스터`}
@@ -208,7 +207,7 @@ export default async function EventPublicPage({
         <BookingForm
           eventId={event.id}
           price={event.price}
-          bankInfo={maskBankInfo(event.bank_info)}
+          bankInfo={event.bank_info}
           customFields={customFields}
           isLoggedIn={!!user}
           userEmail={user?.email ?? undefined}

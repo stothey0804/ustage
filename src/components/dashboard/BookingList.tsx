@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
-import { Trash2, Check, ChevronRight, LogIn, KeyRound } from "lucide-react";
+import { Trash2, Check, ChevronRight, LogIn, KeyRound, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import type { Tables } from "@/types/database";
@@ -33,6 +33,8 @@ interface BookingListProps {
   /** 1매 가격 (원) — 예매별 입금액 표시용 */
   price?: number;
   customFields?: CustomField[];
+  /** 다운로드 파일명에 사용 */
+  eventTitle?: string;
 }
 
 type FilterStatus = "all" | "pending" | "confirmed" | "cancelled" | "checked_in" | "not_checked_in";
@@ -63,17 +65,92 @@ function buildFieldLabelMap(fields?: CustomField[]): Record<string, string> {
   return Object.fromEntries(fields.map((f) => [f.id, f.label]));
 }
 
+function bookingStatusLabel(status: string, isFree: boolean): string {
+  if (status === "confirmed") return isFree ? "참가확정" : "입금완료";
+  if (status === "cancelled") return "취소";
+  return "입금대기";
+}
+
+/** CSV 셀 이스케이프 — 쉼표/따옴표/개행 포함 시 큰따옴표로 감싼다. */
+function csvCell(value: unknown): string {
+  const s = value == null ? "" : String(value);
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function buildBookingsCsv(
+  bookings: BookingWithTickets[],
+  fields: CustomField[],
+  opts: { isFree: boolean; price: number },
+): string {
+  const headers = [
+    "이름",
+    "이메일",
+    "매수",
+    "입금자명",
+    "입금시간",
+    "상태",
+    "입장",
+    ...(opts.isFree ? [] : ["입금액(원)"]),
+    ...fields.map((f) => f.label),
+    "신청일시",
+  ];
+  const lines = bookings.map((b) => {
+    const tickets = b.booking_tickets ?? [];
+    const checkedIn = tickets.filter((t) => t.checked_in).length;
+    const quantity = b.quantity ?? 1;
+    const answers = (b.custom_answers ?? {}) as Record<string, unknown>;
+    const email = (b as BookingWithTickets & { email?: string }).email ?? "";
+    return [
+      b.name,
+      email,
+      quantity,
+      b.depositor_name,
+      b.deposited_at,
+      bookingStatusLabel(b.status, opts.isFree),
+      `${checkedIn}/${quantity}`,
+      ...(opts.isFree ? [] : [opts.price * quantity]),
+      ...fields.map((f) => {
+        const v = answers[f.id];
+        if (typeof v === "boolean") return v ? "예" : "아니오";
+        return v ?? "";
+      }),
+      b.created_at
+        ? format(new Date(b.created_at), "yyyy-MM-dd HH:mm", { locale: ko })
+        : "",
+    ]
+      .map(csvCell)
+      .join(",");
+  });
+  return [headers.map(csvCell).join(","), ...lines].join("\r\n");
+}
+
+function downloadCsv(filename: string, csv: string): void {
+  // UTF-8 BOM — Excel에서 한글이 깨지지 않도록
+  const blob = new Blob(["﻿" + csv], {
+    type: "text/csv;charset=utf-8;",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function BookingList({
   initialBookings,
   isFree = false,
   price = 0,
   customFields,
+  eventTitle,
 }: BookingListProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [searchName, setSearchName] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [resetTarget, setResetTarget] = useState<{ id: string; name: string } | null>(null);
+  const [resetPw, setResetPw] = useState("");
   const [selectedBooking, setSelectedBooking] = useState<BookingWithTickets | null>(null);
   const [sortBy, setSortBy] = useState<"created" | "name" | "email">("created");
 
@@ -159,6 +236,37 @@ export function BookingList({
     });
   }
 
+  function handleResetConfirm() {
+    if (!resetTarget) return;
+    if (resetPw.trim().length < 4) {
+      toast.error("비밀번호는 4자 이상이어야 합니다.");
+      return;
+    }
+    const { id } = resetTarget;
+    const pw = resetPw.trim();
+    startTransition(async () => {
+      const result = await resetBookingPassword(id, pw);
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success("비밀번호가 초기화되었습니다.");
+      setResetTarget(null);
+      setResetPw("");
+    });
+  }
+
+  function handleExport() {
+    if (filtered.length === 0) {
+      toast.error("다운로드할 명단이 없습니다.");
+      return;
+    }
+    const date = format(new Date(), "yyyyMMdd", { locale: ko });
+    const safeTitle = (eventTitle ?? "이벤트").replace(/[\\/:*?"<>|]/g, "_");
+    const csv = buildBookingsCsv(filtered, customFields ?? [], { isFree, price });
+    downloadCsv(`${safeTitle}_신청자명단_${date}.csv`, csv);
+  }
+
   return (
     <div className="space-y-4">
       {/* 필터 + 검색 */}
@@ -186,8 +294,8 @@ export function BookingList({
         </span>
       </div>
 
-      {/* 정렬 */}
-      <div className="flex gap-1">
+      {/* 정렬 + 다운로드 */}
+      <div className="flex items-center gap-1">
         {([
           { value: "created", label: "최신순" },
           { value: "name", label: "이름순" },
@@ -203,17 +311,27 @@ export function BookingList({
             {s.label}
           </Button>
         ))}
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="ml-auto h-7 text-xs"
+          onClick={handleExport}
+        >
+          <Download className="size-3.5" />
+          명단 다운로드
+        </Button>
       </div>
 
       {/* 목록 — 간략 카드 */}
       {filtered.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+        <div className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
           {initialBookings.length === 0
             ? "아직 예매가 없습니다."
             : "조건에 맞는 예매가 없습니다."}
         </div>
       ) : (
-        <div className="divide-y rounded-lg border">
+        <div className="divide-y rounded-2xl border">
           {filtered.map((booking) => {
             const quantity = booking.quantity ?? 1;
             const tickets = (booking.booking_tickets ?? []).sort(
@@ -223,11 +341,18 @@ export function BookingList({
             const email = (booking as BookingWithTickets & { email?: string }).email;
 
             return (
-              <button
-                type="button"
+              <div
                 key={booking.id}
-                className="w-full p-3 flex items-center gap-3 text-left hover:bg-muted/50 transition-colors"
+                role="button"
+                tabIndex={0}
+                className="w-full p-3 flex items-center gap-3 text-left hover:bg-muted/50 transition-colors cursor-pointer"
                 onClick={() => setSelectedBooking(booking)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelectedBooking(booking);
+                  }
+                }}
               >
                 <div className="flex-1 min-w-0">
                   <span className="font-medium text-sm">
@@ -282,7 +407,7 @@ export function BookingList({
                   </Button>
                 )}
                 <ChevronRight className="size-4 text-muted-foreground shrink-0" />
-              </button>
+              </div>
             );
           })}
         </div>
@@ -299,16 +424,10 @@ export function BookingList({
         onStatusChange={handleStatusChange}
         onForceCheckIn={handleForceCheckIn}
         onResetPassword={(bookingId) => {
-          const newPw = window.prompt("새 비밀번호를 입력하세요 (4자 이상):");
-          if (!newPw) return;
-          startTransition(async () => {
-            const result = await resetBookingPassword(bookingId, newPw);
-            if (result.error) {
-              toast.error(result.error);
-              return;
-            }
-            toast.success("비밀번호가 초기화되었습니다.");
-          });
+          const name = selectedBooking?.name ?? "";
+          setSelectedBooking(null);
+          setResetPw("");
+          setResetTarget({ id: bookingId, name });
         }}
         onDelete={(id, name) => {
           setSelectedBooking(null);
@@ -345,6 +464,52 @@ export function BookingList({
               disabled={isPending}
             >
               삭제
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 비밀번호 초기화 Dialog (네이티브 prompt 대체) */}
+      <Dialog
+        open={resetTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setResetTarget(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>비밀번호 초기화</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">
+                {resetTarget?.name}
+              </span>
+              님의 예약 조회 비밀번호를 새로 설정합니다. 변경한 비밀번호를
+              참석자에게 전달해 주세요.
+            </p>
+            <Input
+              type="password"
+              value={resetPw}
+              onChange={(e) => setResetPw(e.target.value)}
+              placeholder="새 비밀번호 (4자 이상)"
+              autoComplete="new-password"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleResetConfirm();
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setResetTarget(null)}
+              disabled={isPending}
+            >
+              취소
+            </Button>
+            <Button onClick={handleResetConfirm} disabled={isPending}>
+              {isPending && <Loader2 className="size-4 mr-2 animate-spin" />}
+              초기화
             </Button>
           </DialogFooter>
         </DialogContent>

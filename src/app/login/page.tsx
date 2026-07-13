@@ -46,6 +46,14 @@ export default async function LoginPage({ searchParams }: Props) {
 
         <div className="flex flex-col gap-3 text-center text-sm text-muted-foreground">
           <p>
+            <Link
+              href="/forgot-password"
+              className="font-medium underline underline-offset-4"
+            >
+              비밀번호를 잊으셨나요?
+            </Link>
+          </p>
+          <p>
             아직 계정이 없으신가요?{" "}
             <Link href="/signup" className="font-medium underline underline-offset-4">
               회원가입

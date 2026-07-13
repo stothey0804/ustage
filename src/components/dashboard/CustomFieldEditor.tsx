@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Trash2, GripVertical } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -79,8 +79,7 @@ export function CustomFieldEditor({ value, onChange }: CustomFieldEditorProps) {
           className="rounded-lg border bg-muted/30 p-4 space-y-3"
         >
           <div className="flex items-center gap-2">
-            <GripVertical className="size-4 text-muted-foreground shrink-0" />
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs font-medium text-muted-foreground">
               필드 {index + 1}
             </span>
             <div className="ml-auto">
@@ -90,6 +89,7 @@ export function CustomFieldEditor({ value, onChange }: CustomFieldEditorProps) {
                 size="icon"
                 className="size-7 text-destructive hover:text-destructive"
                 onClick={() => removeField(field.id)}
+                aria-label={`필드 ${index + 1} 삭제`}
               >
                 <Trash2 className="size-4" />
               </Button>

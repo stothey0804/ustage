@@ -166,7 +166,7 @@ function InfoCard({
   items: string[];
 }) {
   return (
-    <div className="rounded-3xl border bg-card p-6 shadow-sm">
+    <div className="rounded-2xl border bg-card p-6 shadow-sm">
       <div className="flex items-center gap-3">
         <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
           <Icon className="size-5" />
@@ -364,7 +364,7 @@ export default function GuidePage() {
         <section>
           <SectionHead eyebrow="상태" title="배지로 한눈에" />
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-3xl border bg-card p-6 shadow-sm">
+            <div className="rounded-2xl border bg-card p-6 shadow-sm">
               <h3 className="mb-4 flex items-center gap-2 font-semibold">
                 <Calendar className="size-4 text-primary" />
                 이벤트 상태
@@ -378,7 +378,7 @@ export default function GuidePage() {
                 ))}
               </ul>
             </div>
-            <div className="rounded-3xl border bg-card p-6 shadow-sm">
+            <div className="rounded-2xl border bg-card p-6 shadow-sm">
               <h3 className="mb-4 flex items-center gap-2 font-semibold">
                 <Ticket className="size-4 text-primary" />
                 예매 상태
@@ -414,7 +414,7 @@ export default function GuidePage() {
         </section>
 
         {/* 하단 CTA */}
-        <section className="rounded-3xl border bg-primary/5 p-8 text-center">
+        <section className="rounded-2xl border bg-primary/5 p-8 text-center">
           <BrandMark className="mx-auto size-12" />
           <h2 className="mt-4 text-xl font-bold tracking-tight sm:text-2xl">
             링크만 공유하면, 예매부터 입장까지 끝.

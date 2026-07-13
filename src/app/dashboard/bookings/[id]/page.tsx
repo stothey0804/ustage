@@ -13,7 +13,6 @@ import { AddToCalendar } from "@/components/booking/AddToCalendar";
 import { VenueMapLinks } from "@/components/booking/VenueMapLinks";
 import { CopyButton } from "@/components/ui/copy-button";
 import { BookingStatusBadge } from "@/components/StatusBadge";
-import { maskBankInfo } from "@/lib/utils";
 
 export default async function BookingDetailPage({
   params,
@@ -221,9 +220,9 @@ export default async function BookingDetailPage({
             <h2 className="text-sm font-semibold">입금 계좌</h2>
             <div className="flex items-center gap-2 bg-muted rounded-md px-3 py-2">
               <p className="text-sm text-muted-foreground flex-1">
-                {maskBankInfo(event.bank_info)}
+                {event.bank_info}
               </p>
-              <CopyButton value={maskBankInfo(event.bank_info)} label="계좌복사" />
+              <CopyButton value={event.bank_info} label="계좌복사" />
             </div>
           </div>
         </>

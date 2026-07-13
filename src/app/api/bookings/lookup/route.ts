@@ -4,7 +4,6 @@ import bcrypt from "bcryptjs";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
-import { maskBankInfo } from "@/lib/utils";
 
 const lookupSchema = z.object({
   event_id: z.string().uuid(),
@@ -116,13 +115,9 @@ export async function POST(req: Request) {
 
       const { password_hash, ...safeBooking } = booking;
       void password_hash;
-      // 예금주명은 마스킹해서 반환 (원본 이름이 클라이언트에 내려가지 않도록)
+      // bank_info는 소유자가 입력한 그대로 노출한다. 마스킹이 필요하면 소유자가 직접 입력.
       return {
         ...safeBooking,
-        events: {
-          ...safeBooking.events,
-          bank_info: maskBankInfo(safeBooking.events.bank_info),
-        },
         tickets: tickets ?? [],
       };
     })

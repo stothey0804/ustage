@@ -6,9 +6,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { bookingApiSchema } from "@/lib/validations/booking";
 import { sendBookingConfirmation, getBaseUrl } from "@/lib/email";
 import { formatKST } from "@/lib/date";
-import { deriveAutoStatus } from "@/lib/auto-status";
+import { autoTransitionStatus } from "@/lib/auto-status";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
-import { maskBankInfo } from "@/lib/utils";
 import type { CustomField } from "@/lib/validations/event";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
@@ -31,6 +30,11 @@ type CreateResult =
   | { status: number; error: string; code?: string };
 
 const DUPLICATE_EMAIL_ERROR = "이미 동일한 이메일로 예매된 내역이 있습니다.";
+
+// 추가구매 비밀번호 대조 시 후보가 없어도 동일한 시간을 소비하기 위한 더미 해시
+// (예약 존재 여부가 응답 시간으로 새지 않도록).
+const DUMMY_HASH =
+  "$2b$10$oTQzYOh9/OwmdGkVxQ0CFeN15copdbNHCuOKsxkQNrRUsOjoFwgyG";
 
 function capacityError(remaining: number): string {
   return remaining <= 0
@@ -232,7 +236,7 @@ export async function POST(req: Request) {
   // 이벤트 조회
   const { data: event, error: eventError } = await supabase
     .from("events")
-    .select("id, title, slug, status, capacity, booking_start, booking_end, bank_info, price, event_date, venue, venue_address, custom_fields")
+    .select("id, title, slug, status, capacity, booking_start, booking_end, bank_info, price, event_date, event_end_date, venue, venue_address, custom_fields")
     .eq("id", data.event_id)
     .single();
 
@@ -244,8 +248,9 @@ export async function POST(req: Request) {
   }
 
   // 예매 가능 조건 1: 상태 확인
-  // 저장된 status가 갱신되지 않았어도(자동 전환은 lazy) 시각 기준 파생 상태로 판정
-  const effectiveStatus = deriveAutoStatus(event) ?? event.status;
+  // 저장된 status가 갱신되지 않았어도(자동 전환은 lazy) 파생 상태로 판정하고,
+  // draft→open 등 전환을 DB에 반영한다 — RPC가 저장된 status를 검사하므로 필수.
+  const effectiveStatus = (await autoTransitionStatus(event)) ?? event.status;
   if (effectiveStatus !== "open") {
     return NextResponse.json(
       {
@@ -321,6 +326,7 @@ export async function POST(req: Request) {
   } | null = null;
 
   if (data.additional) {
+    // 1) 회원: 세션 user_id의 기존 예약 (비밀번호 불필요)
     if (user) {
       const { data: mine } = await admin
         .from("bookings")
@@ -338,21 +344,37 @@ export async function POST(req: Request) {
             (mine[0].custom_answers as NewBooking["custom_answers"]) ?? null,
         };
       }
-    } else {
+    }
+
+    // 2) 비밀번호 본인 확인 — 비회원, 그리고 "비회원으로 예매한 뒤 로그인한 회원"
+    //    (회원 매칭이 실패했고 비밀번호가 제공된 경우)도 여기서 처리한다.
+    if (!original && data.password) {
+      // 계정 단위 rate limit — 추가구매 경로를 통한 비밀번호 대입 차단
+      const acctOk = await checkRateLimit(
+        `booking:additional:${event.id}:${email}`,
+        5,
+        15 * 60
+      );
+      if (!acctOk) {
+        return NextResponse.json(
+          { error: "본인 확인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요." },
+          { status: 429 }
+        );
+      }
+
       const emailPattern = email.replace(/([\\%_])/g, "\\$1");
       const { data: candidates } = await admin
         .from("bookings")
         .select("name, password_hash, custom_answers")
         .eq("event_id", event.id)
         .ilike("email", emailPattern)
-        .is("user_id", null)
         .neq("status", "cancelled")
         .order("created_at", { ascending: false });
 
       for (const candidate of candidates ?? []) {
         if (
           candidate.password_hash &&
-          (await bcrypt.compare(data.password!, candidate.password_hash))
+          (await bcrypt.compare(data.password, candidate.password_hash))
         ) {
           original = {
             name: candidate.name,
@@ -363,6 +385,11 @@ export async function POST(req: Request) {
           };
           break;
         }
+      }
+
+      // 타이밍 사이드채널 완화: 후보 없음/불일치도 동일한 시간 소비
+      if (!original) {
+        await bcrypt.compare(data.password, DUMMY_HASH);
       }
     }
 
@@ -460,7 +487,7 @@ export async function POST(req: Request) {
       eventDate: formatKST(event.event_date),
       eventVenue: event.venue_address || event.venue,
       isFree: event.price === 0,
-      bankInfo: maskBankInfo(event.bank_info),
+      bankInfo: event.bank_info,
       totalAmount: event.price * data.quantity,
       confirmUrl,
       tickets: emailTickets,

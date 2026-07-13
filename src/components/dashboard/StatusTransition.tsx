@@ -7,40 +7,22 @@ import { Loader2, ArrowRight, Lock, CheckCircle2 } from "lucide-react";
 
 import { updateEventStatus } from "@/app/actions/event";
 import { Button } from "@/components/ui/button";
-import type { Tables } from "@/types/database";
-
-type Event = Tables<"events">;
 
 interface StatusTransitionProps {
   eventId: string;
   currentStatus: "draft" | "open" | "closed" | "ended";
-  event: Event;
 }
 
 export function StatusTransition({
   eventId,
   currentStatus,
-  event,
 }: StatusTransitionProps) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  function canOpen(): { ok: boolean; reason?: string } {
-    if (!event.booking_start || !event.booking_end) {
-      return { ok: false, reason: "예매 기간을 먼저 설정해 주세요." };
-    }
-    return { ok: true };
-  }
-
   function handleTransition(newStatus: "draft" | "open" | "closed" | "ended") {
-    if (newStatus === "open") {
-      const check = canOpen();
-      if (!check.ok) {
-        toast.error(check.reason);
-        return;
-      }
-    }
-
+    // 오픈 조건 검증은 서버(updateEventStatus)에서 수행한다.
+    // 예매 기간 미설정도 즉시 수동 오픈으로 허용하므로 여기서 막지 않는다.
     startTransition(async () => {
       const result = await updateEventStatus(eventId, newStatus);
       if (result.error) {
@@ -61,7 +43,7 @@ export function StatusTransition({
   // 행사 종료 — 변경 불가
   if (currentStatus === "ended") {
     return (
-      <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-4 py-3">
+      <div className="flex items-center gap-2 rounded-2xl border bg-muted/30 px-4 py-3">
         <CheckCircle2 className="size-4 text-muted-foreground" />
         <span className="text-xs text-muted-foreground">행사가 종료되었습니다</span>
       </div>
@@ -69,7 +51,7 @@ export function StatusTransition({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 px-4 py-3">
+    <div className="flex flex-wrap items-center gap-2 rounded-2xl border bg-muted/30 px-4 py-3">
       <span className="text-xs text-muted-foreground mr-auto">상태 변경</span>
 
       {currentStatus === "draft" && (

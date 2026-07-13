@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { computeInitialStatus } from "@/lib/auto-status";
 import { eventSchema, type EventFormValues } from "@/lib/validations/event";
 
 type ActionResult = { error?: string; success?: boolean; id?: string };
@@ -43,6 +44,19 @@ export async function createEvent(
     return { error: "계좌 정보를 입력해 주세요." };
   }
 
+  const eventDate = toKST(v.event_date)!;
+  const eventEndDate = toKST(v.event_end_date);
+  const bookingStart = toKST(v.booking_start);
+  const bookingEnd = toKST(v.booking_end);
+
+  // 예매 시작이 이미 지났으면 즉시 open, 행사가 이미 지났으면 ended — 그 외엔 draft.
+  const status = computeInitialStatus({
+    event_date: eventDate,
+    event_end_date: eventEndDate,
+    booking_start: bookingStart,
+    booking_end: bookingEnd,
+  });
+
   const { data, error } = await supabase
     .from("events")
     .insert({
@@ -51,8 +65,8 @@ export async function createEvent(
       title: v.title,
       description: v.description ?? null,
       poster_url: v.poster_url ?? null,
-      event_date: toKST(v.event_date)!,
-      event_end_date: toKST(v.event_end_date),
+      event_date: eventDate,
+      event_end_date: eventEndDate,
       venue: v.venue,
       venue_address: v.venue_address ?? null,
       venue_lat: v.venue_lat ?? null,
@@ -61,10 +75,10 @@ export async function createEvent(
       bank_info: v.bank_info,
       contact: v.contact,
       capacity: v.capacity ?? null,
-      booking_start: toKST(v.booking_start),
-      booking_end: toKST(v.booking_end),
+      booking_start: bookingStart,
+      booking_end: bookingEnd,
       custom_fields: v.custom_fields ?? null,
-      status: "draft",
+      status,
     })
     .select("id")
     .single();
@@ -243,23 +257,24 @@ export async function updateEventStatus(
 
   const { data: event } = await supabase
     .from("events")
-    .select("id, status, booking_start, booking_end, event_date, capacity")
+    .select(
+      "id, status, booking_start, booking_end, event_date, event_end_date, capacity"
+    )
     .eq("id", id)
     .eq("performer_id", user.id)
     .single();
 
   if (!event) return { error: "이벤트를 찾을 수 없거나 권한이 없습니다." };
 
-  // 오픈(재오픈 포함) 조건 서버 검증 — 클라이언트 검증 우회 대비
+  // 오픈(재오픈 포함) 조건 서버 검증 — 클라이언트 검증 우회 대비.
+  // 예매 기간은 필수가 아니다: 미설정 시 즉시 수동 오픈(수동 관리)을 허용한다.
   if (status === "open") {
-    if (!event.booking_start || !event.booking_end) {
-      return { error: "예매 시작/종료 일시를 먼저 설정해 주세요." };
-    }
     const now = new Date();
-    if (event.event_date && new Date(event.event_date) < now) {
+    const eventEnd = event.event_end_date ?? event.event_date;
+    if (eventEnd && new Date(eventEnd) < now) {
       return { error: "이미 종료된 행사는 오픈할 수 없습니다." };
     }
-    if (new Date(event.booking_end) < now) {
+    if (event.booking_end && new Date(event.booking_end) < now) {
       return { error: "예매 종료 일시가 지났습니다. 예매 기간을 수정해 주세요." };
     }
     if (event.capacity) {

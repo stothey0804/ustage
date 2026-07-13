@@ -23,6 +23,7 @@ import { EventStatusBadge } from "@/components/StatusBadge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusTransition } from "@/components/dashboard/StatusTransition";
+import { EventLifecycle } from "@/components/dashboard/EventLifecycle";
 import { BookingLinkButton } from "@/components/dashboard/BookingLinkButton";
 import { BookingList } from "@/components/dashboard/BookingList";
 import { DeleteEventButton } from "@/components/dashboard/DeleteEventButton";
@@ -114,8 +115,11 @@ export default async function EventDetailPage({
         <DeleteEventButton eventId={id} hasBookings={bookingCount > 0} />
       </div>
 
+      {/* 진행 상태 흐름 */}
+      <EventLifecycle event={event} />
+
       {/* 상태 전환 */}
-      <StatusTransition eventId={id} currentStatus={status} event={event} />
+      <StatusTransition eventId={id} currentStatus={status} />
 
       <Separator />
 
@@ -211,6 +215,7 @@ export default async function EventDetailPage({
             initialBookings={bookings ?? []}
             isFree={event.price === 0}
             price={event.price}
+            eventTitle={event.title}
             customFields={(event.custom_fields ?? []) as import("@/lib/validations/event").CustomField[]}
           />
         </TabsContent>

@@ -28,7 +28,9 @@ export default async function EventsPage() {
 
   const { data: events, error } = await supabase
     .from("events")
-    .select("id, title, event_date, venue, status, capacity, slug, booking_end")
+    .select(
+      "id, title, event_date, event_end_date, venue, status, capacity, slug, booking_start, booking_end"
+    )
     .eq("performer_id", user.id)
     .order("created_at", { ascending: false });
 

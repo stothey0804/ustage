@@ -17,9 +17,9 @@ export default function DashboardPage() {
               <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-primary/10">
                 <Calendar className="size-5 text-primary" />
               </div>
-              <CardTitle>내 이벤트 관리</CardTitle>
+              <CardTitle>내 스테이지 관리</CardTitle>
               <CardDescription>
-                이벤트를 만들고 예매 현황을 관리하세요.
+                스테이지를 만들고 예매 현황을 관리하세요.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -33,7 +33,7 @@ export default function DashboardPage() {
               </div>
               <CardTitle>내 예약 조회</CardTitle>
               <CardDescription>
-                예매한 이벤트를 확인하고 QR 코드를 받으세요.
+                예매한 스테이지를 확인하고 QR 코드를 받으세요.
               </CardDescription>
             </CardHeader>
           </Card>

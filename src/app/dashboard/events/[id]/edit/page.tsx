@@ -48,6 +48,7 @@ export default async function EditEventPage({
   const defaultValues: Partial<EventFormValues> = {
     title: event.title,
     description: event.description ?? "",
+    booking_notice: event.booking_notice ?? "",
     poster_url: event.poster_url ?? "",
     event_date: toDatetimeLocal(event.event_date) ?? "",
     event_end_date: toDatetimeLocal(event.event_end_date) ?? undefined,
@@ -72,10 +73,10 @@ export default async function EditEventPage({
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
           <ChevronLeft className="size-4" />
-          이벤트 상세
+          스테이지 상세
         </Link>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">
-          이벤트 수정
+          스테이지 수정
         </h1>
       </div>
 

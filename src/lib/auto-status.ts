@@ -65,7 +65,7 @@ export function computeInitialStatus(
 }
 
 /**
- * 이벤트 상태를 조건에 따라 자동 전환 (lazy evaluation).
+ * 스테이지 상태를 조건에 따라 자동 전환 (lazy evaluation).
  * 갱신은 service_role로 수행 — 공개 페이지(익명 방문자 세션)에서 호출하면
  * RLS에 막혀 0-row 업데이트로 조용히 무시되는 문제를 피하기 위함.
  * 조건은 서버에서 계산한 값이므로 권한 상승 위험 없음.

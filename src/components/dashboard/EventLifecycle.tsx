@@ -15,8 +15,8 @@ type Phase = {
 };
 
 /**
- * 이벤트 생애주기 단계 표시.
- * 오픈 전 → 예매 오픈 → 예매 종료 → 이벤트 전 → 이벤트 중 → 이벤트 종료
+ * 스테이지 생애주기 단계 표시.
+ * 오픈 전 → 예매 오픈 → 예매 종료 → 스테이지 전 → 스테이지 중 → 스테이지 종료
  * 저장된 status와 일시(booking_start/end, event_date/end_date)로 현재 단계를 계산한다.
  * 시각 비교는 절대 시각(instant) 기준이라 서버 타임존과 무관하게 정확하다.
  */
@@ -29,9 +29,9 @@ function currentPhaseIndex(event: Event): number {
   const ee = eeRaw ? new Date(eeRaw).getTime() : null;
   const status = event.status ?? "draft";
 
-  if (status === "ended" || (ee != null && now >= ee)) return 5; // 이벤트 종료
-  if (ed != null && now >= ed) return 4; // 이벤트 중
-  if (status === "closed" || (be != null && now >= be)) return 3; // 이벤트 전 (예매 종료됨)
+  if (status === "ended" || (ee != null && now >= ee)) return 5; // 스테이지 종료
+  if (ed != null && now >= ed) return 4; // 스테이지 중
+  if (status === "closed" || (be != null && now >= be)) return 3; // 스테이지 전 (예매 종료됨)
   if (status === "open" || (bs != null && now >= bs)) return 1; // 예매 오픈
   return 0; // 오픈 전
 }
@@ -41,16 +41,16 @@ export function EventLifecycle({ event }: { event: Event }) {
     { label: "오픈 전", at: null },
     { label: "예매 오픈", at: event.booking_start },
     { label: "예매 종료", at: event.booking_end },
-    { label: "이벤트 전", at: null },
-    { label: "이벤트 중", at: event.event_date },
-    { label: "이벤트 종료", at: event.event_end_date ?? event.event_date },
+    { label: "스테이지 전", at: null },
+    { label: "스테이지 중", at: event.event_date },
+    { label: "스테이지 종료", at: event.event_end_date ?? event.event_date },
   ];
   const current = currentPhaseIndex(event);
 
   return (
     <div className="rounded-2xl border bg-muted/30 px-4 py-3">
       <p className="mb-3 text-xs text-muted-foreground">진행 상태</p>
-      <ol className="flex items-start gap-0 overflow-x-auto pb-1">
+      <ol className="flex items-start gap-0 overflow-x-auto pt-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {phases.map((phase, i) => {
           const state = i < current ? "done" : i === current ? "current" : "todo";
           return (

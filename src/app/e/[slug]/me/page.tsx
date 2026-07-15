@@ -35,7 +35,7 @@ export default async function BookingLookupPage({ params }: Props) {
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
           <ChevronLeft className="size-4" />
-          이벤트로 돌아가기
+          스테이지로 돌아가기
         </Link>
         <h1 className="mt-2 text-xl font-semibold">비회원 예약 조회</h1>
         <p className="mt-1 text-sm text-muted-foreground">{event.title}</p>

@@ -121,6 +121,7 @@ export type Database = {
         Row: {
           bank_info: string
           booking_end: string | null
+          booking_notice: string | null
           booking_start: string | null
           capacity: number | null
           contact: string
@@ -144,6 +145,7 @@ export type Database = {
         Insert: {
           bank_info: string
           booking_end?: string | null
+          booking_notice?: string | null
           booking_start?: string | null
           capacity?: number | null
           contact: string
@@ -167,6 +169,7 @@ export type Database = {
         Update: {
           bank_info?: string
           booking_end?: string | null
+          booking_notice?: string | null
           booking_start?: string | null
           capacity?: number | null
           contact?: string

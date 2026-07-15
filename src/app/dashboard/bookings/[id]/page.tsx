@@ -128,7 +128,7 @@ export default async function BookingDetailPage({
         )}
       </div>
 
-      {/* 추가 구매 — 같은 이벤트에 별도 예약으로 추가 */}
+      {/* 추가 구매 — 같은 스테이지에 별도 예약으로 추가 */}
       {event && status !== "cancelled" && booking.email && (
         <div className="flex justify-end">
           <AdditionalPurchase
@@ -139,7 +139,7 @@ export default async function BookingDetailPage({
         </div>
       )}
 
-      {/* 이벤트 정보 */}
+      {/* 스테이지 정보 */}
       {event && (
         <div className="space-y-3">
           <div className="grid gap-3 text-sm">

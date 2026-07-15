@@ -37,7 +37,7 @@ function getBookingStatus(event: {
       isOpen: false,
       reason:
         event.status === "ended"
-          ? "행사가 종료되었습니다."
+          ? "스테이지가 종료되었습니다."
           : event.status === "closed"
             ? "예매가 마감되었습니다."
             : "아직 예매를 받지 않습니다.",
@@ -64,7 +64,7 @@ export default async function EventPublicPage({
   const { slug } = await params;
   const supabase = await createClient();
 
-  // 이벤트 조회 (RLS: 누구나 SELECT 가능)
+  // 스테이지 조회 (RLS: 누구나 SELECT 가능)
   const { data: event } = await supabase
     .from("events")
     .select("*")
@@ -208,6 +208,11 @@ export default async function EventPublicPage({
           eventId={event.id}
           price={event.price}
           bankInfo={event.bank_info}
+          noticeHtml={
+            event.booking_notice
+              ? sanitizeEventHtml(event.booking_notice)
+              : undefined
+          }
           customFields={customFields}
           isLoggedIn={!!user}
           userEmail={user?.email ?? undefined}

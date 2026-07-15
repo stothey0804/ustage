@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const bookingApiSchema = z.object({
-  event_id: z.string().uuid("올바른 이벤트 ID가 아닙니다."),
+  event_id: z.string().uuid("올바른 스테이지 ID가 아닙니다."),
   // 추가 구매(additional)에서는 기존 예약에서 상속하므로 선택 — 신규 예매는 라우트에서 필수 검증
   name: z.string().optional().default(""),
   email: z.string().min(1, "이메일을 입력해 주세요.").email("올바른 이메일 형식이 아닙니다."),

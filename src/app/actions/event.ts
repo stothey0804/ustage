@@ -39,7 +39,7 @@ export async function createEvent(
 
   const v = parsed.data;
 
-  // 유료 이벤트는 계좌 필수
+  // 유료 스테이지는 계좌 필수
   if (v.price > 0 && !v.bank_info) {
     return { error: "계좌 정보를 입력해 주세요." };
   }
@@ -64,6 +64,7 @@ export async function createEvent(
       slug: generateSlug(),
       title: v.title,
       description: v.description ?? null,
+      booking_notice: v.booking_notice || null,
       poster_url: v.poster_url ?? null,
       event_date: eventDate,
       event_end_date: eventEndDate,
@@ -85,7 +86,7 @@ export async function createEvent(
 
   if (error) {
     console.error("[createEvent]", error);
-    return { error: "이벤트 생성에 실패했습니다." };
+    return { error: "스테이지 생성에 실패했습니다." };
   }
 
   revalidatePath("/dashboard/events");
@@ -121,7 +122,7 @@ export async function updateEvent(
     .eq("performer_id", user.id)
     .single();
 
-  if (!current) return { error: "이벤트를 찾을 수 없거나 권한이 없습니다." };
+  if (!current) return { error: "스테이지를 찾을 수 없거나 권한이 없습니다." };
 
   const { data: activeBookings } = await supabase
     .from("bookings")
@@ -139,7 +140,7 @@ export async function updateEvent(
   if (activeCount > 0 && (current.price === 0) !== (v.price === 0)) {
     return {
       error:
-        "예매가 있는 이벤트는 유료/무료를 변경할 수 없습니다. 기존 예매를 먼저 취소 처리해 주세요.",
+        "예매가 있는 스테이지는 유료/무료를 변경할 수 없습니다. 기존 예매를 먼저 취소 처리해 주세요.",
     };
   }
 
@@ -155,6 +156,7 @@ export async function updateEvent(
     .update({
       title: v.title,
       description: v.description ?? null,
+      booking_notice: v.booking_notice || null,
       poster_url: v.poster_url ?? null,
       event_date: toKST(v.event_date)!,
       event_end_date: toKST(v.event_end_date),
@@ -175,7 +177,7 @@ export async function updateEvent(
 
   if (error) {
     console.error("[updateEvent]", error);
-    return { error: "이벤트 수정에 실패했습니다." };
+    return { error: "스테이지 수정에 실패했습니다." };
   }
 
   revalidatePath("/dashboard/events");
@@ -198,7 +200,7 @@ export async function deleteEvent(id: string): Promise<ActionResult> {
     .eq("performer_id", user.id)
     .single();
 
-  if (!event) return { error: "이벤트를 찾을 수 없거나 권한이 없습니다." };
+  if (!event) return { error: "스테이지를 찾을 수 없거나 권한이 없습니다." };
 
   // 취소된 예매를 포함해 예매 이력이 하나라도 있으면 삭제 불가 (기록 보존)
   const { count } = await supabase
@@ -209,7 +211,7 @@ export async function deleteEvent(id: string): Promise<ActionResult> {
   if ((count ?? 0) > 0) {
     return {
       error:
-        "예매 내역이 있는 이벤트는 삭제할 수 없습니다. 대신 상태를 마감으로 변경해 주세요.",
+        "예매 내역이 있는 스테이지는 삭제할 수 없습니다. 대신 상태를 마감으로 변경해 주세요.",
     };
   }
 
@@ -221,7 +223,7 @@ export async function deleteEvent(id: string): Promise<ActionResult> {
 
   if (error) {
     console.error("[deleteEvent]", error);
-    return { error: "이벤트 삭제에 실패했습니다." };
+    return { error: "스테이지 삭제에 실패했습니다." };
   }
 
   // 포스터 파일 정리 (실패해도 무시 — 고아 파일만 남음)
@@ -264,7 +266,7 @@ export async function updateEventStatus(
     .eq("performer_id", user.id)
     .single();
 
-  if (!event) return { error: "이벤트를 찾을 수 없거나 권한이 없습니다." };
+  if (!event) return { error: "스테이지를 찾을 수 없거나 권한이 없습니다." };
 
   // 오픈(재오픈 포함) 조건 서버 검증 — 클라이언트 검증 우회 대비.
   // 예매 기간은 필수가 아니다: 미설정 시 즉시 수동 오픈(수동 관리)을 허용한다.
@@ -272,7 +274,7 @@ export async function updateEventStatus(
     const now = new Date();
     const eventEnd = event.event_end_date ?? event.event_date;
     if (eventEnd && new Date(eventEnd) < now) {
-      return { error: "이미 종료된 행사는 오픈할 수 없습니다." };
+      return { error: "이미 종료된 스테이지는 오픈할 수 없습니다." };
     }
     if (event.booking_end && new Date(event.booking_end) < now) {
       return { error: "예매 종료 일시가 지났습니다. 예매 기간을 수정해 주세요." };

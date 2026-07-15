@@ -14,7 +14,7 @@ type OwnerContext = {
   eventId: string;
 };
 
-/** 로그인 + 해당 예매가 속한 이벤트의 소유자인지 확인. 실패 시 error 반환. */
+/** 로그인 + 해당 예매가 속한 스테이지의 소유자인지 확인. 실패 시 error 반환. */
 async function assertBookingOwner(
   bookingId: string
 ): Promise<OwnerContext | { error: string }> {

@@ -29,8 +29,8 @@ const FAQS: { q: string; a: string }[] = [
     a: "예매가 확정되면 매수만큼 QR 코드가 발급됩니다. 현장에서 공연자가 QR을 스캔하면 입장 처리되며, 재입장 시도는 자동으로 경고됩니다. QR에는 개인정보 없이 무작위 토큰만 담깁니다.",
   },
   {
-    q: "무료 이벤트도 운영할 수 있나요?",
-    a: "네. 무료 이벤트는 입금 절차 없이 예매 즉시 참가가 확정되고 QR이 바로 발급됩니다.",
+    q: "무료 스테이지도 운영할 수 있나요?",
+    a: "네. 무료 스테이지는 입금 절차 없이 예매 즉시 참가가 확정되고 QR이 바로 발급됩니다.",
   },
 ];
 
@@ -109,7 +109,7 @@ export default function Home() {
           </h1>
           <p className="text-sm font-medium text-muted-foreground">어스테이지</p>
           <p className="text-base text-muted-foreground">
-            소규모 공연·이벤트를 위한 예매 서비스 <br />
+            소규모 공연·강연을 위한 예매 서비스 <br />
             어스테이지입니다.
           </p>
           <p className="text-base text-muted-foreground">

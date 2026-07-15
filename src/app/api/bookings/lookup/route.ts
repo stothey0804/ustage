@@ -40,7 +40,7 @@ export async function POST(req: Request) {
   const email = parsed.data.email.trim().toLowerCase();
   const emailPattern = email.replace(/([\\%_])/g, "\\$1");
 
-  // 브루트포스 방지: IP당 분당 10회 + 계정(이벤트+이메일)당 15분에 5회
+  // 브루트포스 방지: IP당 분당 10회 + 계정(스테이지+이메일)당 15분에 5회
   const ip = getClientIp(req);
   const [ipAllowed, accountAllowed] = await Promise.all([
     checkRateLimit(`lookup:ip:${ip}`, 10, 60),

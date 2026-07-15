@@ -32,7 +32,7 @@ export function StatusTransition({
           draft: "오픈 전으로 변경되었습니다.",
           open: "티켓이 오픈되었습니다.",
           closed: "예매가 마감되었습니다.",
-          ended: "행사가 종료되었습니다.",
+          ended: "스테이지가 종료되었습니다.",
         };
         toast.success(labels[newStatus]);
         router.refresh();
@@ -45,7 +45,7 @@ export function StatusTransition({
     return (
       <div className="flex items-center gap-2 rounded-2xl border bg-muted/30 px-4 py-3">
         <CheckCircle2 className="size-4 text-muted-foreground" />
-        <span className="text-xs text-muted-foreground">행사가 종료되었습니다</span>
+        <span className="text-xs text-muted-foreground">스테이지가 종료되었습니다</span>
       </div>
     );
   }
@@ -112,7 +112,7 @@ export function StatusTransition({
             ) : (
               <CheckCircle2 className="size-4 mr-1.5" />
             )}
-            행사 종료
+            스테이지 종료
           </Button>
         </>
       )}

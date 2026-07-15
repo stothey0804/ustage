@@ -262,7 +262,7 @@ export function BookingList({
       return;
     }
     const date = format(new Date(), "yyyyMMdd", { locale: ko });
-    const safeTitle = (eventTitle ?? "이벤트").replace(/[\\/:*?"<>|]/g, "_");
+    const safeTitle = (eventTitle ?? "스테이지").replace(/[\\/:*?"<>|]/g, "_");
     const csv = buildBookingsCsv(filtered, customFields ?? [], { isFree, price });
     downloadCsv(`${safeTitle}_신청자명단_${date}.csv`, csv);
   }

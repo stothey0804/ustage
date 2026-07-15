@@ -51,7 +51,7 @@ export function AddToCalendar({
       `DTEND:${end}`,
       `SUMMARY:${title}`,
       `LOCATION:${location}`,
-      `DESCRIPTION:어스테이지에서 예매한 공연입니다.`,
+      `DESCRIPTION:어스테이지에서 예매한 스테이지입니다.`,
       "END:VEVENT",
       "END:VCALENDAR",
     ].join("\r\n");

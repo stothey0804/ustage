@@ -21,10 +21,10 @@ export default async function NewEventPage() {
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
           <ChevronLeft className="size-4" />
-          내 이벤트
+          내 스테이지
         </Link>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">
-          새 이벤트 만들기
+          새 스테이지 만들기
         </h1>
       </div>
 

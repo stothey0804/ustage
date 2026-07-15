@@ -92,7 +92,7 @@ function infoTableHtml(params: {
   return `
     <table style="width:100%;border-collapse:collapse;font-size:14px;">
       <tr>
-        <td style="padding:8px 0;color:#666;width:80px;">공연</td>
+        <td style="padding:8px 0;color:#666;width:80px;">스테이지</td>
         <td style="padding:8px 0;font-weight:600;">${escapeHtml(params.eventTitle)}</td>
       </tr>
       <tr>
@@ -159,7 +159,7 @@ interface BookingConfirmationParams {
   totalAmount: number;
   /** 예약 확인 페이지 URL */
   confirmUrl: string;
-  /** 전달 시 QR을 본문에 인라인 포함 (무료 이벤트 — 신청 즉시 확정) */
+  /** 전달 시 QR을 본문에 인라인 포함 (무료 스테이지 — 신청 즉시 확정) */
   tickets?: EmailTicket[];
 }
 

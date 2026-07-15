@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Ticket } from "lucide-react";
+import { Ticket, Calendar, MapPin } from "lucide-react";
 import { formatKST } from "@/lib/date";
 
 import { createClient } from "@/lib/supabase/server";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookingStatusBadge } from "@/components/StatusBadge";
+
+const LIST_DATE_FORMAT = "yyyy. M. d. (EEE) HH:mm";
 
 export default async function BookingsPage() {
   const supabase = await createClient();
@@ -35,9 +37,9 @@ export default async function BookingsPage() {
             <Ticket className="size-6" />
           </div>
           <div className="space-y-1">
-            <p className="font-medium">아직 예매한 공연이 없어요</p>
+            <p className="font-medium">아직 예매한 스테이지가 없어요</p>
             <p className="text-sm text-muted-foreground">
-              공연 링크를 받으면 여기에서 예매 현황과 입장 QR을 볼 수 있어요.
+              스테이지 링크를 받으면 여기에서 예매 현황과 입장 QR을 볼 수 있어요.
             </p>
           </div>
         </div>
@@ -55,36 +57,43 @@ export default async function BookingsPage() {
 
             const isFree = event?.price === 0;
             const status = booking.status;
+            const quantity = booking.quantity ?? 1;
 
             return (
               <Link
                 key={booking.id}
                 href={`/dashboard/bookings/${booking.id}`}
               >
-                <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 space-y-1">
-                        <p className="font-medium truncate">
-                          {event?.title ?? "알 수 없는 공연"}
-                        </p>
-                        {event?.event_date && (
-                          <p className="text-sm text-muted-foreground">
-                            {formatKST(event.event_date)}
-                          </p>
-                        )}
-                        {event?.venue && (
-                          <p className="text-sm text-muted-foreground">
-                            {event.venue}
-                          </p>
-                        )}
-                      </div>
+                <Card className="transition-colors hover:border-primary/50">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <CardTitle className="text-lg font-semibold leading-snug">
+                        {event?.title ?? "알 수 없는 스테이지"}
+                      </CardTitle>
                       <BookingStatusBadge
                         status={status}
                         isFree={isFree}
-                        className="shrink-0"
+                        className="mt-0.5 shrink-0"
                       />
                     </div>
+                  </CardHeader>
+                  <CardContent className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                    {event?.event_date && (
+                      <span className="flex items-center gap-1">
+                        <Calendar className="size-3.5" />
+                        {formatKST(event.event_date, LIST_DATE_FORMAT)}
+                      </span>
+                    )}
+                    {event?.venue && (
+                      <span className="flex items-center gap-1">
+                        <MapPin className="size-3.5" />
+                        {event.venue}
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1">
+                      <Ticket className="size-3.5" />
+                      {quantity}매
+                    </span>
                   </CardContent>
                 </Card>
               </Link>

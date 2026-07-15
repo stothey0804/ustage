@@ -45,7 +45,7 @@ const EVENT_STATUS: Record<string, { tone: StatusTone; label: string }> = {
   draft: { tone: "wait", label: "오픈 전" },
   open: { tone: "live", label: "티켓 오픈" },
   closed: { tone: "done", label: "예매 마감" },
-  ended: { tone: "done", label: "행사 종료" },
+  ended: { tone: "done", label: "스테이지 종료" },
 };
 
 export function EventStatusBadge({

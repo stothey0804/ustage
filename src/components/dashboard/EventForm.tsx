@@ -62,6 +62,7 @@ export function EventForm({
     defaultValues: {
       title: "",
       description: "",
+      booking_notice: "",
       poster_url: "",
       event_date: "",
       event_end_date: undefined,
@@ -81,6 +82,7 @@ export function EventForm({
   });
 
   const description = watch("description");
+  const bookingNotice = watch("booking_notice");
   const watchPrice = watch("price") ?? 0;
   const customFields = watch("custom_fields") ?? [];
 
@@ -152,7 +154,7 @@ export function EventForm({
       }
 
       toast.success(
-        mode === "create" ? "이벤트가 생성되었습니다." : "이벤트가 수정되었습니다."
+        mode === "create" ? "스테이지가 생성되었습니다." : "스테이지가 수정되었습니다."
       );
 
       if (mode === "create") {
@@ -168,7 +170,7 @@ export function EventForm({
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
       {mode === "edit" && activeBookingCount > 0 && (
         <div className="rounded-md border border-amber-300/60 bg-amber-50 px-3 py-2.5 text-xs leading-relaxed text-amber-800 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-300">
-          이미 예매 {activeBookingCount}건이 있는 이벤트예요. 일시·장소·가격을
+          이미 예매 {activeBookingCount}건이 있는 스테이지예요. 일시·장소·가격을
           바꾸면 기존 예매자가 안내받은 내용과 달라지니 변경 시 참석자에게 직접
           알려주세요. 유료/무료 전환과 예매 좌석보다 적은 정원은 저장되지
           않습니다.
@@ -181,8 +183,8 @@ export function EventForm({
         </h2>
 
         <div className="space-y-1.5">
-          <Label htmlFor="title">공연 제목 *</Label>
-          <Input id="title" {...register("title")} placeholder="공연 제목을 입력하세요" />
+          <Label htmlFor="title">스테이지 제목 *</Label>
+          <Input id="title" {...register("title")} placeholder="스테이지 제목을 입력하세요" />
           {errors.title && (
             <p className="text-xs text-destructive">{errors.title.message}</p>
           )}
@@ -190,7 +192,7 @@ export function EventForm({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label>공연 시작 *</Label>
+            <Label>스테이지 시작 *</Label>
             <DateTimePicker
               value={watch("event_date") || undefined}
               onChange={(v) => setValue("event_date", v, { shouldValidate: true })}
@@ -202,7 +204,7 @@ export function EventForm({
           </div>
 
           <div className="space-y-1.5">
-            <Label>공연 종료</Label>
+            <Label>스테이지 종료</Label>
             <DateTimePicker
               value={watch("event_end_date") || undefined}
               onChange={(v) => setValue("event_end_date", v)}
@@ -214,12 +216,12 @@ export function EventForm({
         <div className="grid gap-4 sm:grid-cols-2">
 
           <div className="space-y-1.5">
-            <Label htmlFor="venue">공연 장소 *</Label>
+            <Label htmlFor="venue">스테이지 장소 *</Label>
             <div className="flex gap-2">
               <Input
                 id="venue"
                 {...register("venue")}
-                placeholder="공연 장소를 입력하세요"
+                placeholder="스테이지 장소를 입력하세요"
                 className="flex-1"
               />
               <KakaoAddressSearch
@@ -281,10 +283,23 @@ export function EventForm({
         </h2>
 
         <div className="space-y-1.5">
-          <Label>공연 안내</Label>
+          <Label>스테이지 안내</Label>
           <RichTextEditor
             value={description ?? ""}
             onChange={(v) => setValue("description", v)}
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>
+            예매 주의사항{" "}
+            <span className="text-muted-foreground font-normal">
+              (신청 폼 상단에 노출)
+            </span>
+          </Label>
+          <RichTextEditor
+            value={bookingNotice ?? ""}
+            onChange={(v) => setValue("booking_notice", v)}
           />
         </div>
 
@@ -432,7 +447,7 @@ export function EventForm({
         </Button>
         <Button type="submit" disabled={isPending || uploading}>
           {isPending && <Loader2 className="size-4 mr-2 animate-spin" />}
-          {mode === "create" ? "이벤트 생성" : "수정 완료"}
+          {mode === "create" ? "스테이지 생성" : "수정 완료"}
         </Button>
       </div>
     </form>

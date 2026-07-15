@@ -38,6 +38,8 @@ interface BookingFormProps {
   eventId: string;
   price: number;
   bankInfo: string;
+  /** 신청 폼 상단 주의사항 — 서버에서 sanitize된 HTML */
+  noticeHtml?: string;
   customFields: CustomField[];
   isLoggedIn: boolean;
   userEmail?: string;
@@ -53,6 +55,7 @@ export function BookingForm({
   eventId,
   price,
   bankInfo,
+  noticeHtml,
   customFields,
   isLoggedIn,
   userEmail,
@@ -263,10 +266,17 @@ export function BookingForm({
       )}
 
       <Dialog open={step === "form"} onOpenChange={(open) => { if (!open) setStep("idle"); }}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md max-sm:top-0 max-sm:left-0 max-sm:h-dvh max-sm:max-h-dvh max-sm:max-w-full max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none max-sm:content-start max-sm:data-open:zoom-in-100 max-sm:data-open:slide-in-from-bottom-6 max-sm:data-closed:zoom-out-100 max-sm:data-closed:slide-out-to-bottom-6">
           <DialogHeader>
             <DialogTitle>{isFree ? "참가 신청" : "예매하기"}</DialogTitle>
           </DialogHeader>
+
+          {noticeHtml && (
+            <div
+              className="rounded-lg border border-amber-300/60 bg-amber-50 px-3.5 py-3 text-xs leading-relaxed text-amber-900 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-200 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:mb-2 [&_ol]:list-decimal [&_ol]:pl-4 [&_ol]:mb-2 [&_li]:mb-0.5 [&_a]:underline [&_a]:underline-offset-2 [&_strong]:font-semibold [&_h2]:font-semibold [&_h2]:mb-1 [&_h3]:font-semibold [&_h3]:mb-1"
+              dangerouslySetInnerHTML={{ __html: noticeHtml }}
+            />
+          )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div className="space-y-4">

@@ -20,7 +20,7 @@ interface Props {
 }
 
 const NAV_ITEMS = [
-  { href: "/dashboard/events", label: "내 이벤트", icon: Calendar },
+  { href: "/dashboard/events", label: "내 스테이지", icon: Calendar },
   { href: "/dashboard/bookings", label: "내 예약", icon: Ticket },
 ] as const;
 

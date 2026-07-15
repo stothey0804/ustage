@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const checkInSchema = z.object({
   qr_token: z.string().uuid("유효하지 않은 QR 토큰입니다."),
-  event_id: z.string().uuid("유효하지 않은 이벤트 ID입니다."),
+  event_id: z.string().uuid("유효하지 않은 스테이지 ID입니다."),
 });
 
 export async function POST(req: Request) {
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
 
   const { qr_token, event_id } = parsed.data;
 
-  // 인증 확인 — 이벤트 소유자만 입장확인 가능
+  // 인증 확인 — 스테이지 소유자만 입장확인 가능
   const supabase = await createClient();
   const {
     data: { user },
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
   }
 
-  // 이벤트 소유자 확인
+  // 스테이지 소유자 확인
   const { data: event } = await supabase
     .from("events")
     .select("id, performer_id, title")
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
 
   if (!event) {
     return NextResponse.json(
-      { error: "이벤트를 찾을 수 없거나 권한이 없습니다." },
+      { error: "스테이지를 찾을 수 없거나 권한이 없습니다." },
       { status: 403 }
     );
   }
@@ -67,7 +67,7 @@ export async function POST(req: Request) {
     );
   }
 
-  // 예약 정보 조회 + 이벤트 일치 확인
+  // 예약 정보 조회 + 스테이지 일치 확인
   const { data: booking } = await admin
     .from("bookings")
     .select("id, name, status, event_id, quantity")
@@ -76,7 +76,7 @@ export async function POST(req: Request) {
 
   if (!booking || booking.event_id !== event_id) {
     return NextResponse.json(
-      { result: "invalid", message: "이 이벤트의 QR 코드가 아닙니다." },
+      { result: "invalid", message: "이 스테이지의 QR 코드가 아닙니다." },
       { status: 200 }
     );
   }

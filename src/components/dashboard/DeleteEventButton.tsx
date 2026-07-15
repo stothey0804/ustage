@@ -36,7 +36,7 @@ export function DeleteEventButton({
         setOpen(false);
         return;
       }
-      toast.success("이벤트가 삭제되었습니다.");
+      toast.success("스테이지가 삭제되었습니다.");
       router.replace("/dashboard/events");
     });
   };
@@ -56,17 +56,17 @@ export function DeleteEventButton({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>이벤트 삭제</DialogTitle>
+            <DialogTitle>스테이지 삭제</DialogTitle>
           </DialogHeader>
           {hasBookings ? (
             <p className="text-sm text-muted-foreground">
-              예매 내역이 있는 이벤트는 삭제할 수 없습니다. 대신 상태를
+              예매 내역이 있는 스테이지는 삭제할 수 없습니다. 대신 상태를
               마감으로 변경해 주세요.
             </p>
           ) : (
             <>
               <p className="text-sm text-muted-foreground">
-                이벤트와 예매 페이지가 함께 사라지며 되돌릴 수 없습니다. 정말
+                스테이지와 예매 페이지가 함께 사라지며 되돌릴 수 없습니다. 정말
                 삭제할까요?
               </p>
               <div className="flex gap-3 pt-2">

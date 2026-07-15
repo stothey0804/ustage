@@ -44,7 +44,7 @@ const ROLES: { icon: IconType; title: string; items: string[] }[] = [
     icon: Calendar,
     title: "공연자 (주최)",
     items: [
-      "이벤트 생성·수정, 포스터·안내 작성",
+      "스테이지 생성·수정, 포스터·안내 작성",
       "티켓 오픈하고 예매 링크 공유",
       "예매 명단 관리 · 입금 확인",
       "현장에서 QR 스캔으로 입장 확인",
@@ -63,7 +63,7 @@ const ROLES: { icon: IconType; title: string; items: string[] }[] = [
 ];
 
 const FLOW: { icon: IconType; label: string }[] = [
-  { icon: Plus, label: "이벤트 생성" },
+  { icon: Plus, label: "스테이지 생성" },
   { icon: Ticket, label: "티켓 오픈" },
   { icon: Share2, label: "링크 공유" },
   { icon: Edit, label: "참석자 예매" },
@@ -74,7 +74,7 @@ const FLOW: { icon: IconType; label: string }[] = [
 const STEPS: { icon: IconType; title: string; desc: string }[] = [
   {
     icon: Edit,
-    title: "이벤트 만들기",
+    title: "스테이지 만들기",
     desc: "제목·일시·장소·가격·입금 계좌를 입력하고, 정원·예매기간·포스터·안내·커스텀 질문을 더합니다. 생성 시 상태는 ‘오픈 전’이에요.",
   },
   {
@@ -95,7 +95,7 @@ const STEPS: { icon: IconType; title: string; desc: string }[] = [
   {
     icon: Clock,
     title: "마감 & 종료",
-    desc: "‘예매 마감’으로 닫거나(재오픈 가능) ‘행사 종료’로 마무리합니다. 예매 종료일·정원·행사일에 따라 자동으로도 전환됩니다.",
+    desc: "‘예매 마감’으로 닫거나(재오픈 가능) ‘스테이지 종료’로 마무리합니다. 예매 종료일·정원·스테이지 일시에 따라 자동으로도 전환됩니다.",
   },
 ];
 
@@ -104,10 +104,10 @@ const ATTENDEE: { icon: IconType; title: string; items: string[] }[] = [
     icon: Edit,
     title: "예매하기",
     items: [
-      "받은 링크 열기 → 공연 정보 확인 → [예매하기]",
+      "받은 링크 열기 → 스테이지 정보 확인 → [예매하기]",
       "이름·이메일·매수 입력 (비회원은 비밀번호도)",
       "유료면 입금자명·입금시간 입력 후 계좌로 송금",
-      "무료 이벤트는 입금 절차 없이 즉시 참가 확정",
+      "무료 스테이지는 입금 절차 없이 즉시 참가 확정",
     ],
   },
   {
@@ -123,7 +123,7 @@ const ATTENDEE: { icon: IconType; title: string; items: string[] }[] = [
 ];
 
 const TIPS: { icon: IconType; text: string }[] = [
-  { icon: Banknote, text: "무료 이벤트는 입금자명·입금시간·계좌 안내가 없고 즉시 확정됩니다." },
+  { icon: Banknote, text: "무료 스테이지는 입금자명·입금시간·계좌 안내가 없고 즉시 확정됩니다." },
   { icon: Clock, text: "정원이 차거나 예매 종료일이 지나면 자동으로 마감됩니다." },
   { icon: QrCode, text: "QR은 확정된 후에만 보이며 매수만큼 발급되고, 재입장은 경고됩니다." },
   { icon: KeyRound, text: "비회원 정보는 제출 후 수정할 수 없습니다 — 정확히 입력하세요." },
@@ -134,7 +134,7 @@ const EVENT_STATES: { status: "draft" | "open" | "closed" | "ended"; desc: strin
   { status: "draft", desc: "작성 중, 예매 불가" },
   { status: "open", desc: "예매를 받는 중" },
   { status: "closed", desc: "예매 종료" },
-  { status: "ended", desc: "행사 종료" },
+  { status: "ended", desc: "스테이지 종료" },
 ];
 
 const BOOKING_STATES: { status: string; desc: string }[] = [
@@ -196,7 +196,7 @@ const GUIDE_JSON_LD = {
       "@type": "HowTo",
       name: "어스테이지로 소규모 공연 예매 운영하기",
       description:
-        "이벤트 생성부터 예매 링크 공유, 계좌이체 입금 확인, QR 입장 확인까지 어스테이지 운영 절차.",
+        "스테이지 생성부터 예매 링크 공유, 계좌이체 입금 확인, QR 입장 확인까지 어스테이지 운영 절차.",
       inLanguage: "ko-KR",
       step: STEPS.map((s, i) => ({
         "@type": "HowToStep",
@@ -326,7 +326,7 @@ export default function GuidePage() {
 
         {/* 공연자 단계 */}
         <section>
-          <SectionHead eyebrow="공연자" title="이벤트 운영 5단계" />
+          <SectionHead eyebrow="공연자" title="스테이지 운영 5단계" />
           <ol className="space-y-3">
             {STEPS.map(({ icon: Icon, title, desc }, i) => (
               <li
@@ -367,7 +367,7 @@ export default function GuidePage() {
             <div className="rounded-2xl border bg-card p-6 shadow-sm">
               <h3 className="mb-4 flex items-center gap-2 font-semibold">
                 <Calendar className="size-4 text-primary" />
-                이벤트 상태
+                스테이지 상태
               </h3>
               <ul className="space-y-3 text-sm text-muted-foreground">
                 {EVENT_STATES.map(({ status, desc }) => (
@@ -420,7 +420,7 @@ export default function GuidePage() {
             링크만 공유하면, 예매부터 입장까지 끝.
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            지금 바로 첫 공연을 등록해 보세요.
+            지금 바로 첫 스테이지를 등록해 보세요.
           </p>
           <div className="mt-5 flex justify-center gap-3">
             <Button asChild size="lg">

@@ -44,7 +44,7 @@ function capacityError(remaining: number): string {
 
 /**
  * 정원 검사 + 예매 + 티켓 생성을 DB 트랜잭션(create_booking RPC)으로 원자 처리.
- * 이벤트 행 잠금으로 동시 제출을 직렬화해 정원 초과를 막고,
+ * 스테이지 행 잠금으로 동시 제출을 직렬화해 정원 초과를 막고,
  * 동일 이메일 중복도 함수 내부에서 검사한다 (allowDuplicate=추가 구매만 예외).
  * 마이그레이션 미적용 환경에서는 기존 비원자 경로로 폴백한다.
  */
@@ -95,10 +95,10 @@ async function createBookingAtomic(
   }
 
   if (message.includes("EVENT_NOT_OPEN")) {
-    return { status: 409, error: "현재 예매를 받지 않는 이벤트입니다." };
+    return { status: 409, error: "현재 예매를 받지 않는 스테이지입니다." };
   }
   if (message.includes("EVENT_NOT_FOUND")) {
-    return { status: 404, error: "이벤트를 찾을 수 없습니다." };
+    return { status: 404, error: "스테이지를 찾을 수 없습니다." };
   }
   if (message.includes("INVALID_QUANTITY")) {
     return { status: 400, error: "최대 20매까지 예매할 수 있습니다." };
@@ -233,7 +233,7 @@ export async function POST(req: Request) {
   // 로그인 사용자는 세션 이메일을 강제 사용 (임의 이메일 지정 차단)
   const email = (user?.email ?? data.email).trim().toLowerCase();
 
-  // 이벤트 조회
+  // 스테이지 조회
   const { data: event, error: eventError } = await supabase
     .from("events")
     .select("id, title, slug, status, capacity, booking_start, booking_end, bank_info, price, event_date, event_end_date, venue, venue_address, custom_fields")
@@ -242,7 +242,7 @@ export async function POST(req: Request) {
 
   if (eventError || !event) {
     return NextResponse.json(
-      { error: "이벤트를 찾을 수 없습니다." },
+      { error: "스테이지를 찾을 수 없습니다." },
       { status: 404 }
     );
   }
@@ -256,8 +256,8 @@ export async function POST(req: Request) {
       {
         error:
           effectiveStatus === "ended"
-            ? "이미 종료된 행사입니다."
-            : "현재 예매를 받지 않는 이벤트입니다.",
+            ? "이미 종료된 스테이지입니다."
+            : "현재 예매를 받지 않는 스테이지입니다.",
       },
       { status: 409 }
     );
@@ -278,7 +278,7 @@ export async function POST(req: Request) {
     );
   }
 
-  // 유료 이벤트 필수값 서버 검증 (클라이언트 검증 우회 대비)
+  // 유료 스테이지 필수값 서버 검증 (클라이언트 검증 우회 대비)
   if (
     event.price > 0 &&
     (!data.depositor_name.trim() || !data.deposited_at.trim())
@@ -317,7 +317,7 @@ export async function POST(req: Request) {
 
   const admin = createAdminClient();
 
-  // 추가 구매: 이 이벤트에 대한 기존 예약의 본인임을 확인하고 정보를 상속
+  // 추가 구매: 이 스테이지에 대한 기존 예약의 본인임을 확인하고 정보를 상속
   // (회원 = 세션 user_id 일치, 비회원 = 이메일 + 비밀번호 bcrypt 대조)
   let original: {
     name: string;
@@ -461,7 +461,7 @@ export async function POST(req: Request) {
 
   const bookingId = created.bookingId;
 
-  // 무료 이벤트는 즉시 확정 — 신청완료 메일에 입장 QR을 포함
+  // 무료 스테이지는 즉시 확정 — 신청완료 메일에 입장 QR을 포함
   let emailTickets: { ticket_number: number; qr_token: string }[] | undefined;
   if (event.price === 0) {
     const { data: tickets } = await admin

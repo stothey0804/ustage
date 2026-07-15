@@ -99,6 +99,7 @@ id              uuid PK
 performer_id    uuid → auth.users
 title           text
 description     text             # 리치텍스트 (HTML) — CKEditor로 입력
+booking_notice  text nullable    # 신청 폼 상단 주의사항 (HTML) — CKEditor로 입력
 poster_url      text nullable    # 포스터 이미지 URL (Supabase Storage)
 event_date      timestamptz
 event_end_date  timestamptz nullable  # 종료 일시 (선택)

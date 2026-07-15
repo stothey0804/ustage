@@ -35,7 +35,7 @@ export default async function ScanPage({
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
           <ChevronLeft className="size-4" />
-          이벤트 상세
+          스테이지 상세
         </Link>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">
           QR 입장확인

@@ -72,12 +72,12 @@ export function DateTimePicker({
           variant="outline"
           disabled={disabled}
           className={cn(
-            "w-full justify-start text-left font-normal truncate",
+            "w-full min-w-0 justify-start text-left font-normal",
             !value && "text-muted-foreground"
           )}
         >
           <CalendarIcon className="mr-2 size-4 shrink-0" />
-          {displayValue || placeholder}
+          <span className="truncate">{displayValue || placeholder}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent

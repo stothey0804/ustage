@@ -39,7 +39,9 @@ export default async function BookingsPage() {
           <div className="space-y-1">
             <p className="font-medium">아직 예매한 스테이지가 없어요</p>
             <p className="text-sm text-muted-foreground">
-              스테이지 링크를 받으면 여기에서 예매 현황과 입장 QR을 볼 수 있어요.
+              스테이지 링크를 받으면
+              <br />
+              여기에서 예매 현황과 입장 QR을 볼 수 있어요.
             </p>
           </div>
         </div>

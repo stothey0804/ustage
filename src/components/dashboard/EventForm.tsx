@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition, useState, useRef } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -141,6 +141,15 @@ export function EventForm({
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
+  // 에러 표시가 없는 필드에서 validation이 걸려도 제출이 조용히 무시되지 않도록
+  const onInvalid = (errs: FieldErrors<EventFormValues>) => {
+    const first = Object.values(errs).find(
+      (e): e is { message: string } =>
+        typeof (e as { message?: unknown })?.message === "string",
+    );
+    toast.error(first?.message ?? "입력값을 확인해 주세요.");
+  };
+
   const onSubmit = (values: EventFormValues) => {
     startTransition(async () => {
       const result =
@@ -167,7 +176,7 @@ export function EventForm({
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+    <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-8">
       {mode === "edit" && activeBookingCount > 0 && (
         <div className="rounded-md border border-amber-300/60 bg-amber-50 px-3 py-2.5 text-xs leading-relaxed text-amber-800 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-300">
           이미 예매 {activeBookingCount}건이 있는 스테이지예요. 일시·장소·가격을
@@ -207,9 +216,14 @@ export function EventForm({
             <Label>스테이지 종료</Label>
             <DateTimePicker
               value={watch("event_end_date") || undefined}
-              onChange={(v) => setValue("event_end_date", v)}
+              onChange={(v) => setValue("event_end_date", v, { shouldValidate: true })}
               placeholder="종료 날짜·시간"
             />
+            {errors.event_end_date && (
+              <p className="text-xs text-destructive">
+                {errors.event_end_date.message}
+              </p>
+            )}
           </div>
         </div>
 
@@ -402,18 +416,28 @@ export function EventForm({
             <Label>예매 시작</Label>
             <DateTimePicker
               value={watch("booking_start") || undefined}
-              onChange={(v) => setValue("booking_start", v)}
+              onChange={(v) => setValue("booking_start", v, { shouldValidate: true })}
               placeholder="시작 날짜·시간 선택"
             />
+            {errors.booking_start && (
+              <p className="text-xs text-destructive">
+                {errors.booking_start.message}
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">
             <Label>예매 종료</Label>
             <DateTimePicker
               value={watch("booking_end") || undefined}
-              onChange={(v) => setValue("booking_end", v)}
+              onChange={(v) => setValue("booking_end", v, { shouldValidate: true })}
               placeholder="종료 날짜·시간 선택"
             />
+            {errors.booking_end && (
+              <p className="text-xs text-destructive">
+                {errors.booking_end.message}
+              </p>
+            )}
           </div>
         </div>
       </section>

@@ -1,10 +1,5 @@
-"use client";
-
-import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { KAKAO_SCOPES } from "@/lib/kakao";
-import { safeInternalPath } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { safeInternalPath } from "@/lib/utils";
 
 interface Props {
   /** 로그인 성공 후 이동할 내부 경로 */
@@ -13,63 +8,29 @@ interface Props {
 }
 
 /**
- * 카카오 OAuth 로그인 (Supabase provider).
+ * 카카오 로그인 시작 버튼.
  *
- * 카카오는 비즈앱 심사를 통과하지 않으면 이메일을 내려주지 않으므로,
- * 콜백에서 계정 이메일이 비어 있으면 /onboarding/email로 보내 주소를 받는다.
+ * Supabase provider가 아니라 우리 라우트(/api/auth/kakao/start)로 보낸다 —
+ * gotrue가 강제로 붙이는 이메일·프로필 동의항목을 피하고 scope를 openid 하나로
+ * 제한하기 위해서다(lib/kakao.ts 참고). 상태 관리가 필요 없어 서버에서 렌더한다.
  */
 export function KakaoLoginButton({
   next = "/dashboard",
   label = "카카오로 계속하기",
 }: Props) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function start() {
-    setLoading(true);
-    setError(null);
-
-    const supabase = createClient();
-    const callback = new URL("/auth/callback", window.location.origin);
-    callback.searchParams.set("next", safeInternalPath(next));
-
-    // skipBrowserRedirect로 인가 URL을 받아 scope를 로그로 확인한 뒤 직접 이동한다.
-    // (카카오 동의항목 오류를 디버깅할 때 실제로 나간 scope를 바로 확인할 수 있다)
-    const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: "kakao",
-      options: {
-        redirectTo: callback.toString(),
-        scopes: KAKAO_SCOPES,
-        skipBrowserRedirect: true,
-      },
-    });
-
-    if (oauthError || !data?.url) {
-      console.error("[auth] kakao oauth error", oauthError);
-      setError("카카오 로그인을 시작할 수 없습니다. 잠시 후 다시 시도해 주세요.");
-      setLoading(false);
-      return;
-    }
-
-    console.info("[auth] kakao authorize", data.url);
-    window.location.assign(data.url);
-    // 카카오 인증 페이지로 이동하므로 로딩 상태를 유지한다.
-  }
+  const href = `/api/auth/kakao/start?next=${encodeURIComponent(safeInternalPath(next))}`;
 
   return (
-    <div className="flex flex-col gap-2">
-      <Button
-        type="button"
-        size="lg"
-        onClick={start}
-        disabled={loading}
-        className="w-full bg-[#FEE500] text-[#191600] hover:bg-[#FADA0A] focus-visible:ring-[#FEE500]/60"
-      >
+    <Button
+      asChild
+      size="lg"
+      className="w-full bg-[#FEE500] text-[#191600] hover:bg-[#FADA0A] focus-visible:ring-[#FEE500]/60"
+    >
+      <a href={href}>
         <KakaoIcon className="size-4" />
-        {loading ? "카카오로 이동 중…" : label}
-      </Button>
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
-    </div>
+        {label}
+      </a>
+    </Button>
   );
 }
 

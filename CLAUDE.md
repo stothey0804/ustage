@@ -267,32 +267,41 @@ ended  (행사 종료) → event_date 경과
 - 스캔 시 서버에서 토큰으로 티켓·예약 조회 → 이름, 입금상태, 입장여부 표시
 - 이미 입장 처리된 경우 "재입장 시도" 경고 표시 (checked_in=false 조건부 갱신으로 동시 스캔 방지)
 
-### 카카오 로그인 (Supabase OAuth)
+### 카카오 로그인 (OIDC 직연동 — Supabase provider 경유 안 함)
 
-**Supabase / 카카오 콘솔 설정** (코드로 처리 불가 — 대시보드에서 직접):
+**왜 직연동인가**: `signInWithOAuth({provider:'kakao'})`를 쓰면 gotrue가 scope에
+`account_email,profile_image,profile_nickname`을 **항상** 붙인다(클라이언트가 넘긴
+`scopes`는 대체가 아니라 뒤에 덧붙는다 — 실제 인가 URL에서 확인됨). `account_email`은
+카카오 비즈 앱 전환 없이는 요청할 수 없어 "설정하지 않은 카카오 로그인 동의 항목"으로
+거절된다. 그래서 인가·토큰 교환을 직접 처리하고 scope는 `openid` 하나만 보낸다
+(개인정보 동의항목 0개, 받는 값은 카카오 사용자 식별자 sub뿐).
 
-1. 카카오 개발자센터 → 애플리케이션 생성 → 카카오 로그인 활성화
-   - Redirect URI: `https://<PROJECT_REF>.supabase.co/auth/v1/callback`
-   - 동의항목: 닉네임(필수). **이메일은 비즈앱 전환 없이는 받을 수 없다** → 앱에서 직접 입력받는 이유.
-   - 요청 스코프는 `lib/kakao.ts`의 `KAKAO_SCOPES`(`profile_nickname`)로 고정한다.
-     gotrue 기본값에 `account_email`이 들어 있어 그대로 두면 카카오가
-     "설정하지 않은 동의 항목: account_email"로 인가를 거절한다.
-2. Supabase → Authentication → Providers → Kakao 활성화, REST API 키(Client ID)와
-   Client Secret(보안 → Client Secret) 입력
-3. Supabase → Authentication → URL Configuration → Redirect URLs에
-   `http://localhost:3000/auth/callback`, `https://<도메인>/auth/callback` 추가
-4. Supabase → Authentication → Advanced → **Manual linking 활성화**
-   (기존 이메일 계정에 카카오를 연결하는 `/dashboard/account` 기능이 이 설정을 요구)
+**카카오 콘솔 설정**:
+
+1. 카카오 개발자센터 → 애플리케이션 생성 → 제품 설정 → 카카오 로그인 활성화
+2. 카카오 로그인 → **OpenID Connect 활성화** (id_token 발급에 필요)
+3. Redirect URI: `http://localhost:3000/api/auth/kakao/callback`,
+   `https://<도메인>/api/auth/kakao/callback` (Supabase 콜백이 아니라 **우리 라우트**)
+4. 동의항목은 하나도 켜지 않아도 된다
+5. 앱 키의 **REST API 키** → `KAKAO_REST_API_KEY`,
+   보안 → Client Secret을 '사용함'으로 뒀다면 그 값 → `KAKAO_CLIENT_SECRET`
+
+**Supabase 설정**: Authentication → Providers → **Kakao 활성화 + Client ID에 같은
+REST API 키 입력**. OAuth 리다이렉트에는 쓰지 않지만, gotrue가 id_token의 `aud`를
+이 값으로 검증하므로 반드시 일치해야 한다.
 
 **앱 흐름**:
 
 ```
-[카카오로 로그인] → signInWithOAuth({provider:'kakao'})
-  → /auth/callback (code → 세션 교환)
-  → 계정 이메일 없음(needsEmailSetup) → /onboarding/email
-      → updateUser({ email, data:{ contact_email } }) : 인증 메일 발송
-      → 인증 전에도 contact_email로 앱 동작 (대시보드 상단 미인증 배너 노출)
-  → 계정 이메일 있음 → next 경로
+[카카오로 계속하기] → /api/auth/kakao/start
+  state·nonce 쿠키 저장 → kauth.kakao.com/oauth/authorize?scope=openid
+  → /api/auth/kakao/callback
+      state 검증 → code를 토큰으로 교환 → id_token
+      → supabase.auth.signInWithIdToken({ provider:'kakao', token, nonce })
+      → 이메일 없음(needsEmailSetup) → /onboarding/email
+            updateUser({ email, data:{ contact_email } }) : 인증 메일 발송
+            인증 전에도 contact_email로 앱 동작 (대시보드 상단 미인증 배너)
+      → 이메일 있음 → next 경로
 ```
 
 - 이메일 해석은 항상 `lib/account-email.ts`의 `getAccountEmail`(계정 이메일 → 없으면
@@ -300,9 +309,10 @@ ended  (행사 종료) → event_date 경과
   **신뢰 경계가 아니다** — 소유 증명이 필요한 로그인·비밀번호 재설정은 계정 이메일만 인정.
 - `/dashboard/*`는 이메일 **등록**까지만 강제(proxy에서 `/onboarding/email`로 리다이렉트).
   인증 완료는 강제하지 않는다.
-- 기존 이메일 계정과 병합: 온보딩에서 이미 가입된 주소를 입력하면 안내를 띄우고,
-  그 계정으로 로그인한 뒤 `/dashboard/account`에서 `linkIdentity({provider:'kakao'})`로 연결한다.
-  (카카오가 이메일을 주지 않아 Supabase 자동 연결은 동작하지 않는다.)
+- **계정 병합은 지원하지 않는다**: linkIdentity는 Supabase provider 경유가 필요해
+  같은 scope 문제에 걸린다. 카카오 계정과 이메일 계정은 별개이며,
+  `/dashboard/account`는 연결 수단을 보여주고 해제만 제공한다. 온보딩에서 이미 가입된
+  주소를 입력하면 이메일 로그인으로 안내한다.
 
 ### 참석자 인증 (이중 경로)
 
@@ -409,7 +419,13 @@ ended  (행사 종료) → event_date 경과
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=      # 서버 전용, NEXT_PUBLIC 붙이지 말 것
+
+KAKAO_REST_API_KEY=             # 카카오 앱 키 > REST API 키 (Supabase Kakao provider의 Client ID와 동일)
+KAKAO_CLIENT_SECRET=            # 카카오 보안 > Client Secret을 '사용함'으로 둔 경우에만
 ```
+
+> 카카오 관련 값은 서버 라우트(`/api/auth/kakao/*`)에서만 쓰므로 `NEXT_PUBLIC` 접두어를
+> 붙이지 않는다. 미설정 시 카카오 버튼을 눌러도 로그인 화면으로 안내만 하고 넘어간다.
 
 ---
 

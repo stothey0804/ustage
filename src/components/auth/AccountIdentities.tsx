@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { UserIdentity } from "@supabase/supabase-js";
-import { Link2, Mail, Unlink } from "lucide-react";
+import { Link2, Loader2, Mail, Unlink } from "lucide-react";
 import { toast } from "sonner";
 
 import { createClient } from "@/lib/supabase/client";
+import { KAKAO_SCOPES } from "@/lib/kakao";
 import { Button } from "@/components/ui/button";
 
 const PROVIDER_LABEL: Record<string, string> = {
@@ -20,16 +21,40 @@ interface Props {
 }
 
 /**
- * 계정에 연결된 로그인 수단 표시 + 해제.
+ * 계정에 연결된 로그인 수단 관리.
  *
- * 연결(linkIdentity)은 제공하지 않는다 — Supabase의 카카오 provider를 거쳐야 하는데
- * gotrue가 이메일·프로필 동의항목을 강제로 요청해 카카오가 인가를 거절한다
- * (그래서 로그인 자체를 OIDC 직연동으로 처리한다. lib/kakao.ts 참고).
- * 즉 카카오로 만든 계정과 이메일로 가입한 계정은 서로 별개다.
+ * 카카오는 이메일을 주지 않아 자동 연결(같은 이메일 계정에 identity 병합)이
+ * 일어나지 않는다. 그래서 기존 이메일 계정으로 로그인한 상태에서
+ * linkIdentity({ provider: "kakao" })로 직접 연결한다.
+ * Supabase 프로젝트에서 **Manual linking**이 켜져 있어야 동작한다.
  */
 export function AccountIdentities({ identities }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+
+  async function linkKakao() {
+    setBusy(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.linkIdentity({
+      provider: "kakao",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=/dashboard/account`,
+        scopes: KAKAO_SCOPES,
+      },
+    });
+
+    if (error) {
+      console.error("[auth] linkIdentity", error);
+      toast.error(
+        error.code === "manual_linking_disabled"
+          ? "카카오 연결 기능이 꺼져 있습니다. Supabase 설정에서 Manual linking을 켜주세요."
+          : "카카오 연결에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+      );
+      setBusy(false);
+      return;
+    }
+    // 성공 시 카카오 인증 페이지로 이동 — 로딩 상태 유지
+  }
 
   async function unlink(identity: UserIdentity) {
     setBusy(true);
@@ -49,6 +74,7 @@ export function AccountIdentities({ identities }: Props) {
     router.refresh();
   }
 
+  const kakao = identities.find((i) => i.provider === "kakao");
   // 마지막 남은 수단을 해제하면 로그인할 방법이 사라진다.
   const canUnlink = identities.length > 1;
 
@@ -92,9 +118,25 @@ export function AccountIdentities({ identities }: Props) {
         )}
       </ul>
 
+      {!kakao && (
+        <Button
+          type="button"
+          onClick={linkKakao}
+          disabled={busy}
+          className="w-full bg-[#FEE500] text-[#191600] hover:bg-[#FADA0A] focus-visible:ring-[#FEE500]/60"
+        >
+          {busy ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Link2 className="size-4" />
+          )}
+          이 계정에 카카오 연결하기
+        </Button>
+      )}
+
       <p className="text-xs text-muted-foreground leading-relaxed">
-        카카오로 로그인한 계정과 이메일로 가입한 계정은 서로 다른 계정입니다. 스테이지와
-        예매 내역은 계정별로 보이니, 한 가지 방법을 정해 계속 사용해 주세요.
+        카카오를 연결하면 다음부터는 카카오 버튼만 눌러 이 계정으로 로그인할 수
+        있어요. 이메일과 예매 내역은 그대로 유지됩니다.
       </p>
     </div>
   );

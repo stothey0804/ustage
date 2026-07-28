@@ -62,11 +62,13 @@ export function EmailSetupForm({ next, pendingEmail }: Props) {
     return "이메일 등록에 실패했습니다. 잠시 후 다시 시도해 주세요.";
   }
 
-  /** 이미 그 주소로 가입된 계정이 있을 때 — 로그아웃하고 이메일 로그인으로 보낸다. */
+  /** 기존 계정으로 갈아타 카카오를 연결하도록 로그아웃 후 로그인 화면으로 보낸다. */
   async function switchToExistingAccount() {
     const supabase = createClient();
     await supabase.auth.signOut();
-    window.location.assign(`/login?next=${encodeURIComponent("/dashboard")}`);
+    window.location.assign(
+      `/login?next=${encodeURIComponent("/dashboard/account")}`,
+    );
   }
 
   async function onSubmit(values: EmailSetupValues) {
@@ -201,9 +203,9 @@ export function EmailSetupForm({ next, pendingEmail }: Props) {
             이미 있어요.
           </p>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            다른 주소를 입력하거나, 그 계정으로 이메일 로그인해서 기존 스테이지·예매
-            내역을 이어서 쓰실 수 있어요. 카카오 계정과 이메일 계정은 서로 다른
-            계정이라 한쪽을 정해 사용해 주세요.
+            그 계정으로 로그인한 뒤 <span className="font-medium">계정 설정 →
+            로그인 수단</span>에서 카카오를 연결하면, 다음부터 카카오 버튼으로 같은
+            계정에 들어올 수 있어요. 기존 스테이지와 예매 내역도 그대로 유지됩니다.
           </p>
           <Button
             type="button"
@@ -212,7 +214,7 @@ export function EmailSetupForm({ next, pendingEmail }: Props) {
             className="w-full"
             onClick={switchToExistingAccount}
           >
-            기존 계정으로 이메일 로그인하기
+            기존 계정으로 로그인하고 연결하기
           </Button>
         </div>
       ) : null}

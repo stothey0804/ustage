@@ -185,7 +185,7 @@ npx supabase gen types typescript --project-id <PROJECT_ID> > src/types/database
 | `/signup`                      | 누구나 | 회원가입                                       |
 | `/onboarding/email`            | 로그인 | 카카오 계정 이메일 등록 (계정 이메일 없으면 강제 진입) |
 | `/dashboard`                   | 로그인 | 홈 — "내 이벤트 관리" / "내 예약 조회" 선택    |
-| `/dashboard/account`           | 로그인 | 계정 설정 — 이메일 상태, 로그인 수단(카카오) 연결·해제 |
+| `/dashboard/account`           | 로그인 | 계정 설정 — 이메일 상태, 로그인 수단(카카오) 연결·해제, 회원 탈퇴 |
 | `/dashboard/events`            | 로그인 | 내 이벤트 목록 + "이벤트 추가하기"             |
 | `/dashboard/events/new`        | 로그인 | 이벤트 생성                                    |
 | `/dashboard/events/[id]`       | 로그인 | 이벤트 상세 + 예매 명단                        |
@@ -307,6 +307,19 @@ ended  (행사 종료) → event_date 경과
 - 기존 이메일 계정과 병합: 온보딩에서 이미 가입된 주소를 입력하면 안내를 띄우고,
   그 계정으로 로그인한 뒤 `/dashboard/account`에서 `linkIdentity({provider:'kakao'})`로 연결한다.
   (카카오가 이메일을 주지 않아 Supabase 자동 연결은 동작하지 않는다.)
+
+### 회원 탈퇴 (`deleteAccount` 서버 액션)
+
+`/dashboard/account` 최하단. "탈퇴"를 직접 입력해야 실행되며 되돌릴 수 없다.
+
+- **차단 조건**: 내가 만든 스테이지에 예매 이력(취소분 포함)이 하나라도 있으면 탈퇴 불가.
+  주최자가 사라지면 입금 확인·입장 처리를 할 사람이 없어지므로 먼저 정리하게 안내한다.
+- 예매가 없는 내 스테이지는 함께 삭제하고 포스터 파일도 지운다(실패는 무시).
+- 참석자로서의 예약은 **삭제하지 않고 `user_id`만 NULL로 끊는다** — 주최자 명단·정산
+  기록 보존이 우선이다. cascade 삭제 설정이 있어도 미리 끊어두면 기록이 남는다.
+  대신 회원 예약은 `password_hash`가 빈 값이라 탈퇴 후 본인 조회는 불가능하다.
+- 계정 삭제는 service_role(`admin.auth.admin.deleteUser`)로 처리하고, 이후 세션 쿠키를
+  정리한 뒤 `/`로 보낸다.
 
 ### 참석자 인증 (이중 경로)
 

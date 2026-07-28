@@ -6,6 +6,7 @@ import { ChevronLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getAccountEmail, isEmailPendingVerification } from "@/lib/account-email";
 import { AccountIdentities } from "@/components/auth/AccountIdentities";
+import { DeleteAccountButton } from "@/components/auth/DeleteAccountButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -99,6 +100,18 @@ export default async function AccountPage({ searchParams }: Props) {
       <section className="space-y-3">
         <h2 className="text-sm font-semibold">로그인 수단</h2>
         <AccountIdentities identities={user.identities ?? []} />
+      </section>
+
+      <Separator />
+
+      {/* 회원 탈퇴 — 되돌릴 수 없으므로 항상 최하단에 둔다 */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-destructive">회원 탈퇴</h2>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          계정을 삭제하면 되돌릴 수 없습니다. 예매가 없는 스테이지는 함께 삭제되고,
+          예매 내역이 있는 스테이지가 남아 있으면 탈퇴할 수 없습니다.
+        </p>
+        <DeleteAccountButton />
       </section>
     </div>
   );

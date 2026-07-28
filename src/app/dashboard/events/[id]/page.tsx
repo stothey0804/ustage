@@ -20,11 +20,13 @@ import { autoTransitionStatus } from "@/lib/auto-status";
 import { sanitizeEventHtml } from "@/lib/sanitize";
 import { Button } from "@/components/ui/button";
 import { EventStatusBadge } from "@/components/StatusBadge";
+import { RichTextView } from "@/components/RichTextView";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusTransition } from "@/components/dashboard/StatusTransition";
 import { EventLifecycle } from "@/components/dashboard/EventLifecycle";
 import { BookingLinkButton } from "@/components/dashboard/BookingLinkButton";
+import { EventQrShare } from "@/components/dashboard/EventQrShare";
 import { BookingList } from "@/components/dashboard/BookingList";
 import { DeleteEventButton } from "@/components/dashboard/DeleteEventButton";
 
@@ -72,6 +74,10 @@ export default async function EventDetailPage({
     | "closed"
     | "ended";
 
+  const cancelPolicyHtml = event.cancel_policy
+    ? sanitizeEventHtml(event.cancel_policy)
+    : undefined;
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       {/* 헤더 */}
@@ -112,6 +118,7 @@ export default async function EventDetailPage({
           </Link>
         </Button>
         <BookingLinkButton slug={event.slug} />
+        <EventQrShare slug={event.slug} title={event.title} />
         <DeleteEventButton eventId={id} hasBookings={bookingCount > 0} />
       </div>
 
@@ -194,6 +201,20 @@ export default async function EventDetailPage({
             <InfoRow icon={Phone} label="연락처" value={event.contact} />
           </div>
 
+          {/* 취소·환불 규정 */}
+          {cancelPolicyHtml && (
+            <>
+              <Separator />
+              <div>
+                <h2 className="text-sm font-semibold mb-3">취소·환불 규정</h2>
+                <RichTextView
+                  html={cancelPolicyHtml}
+                  className="rounded-lg border bg-muted/30 px-3.5 py-3 text-muted-foreground"
+                />
+              </div>
+            </>
+          )}
+
           {/* 안내 내용 */}
           {event.description && (
             <>
@@ -217,6 +238,7 @@ export default async function EventDetailPage({
             price={event.price}
             eventTitle={event.title}
             customFields={(event.custom_fields ?? []) as import("@/lib/validations/event").CustomField[]}
+            cancelPolicyHtml={cancelPolicyHtml}
           />
         </TabsContent>
       </Tabs>

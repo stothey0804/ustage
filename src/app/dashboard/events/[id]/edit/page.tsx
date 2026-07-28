@@ -49,6 +49,7 @@ export default async function EditEventPage({
     title: event.title,
     description: event.description ?? "",
     booking_notice: event.booking_notice ?? "",
+    cancel_policy: event.cancel_policy ?? "",
     poster_url: event.poster_url ?? "",
     event_date: toDatetimeLocal(event.event_date) ?? "",
     event_end_date: toDatetimeLocal(event.event_end_date) ?? undefined,

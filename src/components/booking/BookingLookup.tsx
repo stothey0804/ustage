@@ -13,6 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { QRTicket } from "@/components/booking/QRTicket";
 import { AdditionalPurchase } from "@/components/booking/AdditionalPurchase";
+import { CancelBooking } from "@/components/booking/CancelBooking";
+import { RichTextView } from "@/components/RichTextView";
 import { CopyButton } from "@/components/ui/copy-button";
 
 interface Props {
@@ -38,13 +40,26 @@ type LookupResult = {
   events: {
     title: string;
     event_date: string;
+    event_end_date: string | null;
     venue: string;
     bank_info: string;
     slug: string;
     contact: string;
     price: number;
+    /** 서버에서 sanitize된 취소·환불 규정 HTML */
+    cancel_policy_html: string | null;
   };
 };
+
+/** 참석자가 직접 취소할 수 있는 예약인지 — 서버(API)에서도 동일하게 검증한다. */
+function canSelfCancel(result: LookupResult): boolean {
+  if (result.status !== "pending" && result.status !== "confirmed") return false;
+  if (result.tickets.some((t) => t.checked_in)) return false;
+  const end = new Date(
+    result.events.event_end_date ?? result.events.event_date
+  );
+  return isNaN(end.getTime()) || end >= new Date();
+}
 
 function getStatusLabel(status: string, isFree: boolean) {
   if (status === "confirmed") return isFree ? "참가확정" : "입금완료";
@@ -203,6 +218,10 @@ export function BookingLookup({ eventId, isFree = false }: Props) {
               result={result}
               isFree={isFree}
               label={results.length > 1 ? `예약 ${results.length - index}` : undefined}
+              credentials={credentials ?? undefined}
+              onCancelled={() => {
+                if (credentials) runLookup(credentials);
+              }}
             />
           ))}
         </div>
@@ -215,12 +234,17 @@ function BookingResultCard({
   result,
   isFree,
   label,
+  credentials,
+  onCancelled,
 }: {
   result: LookupResult;
   isFree: boolean;
   label?: string;
+  credentials?: LookupFormValues;
+  onCancelled?: () => void;
 }) {
   const status = result.status;
+  const policyHtml = result.events.cancel_policy_html ?? undefined;
 
   return (
     <div className="rounded-lg border p-4 space-y-4">
@@ -305,6 +329,32 @@ function BookingResultCard({
       {/* QR 코드 */}
       {status === "confirmed" && result.tickets.length > 0 && (
         <QRTicket name={result.name} tickets={result.tickets} />
+      )}
+
+      {/* 취소·환불 규정 */}
+      {policyHtml && status !== "cancelled" && (
+        <details className="rounded-md border bg-muted/40 px-3 py-2">
+          <summary className="cursor-pointer text-xs font-semibold">
+            취소·환불 규정
+          </summary>
+          <RichTextView
+            html={policyHtml}
+            className="mt-2 text-xs text-muted-foreground"
+          />
+        </details>
+      )}
+
+      {/* 본인 취소 */}
+      {canSelfCancel(result) && (
+        <div className="flex justify-end">
+          <CancelBooking
+            bookingId={result.id}
+            cancelPolicyHtml={policyHtml}
+            contact={result.events.contact}
+            credentials={credentials}
+            onCancelled={onCancelled}
+          />
+        </div>
       )}
     </div>
   );

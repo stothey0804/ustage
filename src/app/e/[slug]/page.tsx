@@ -15,8 +15,10 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { autoTransitionStatus } from "@/lib/auto-status";
+import { getAccountEmail } from "@/lib/account-email";
 import { sanitizeEventHtml } from "@/lib/sanitize";
 import { EventStatusBadge } from "@/components/StatusBadge";
+import { RichTextView } from "@/components/RichTextView";
 import { Separator } from "@/components/ui/separator";
 import { BookingForm } from "@/components/booking/BookingForm";
 import { AddToCalendar } from "@/components/booking/AddToCalendar";
@@ -106,6 +108,9 @@ export default async function EventPublicPage({
   }
 
   const customFields = (event.custom_fields ?? []) as CustomField[];
+  const cancelPolicyHtml = event.cancel_policy
+    ? sanitizeEventHtml(event.cancel_policy)
+    : undefined;
 
   return (
     <div className="mx-auto max-w-lg px-4 py-8 space-y-6">
@@ -199,6 +204,20 @@ export default async function EventPublicPage({
         </>
       )}
 
+      {/* 취소·환불 규정 */}
+      {cancelPolicyHtml && (
+        <>
+          <Separator />
+          <section className="space-y-2">
+            <h2 className="font-semibold">취소·환불 규정</h2>
+            <RichTextView
+              html={cancelPolicyHtml}
+              className="rounded-lg border bg-muted/30 px-3.5 py-3 text-muted-foreground"
+            />
+          </section>
+        </>
+      )}
+
       <Separator />
 
       {/* 예매 섹션 */}
@@ -213,9 +232,10 @@ export default async function EventPublicPage({
               ? sanitizeEventHtml(event.booking_notice)
               : undefined
           }
+          cancelPolicyHtml={cancelPolicyHtml}
           customFields={customFields}
           isLoggedIn={!!user}
-          userEmail={user?.email ?? undefined}
+          userEmail={getAccountEmail(user) ?? undefined}
           isOpen={isOpen}
           closedReason={reason}
           maxQuantity={

@@ -8,6 +8,7 @@ import { sendBookingConfirmation, getBaseUrl } from "@/lib/email";
 import { formatKST } from "@/lib/date";
 import { autoTransitionStatus } from "@/lib/auto-status";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { getAccountEmail } from "@/lib/account-email";
 import type { CustomField } from "@/lib/validations/event";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
@@ -230,8 +231,10 @@ export async function POST(req: Request) {
     );
   }
 
-  // 로그인 사용자는 세션 이메일을 강제 사용 (임의 이메일 지정 차단)
-  const email = (user?.email ?? data.email).trim().toLowerCase();
+  // 로그인 사용자는 세션 이메일을 강제 사용 (임의 이메일 지정 차단).
+  // 카카오 계정은 계정 이메일이 비어 있을 수 있어 온보딩에서 받은 주소를 쓴다.
+  const sessionEmail = getAccountEmail(user);
+  const email = (sessionEmail ?? data.email).trim().toLowerCase();
 
   // 스테이지 조회
   const { data: event, error: eventError } = await supabase

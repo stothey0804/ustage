@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, Calendar, Ticket, ChevronDown } from "lucide-react";
+import { LogOut, Calendar, Ticket, ChevronDown, UserCog } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
 import { Wordmark } from "@/components/Wordmark";
 import { Button } from "@/components/ui/button";
@@ -95,11 +95,20 @@ export function Header({ userEmail }: Props) {
         </div>
 
         <div className="flex items-center gap-3">
-          {userEmail ? (
-            <span className="hidden text-sm text-muted-foreground sm:inline">
-              {userEmail}
-            </span>
-          ) : null}
+          <Link
+            href="/dashboard/account"
+            className="hidden items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground sm:inline-flex"
+          >
+            <UserCog className="size-4" />
+            {userEmail ?? "계정 설정"}
+          </Link>
+          <Link
+            href="/dashboard/account"
+            aria-label="계정 설정"
+            className="text-muted-foreground hover:text-foreground sm:hidden"
+          >
+            <UserCog className="size-4" />
+          </Link>
           <form action={signOut}>
             <Button type="submit" variant="ghost" size="sm">
               <LogOut className="size-4" />

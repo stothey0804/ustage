@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SignupForm } from "@/components/auth/SignupForm";
+import { KakaoLoginButton } from "@/components/auth/KakaoLoginButton";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -28,6 +29,14 @@ export default async function SignupPage() {
             이메일과 비밀번호로 가입하세요.
           </p>
         </header>
+
+        <KakaoLoginButton label="카카오로 시작하기" />
+
+        <div className="flex items-center gap-3">
+          <span className="h-px flex-1 bg-border" />
+          <span className="text-xs text-muted-foreground">또는 이메일로 가입</span>
+          <span className="h-px flex-1 bg-border" />
+        </div>
 
         <SignupForm />
 

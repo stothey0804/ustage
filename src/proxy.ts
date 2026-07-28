@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
+import { needsEmailSetup } from "@/lib/account-email";
 
 export async function proxy(request: NextRequest) {
   const { supabaseResponse, user } = await updateSession(request);
@@ -13,6 +14,24 @@ export async function proxy(request: NextRequest) {
     redirectUrl.searchParams.set("next", pathname);
     const redirectResponse = NextResponse.redirect(redirectUrl);
     // 세션 갱신으로 세팅된 쿠키를 redirect 응답에도 전파.
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie.name, cookie.value);
+    });
+    return redirectResponse;
+  }
+
+  // 카카오처럼 이메일 없는 계정은 주소를 먼저 등록해야 대시보드를 쓸 수 있다.
+  // (인증 링크 클릭은 강제하지 않는다 — 등록만 하면 통과, 미인증은 배너로 안내)
+  if (
+    pathname.startsWith("/dashboard") &&
+    needsEmailSetup(user) &&
+    !pathname.startsWith("/onboarding")
+  ) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = "/onboarding/email";
+    redirectUrl.search = "";
+    redirectUrl.searchParams.set("next", pathname);
+    const redirectResponse = NextResponse.redirect(redirectUrl);
     supabaseResponse.cookies.getAll().forEach((cookie) => {
       redirectResponse.cookies.set(cookie.name, cookie.value);
     });

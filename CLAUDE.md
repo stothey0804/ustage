@@ -8,6 +8,8 @@
 
 **통합 인증**: 역할 구분 없이 한 계정으로 이벤트 생성(공연자)과 예매(참석자) 모두 가능.
 비회원도 예매할 수 있으며, 이메일+비밀번호로 예약을 조회한다.
+로그인은 이메일+비밀번호와 카카오(Supabase OAuth) 두 가지 — 카카오는 이메일을 주지 않으므로
+로그인 후 `/onboarding/email`에서 사용할 주소를 입력받는다.
 
 ---
 
@@ -40,9 +42,13 @@ src/
 │   ├── login/page.tsx                  # 로그인 + "비회원 예약정보 조회" 링크
 │   ├── signup/page.tsx                 # 회원가입
 │   │
+│   ├── onboarding/
+│   │   └── email/page.tsx              # 카카오 계정 이메일 등록
+│   │
 │   ├── dashboard/                      # 로그인 전용 — proxy.ts로 보호
-│   │   ├── layout.tsx
+│   │   ├── layout.tsx                  # Header + 이메일 미인증 배너
 │   │   ├── page.tsx                    # 홈 ("내 이벤트 관리" / "내 예약 조회" 선택)
+│   │   ├── account/page.tsx            # 계정 설정 (이메일·로그인 수단 연결)
 │   │   ├── events/
 │   │   │   ├── page.tsx                # 내 이벤트 목록
 │   │   │   ├── new/page.tsx            # 이벤트 생성
@@ -100,6 +106,7 @@ performer_id    uuid → auth.users
 title           text
 description     text             # 리치텍스트 (HTML) — CKEditor로 입력
 booking_notice  text nullable    # 신청 폼 상단 주의사항 (HTML) — CKEditor로 입력
+cancel_policy   text nullable    # 취소·환불 규정 (HTML) — 신청 시 안내 + 취소 시 재확인
 poster_url      text nullable    # 포스터 이미지 URL (Supabase Storage)
 event_date      timestamptz
 event_end_date  timestamptz nullable  # 종료 일시 (선택)
@@ -176,7 +183,9 @@ npx supabase gen types typescript --project-id <PROJECT_ID> > src/types/database
 | `/`                            | 누구나 | 랜딩 — 로그인/회원가입 버튼                    |
 | `/login`                       | 누구나 | 로그인 + "비회원 예약정보 조회" 링크           |
 | `/signup`                      | 누구나 | 회원가입                                       |
+| `/onboarding/email`            | 로그인 | 카카오 계정 이메일 등록 (계정 이메일 없으면 강제 진입) |
 | `/dashboard`                   | 로그인 | 홈 — "내 이벤트 관리" / "내 예약 조회" 선택    |
+| `/dashboard/account`           | 로그인 | 계정 설정 — 이메일 상태, 로그인 수단(카카오) 연결·해제 |
 | `/dashboard/events`            | 로그인 | 내 이벤트 목록 + "이벤트 추가하기"             |
 | `/dashboard/events/new`        | 로그인 | 이벤트 생성                                    |
 | `/dashboard/events/[id]`       | 로그인 | 이벤트 상세 + 예매 명단                        |
@@ -221,6 +230,22 @@ ended  (행사 종료) → event_date 경과
   → booking_tickets.checked_in: true  (QR 스캔으로 입장 — 티켓 단위)
 ```
 
+### 취소·환불 규정과 참석자 셀프 취소
+
+- `events.cancel_policy`(CKEditor HTML)를 스테이지 생성·수정에서 입력한다.
+- 노출 지점: 공개 스테이지 페이지 · 예매 폼(제출 직전) · 예약 조회(비회원) ·
+  예약 상세(회원) · 취소 확인 모달(참석자/주최자 양쪽) · 취소 완료 메일.
+  표시는 항상 `sanitizeEventHtml`을 통과한 HTML만 사용하고, 클라이언트로 넘길 때는
+  API 응답 단계에서 정화한다(`/api/bookings/lookup`의 `cancel_policy_html`).
+- 참석자 셀프 취소: `POST /api/bookings/cancel` (service_role)
+  - 본인 확인 — 회원은 세션 `user_id` 일치, 비회원은 이메일 + 비밀번호 bcrypt 대조
+  - 차단 조건 — 이미 취소됨 / 티켓 1장이라도 `checked_in` / 스테이지 종료(`event_end_date ?? event_date` 경과)
+    → 이 경우는 주최자 문의로 안내
+  - `status != 'cancelled'` 조건부 갱신으로 동시 요청 중복 취소 방지
+  - rate limit: IP 분당 10회 + 예약당 15분 5회
+  - 취소 후 참석자에게 취소 완료 메일, 주최자에게 취소 알림 메일 발송
+  - 좌석은 별도 처리 없이 반환됨 (잔여석 계산이 `status != 'cancelled'` 합산이므로)
+
 ### 입금 확인 처리
 
 - 이벤트 소유자만 가능 (`/dashboard/events/[id]`)
@@ -228,11 +253,53 @@ ended  (행사 종료) → event_date 경과
 - pending/confirmed → cancelled 전환 가능
 - `status: 'pending'` 상태에서는 QR 스캔 시 입장 처리 불가 (경고 표시)
 
+### QR 두 종류 (혼동 주의)
+
+- **입장 QR** — `booking_tickets.qr_token`(티켓 1장당 1개). 참석자에게 발급, 스캔하면 입장 처리.
+- **예매 페이지 QR** — 공개 링크(`/e/[slug]`)를 인코딩한 홍보용 QR.
+  `components/dashboard/EventQrShare.tsx`에서 클릭 시 `qrcode`를 동적 import해 PNG를
+  생성하고 저장(download)·공유(Web Share, 이미지 첨부 가능하면 파일까지)를 제공한다.
+  개인정보가 없어 포스터·SNS에 그대로 써도 된다.
+
 ### QR 토큰
 
 - QR 코드에는 `booking_tickets.qr_token` (UUID)만 인코딩 — 개인정보 노출 없음, 티켓 1장당 1개
 - 스캔 시 서버에서 토큰으로 티켓·예약 조회 → 이름, 입금상태, 입장여부 표시
 - 이미 입장 처리된 경우 "재입장 시도" 경고 표시 (checked_in=false 조건부 갱신으로 동시 스캔 방지)
+
+### 카카오 로그인 (Supabase OAuth)
+
+**Supabase / 카카오 콘솔 설정** (코드로 처리 불가 — 대시보드에서 직접):
+
+1. 카카오 개발자센터 → 애플리케이션 생성 → 카카오 로그인 활성화
+   - Redirect URI: `https://<PROJECT_REF>.supabase.co/auth/v1/callback`
+   - 동의항목: 닉네임(필수). **이메일은 비즈앱 심사 없이는 받을 수 없다** → 앱에서 직접 입력받는 이유.
+2. Supabase → Authentication → Providers → Kakao 활성화, REST API 키(Client ID)와
+   Client Secret(보안 → Client Secret) 입력
+3. Supabase → Authentication → URL Configuration → Redirect URLs에
+   `http://localhost:3000/auth/callback`, `https://<도메인>/auth/callback` 추가
+4. Supabase → Authentication → Advanced → **Manual linking 활성화**
+   (기존 이메일 계정에 카카오를 연결하는 `/dashboard/account` 기능이 이 설정을 요구)
+
+**앱 흐름**:
+
+```
+[카카오로 로그인] → signInWithOAuth({provider:'kakao'})
+  → /auth/callback (code → 세션 교환)
+  → 계정 이메일 없음(needsEmailSetup) → /onboarding/email
+      → updateUser({ email, data:{ contact_email } }) : 인증 메일 발송
+      → 인증 전에도 contact_email로 앱 동작 (대시보드 상단 미인증 배너 노출)
+  → 계정 이메일 있음 → next 경로
+```
+
+- 이메일 해석은 항상 `lib/account-email.ts`의 `getAccountEmail`(계정 이메일 → 없으면
+  `user_metadata.contact_email`)을 사용한다. `user_metadata`는 사용자가 수정할 수 있어
+  **신뢰 경계가 아니다** — 소유 증명이 필요한 로그인·비밀번호 재설정은 계정 이메일만 인정.
+- `/dashboard/*`는 이메일 **등록**까지만 강제(proxy에서 `/onboarding/email`로 리다이렉트).
+  인증 완료는 강제하지 않는다.
+- 기존 이메일 계정과 병합: 온보딩에서 이미 가입된 주소를 입력하면 안내를 띄우고,
+  그 계정으로 로그인한 뒤 `/dashboard/account`에서 `linkIdentity({provider:'kakao'})`로 연결한다.
+  (카카오가 이메일을 주지 않아 Supabase 자동 연결은 동작하지 않는다.)
 
 ### 참석자 인증 (이중 경로)
 
@@ -262,6 +329,13 @@ ended  (행사 종료) → event_date 경과
 
 - 신청완료 메일: 유료 = 입금 안내(계좌·금액), 무료 = 즉시 확정이므로 입장 QR 포함
 - 입금확인(pending→confirmed) 시: 입장 QR 포함 확정 메일 발송 (`sendBookingConfirmed`)
+- 참석자 셀프 취소 시: 참석자에게 취소 완료 메일(`sendBookingCancelled`, 취소 규정·연락처 포함),
+  주최자에게 취소 알림(`sendOwnerCancelNotice`) — 주최자 주소는 `getAccountEmail`로 해석
+- 주최자 취소(pending/confirmed → cancelled) 시: 참석자에게 취소 통보 메일
+  (`sendBookingCancelled({ byOwner: true })` — 제목·문구가 "주최자가 취소" 버전으로 바뀜).
+  이미 cancelled였던 예약은 재발송하지 않는다.
+- Supabase Auth 메일(가입 인증·비밀번호 재설정·이메일 변경 확인) 템플릿은 `supabase/templates/`에
+  보관하고 Supabase 대시보드 Email Templates에 붙여 쓴다. 파일 첫 줄 주석에 대응 슬롯이 적혀 있다.
 - QR은 CID 인라인 첨부 (Gmail이 data: URI 이미지를 차단하므로)
 - 발신자: `RESEND_FROM_EMAIL` 환경변수 (검증된 도메인 주소여야 함)
 
@@ -346,5 +420,8 @@ SUPABASE_SERVICE_ROLE_KEY=      # 서버 전용, NEXT_PUBLIC 붙이지 말 것
 | slug 기반 참석자 URL          | 공연 ID 노출 없이 공유 가능, 메인에서 검색 불가         |
 | App Router 서버 컴포넌트 우선 | 예매 폼 외 대부분 읽기 전용, SEO 불필요하지만 성능 이점 |
 | Supabase RLS                  | 공연자별 데이터 격리를 DB 레벨에서 보장                 |
+| 카카오 로그인 후 이메일 직접 입력 | 카카오가 비즈앱 심사 전에는 이메일 미제공 — 예매 메일·QR 발송에 주소가 필수 |
+| 이메일 인증 전에도 진입 허용   | 카카오 간편함 유지. 미인증은 배너로 안내하고, 로그인·비밀번호 재설정만 제한 |
+| 셀프 취소는 API(service_role)  | 참석자 UPDATE 권한을 RLS로 열지 않고 본인 확인·상태 검증을 서버에 모음 |
 
 @AGENTS.md

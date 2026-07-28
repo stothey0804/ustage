@@ -32,6 +32,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CopyButton } from "@/components/ui/copy-button";
+import { RichTextView } from "@/components/RichTextView";
 import type { CustomField } from "@/lib/validations/event";
 
 interface BookingFormProps {
@@ -40,6 +41,8 @@ interface BookingFormProps {
   bankInfo: string;
   /** 신청 폼 상단 주의사항 — 서버에서 sanitize된 HTML */
   noticeHtml?: string;
+  /** 취소·환불 규정 — 서버에서 sanitize된 HTML */
+  cancelPolicyHtml?: string;
   customFields: CustomField[];
   isLoggedIn: boolean;
   userEmail?: string;
@@ -56,6 +59,7 @@ export function BookingForm({
   price,
   bankInfo,
   noticeHtml,
+  cancelPolicyHtml,
   customFields,
   isLoggedIn,
   userEmail,
@@ -435,6 +439,21 @@ export function BookingForm({
                   control={control}
                   errors={errors}
                 />
+              </>
+            )}
+
+            {cancelPolicyHtml && (
+              <>
+                <Separator />
+                <details className="rounded-lg border bg-muted/40 px-3.5 py-3" open>
+                  <summary className="cursor-pointer text-xs font-semibold">
+                    취소·환불 규정
+                  </summary>
+                  <RichTextView
+                    html={cancelPolicyHtml}
+                    className="mt-2 text-xs text-muted-foreground"
+                  />
+                </details>
               </>
             )}
 

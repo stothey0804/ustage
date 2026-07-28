@@ -63,6 +63,7 @@ export function EventForm({
       title: "",
       description: "",
       booking_notice: "",
+      cancel_policy: "",
       poster_url: "",
       event_date: "",
       event_end_date: undefined,
@@ -83,6 +84,7 @@ export function EventForm({
 
   const description = watch("description");
   const bookingNotice = watch("booking_notice");
+  const cancelPolicy = watch("cancel_policy");
   const watchPrice = watch("price") ?? 0;
   const customFields = watch("custom_fields") ?? [];
 
@@ -315,6 +317,22 @@ export function EventForm({
             value={bookingNotice ?? ""}
             onChange={(v) => setValue("booking_notice", v)}
           />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>
+            취소·환불 규정{" "}
+            <span className="text-muted-foreground font-normal">
+              (신청 시 안내 + 참석자가 취소할 때 다시 표시)
+            </span>
+          </Label>
+          <RichTextEditor
+            value={cancelPolicy ?? ""}
+            onChange={(v) => setValue("cancel_policy", v)}
+          />
+          <p className="text-xs text-muted-foreground">
+            미입력 시 참석자 취소 화면에는 규정 없이 연락처 안내만 표시됩니다.
+          </p>
         </div>
 
         <div className="space-y-1.5">

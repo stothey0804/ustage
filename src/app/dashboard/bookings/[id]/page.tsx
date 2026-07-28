@@ -9,7 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { QRTicket } from "@/components/booking/QRTicket";
 import { AdditionalPurchase } from "@/components/booking/AdditionalPurchase";
+import { CancelBooking } from "@/components/booking/CancelBooking";
 import { AddToCalendar } from "@/components/booking/AddToCalendar";
+import { RichTextView } from "@/components/RichTextView";
+import { sanitizeEventHtml } from "@/lib/sanitize";
 import { VenueMapLinks } from "@/components/booking/VenueMapLinks";
 import { CopyButton } from "@/components/ui/copy-button";
 import { BookingStatusBadge } from "@/components/StatusBadge";
@@ -30,7 +33,7 @@ export default async function BookingDetailPage({
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "*, events(id, title, event_date, venue, venue_address, price, bank_info, slug, poster_url, contact)"
+      "*, events(id, title, event_date, event_end_date, venue, venue_address, price, bank_info, slug, poster_url, contact, cancel_policy)"
     )
     .eq("id", id)
     .eq("user_id", user.id)
@@ -50,6 +53,7 @@ export default async function BookingDetailPage({
     id: string;
     title: string;
     event_date: string;
+    event_end_date: string | null;
     venue: string;
     venue_address: string | null;
     price: number;
@@ -57,11 +61,25 @@ export default async function BookingDetailPage({
     slug: string;
     poster_url: string | null;
     contact: string;
+    cancel_policy: string | null;
   } | null;
 
   const status = booking.status;
   const isFree = event?.price === 0;
   const quantity = booking.quantity ?? 1;
+  const cancelPolicyHtml = event?.cancel_policy
+    ? sanitizeEventHtml(event.cancel_policy)
+    : undefined;
+
+  // 참석자 직접 취소 가능 여부 — 서버(API)에서도 동일하게 검증한다.
+  const eventEnd = event
+    ? new Date(event.event_end_date ?? event.event_date)
+    : null;
+  const eventOver = !!eventEnd && !isNaN(eventEnd.getTime()) && eventEnd < new Date();
+  const canSelfCancel =
+    (status === "pending" || status === "confirmed") &&
+    !(tickets ?? []).some((t) => t.checked_in) &&
+    !eventOver;
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
@@ -226,6 +244,31 @@ export default async function BookingDetailPage({
             </div>
           </div>
         </>
+      )}
+
+      {/* 취소·환불 규정 */}
+      {cancelPolicyHtml && status !== "cancelled" && (
+        <>
+          <Separator />
+          <div className="space-y-2">
+            <h2 className="text-sm font-semibold">취소·환불 규정</h2>
+            <RichTextView
+              html={cancelPolicyHtml}
+              className="rounded-lg border bg-muted/30 px-3.5 py-3 text-muted-foreground"
+            />
+          </div>
+        </>
+      )}
+
+      {/* 본인 취소 */}
+      {canSelfCancel && (
+        <div className="flex justify-end">
+          <CancelBooking
+            bookingId={booking.id}
+            cancelPolicyHtml={cancelPolicyHtml}
+            contact={event?.contact}
+          />
+        </div>
       )}
 
       {/* QR 코드 (confirmed 상태 + 티켓 존재) */}

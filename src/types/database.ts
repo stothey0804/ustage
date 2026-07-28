@@ -123,6 +123,7 @@ export type Database = {
           booking_end: string | null
           booking_notice: string | null
           booking_start: string | null
+          cancel_policy: string | null
           capacity: number | null
           contact: string
           created_at: string | null
@@ -147,6 +148,7 @@ export type Database = {
           booking_end?: string | null
           booking_notice?: string | null
           booking_start?: string | null
+          cancel_policy?: string | null
           capacity?: number | null
           contact: string
           created_at?: string | null
@@ -171,6 +173,7 @@ export type Database = {
           booking_end?: string | null
           booking_notice?: string | null
           booking_start?: string | null
+          cancel_policy?: string | null
           capacity?: number | null
           contact?: string
           created_at?: string | null

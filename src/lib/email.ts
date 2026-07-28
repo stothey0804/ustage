@@ -218,6 +218,150 @@ export async function sendBookingConfirmation({
   });
 }
 
+interface BookingCancelledParams {
+  to: string;
+  name: string;
+  quantity: number;
+  eventTitle: string;
+  eventDate: string;
+  eventVenue: string;
+  /** 주최자 연락처 — 환불 문의 안내용 */
+  contact: string;
+  /** 취소·환불 규정 (서버에서 sanitize된 HTML) */
+  cancelPolicyHtml?: string;
+  /** true면 주최자가 취소한 경우 — 참석자는 본인이 취소한 게 아니라 통보를 받는다 */
+  byOwner?: boolean;
+}
+
+/** 예약 취소 안내 메일 (참석자 본인 취소 / 주최자 취소 공용) — 환불은 주최자 문의로 안내 */
+export async function sendBookingCancelled({
+  to,
+  name,
+  quantity,
+  eventTitle,
+  eventDate,
+  eventVenue,
+  contact,
+  cancelPolicyHtml,
+  byOwner = false,
+}: BookingCancelledParams): Promise<void> {
+  const heading = byOwner
+    ? "주최자가 예약을 취소했습니다"
+    : "예약이 취소되었습니다";
+  const lead = byOwner
+    ? "발급된 입장 QR은 더 이상 사용할 수 없습니다. 취소 사유와 환불은 주최자에게 문의해 주세요."
+    : "입장 QR은 더 이상 사용할 수 없습니다. 환불이 필요하면 주최자에게 문의해 주세요.";
+
+  const html = `
+<div style="max-width:480px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a1a;">
+  <div style="padding:32px 24px;border:1px solid #e5e5e5;border-radius:12px;">
+    <h1 style="font-size:20px;margin:0 0 24px;color:#2b8a8a;">${heading}</h1>
+
+    ${infoTableHtml({ eventTitle, eventDate, eventVenue, name, quantity })}
+
+    <p style="margin:20px 0 0;font-size:13px;color:#666;">
+      ${lead}
+    </p>
+    <div style="margin:12px 0 0;padding:16px;background:#f5f5f5;border-radius:8px;">
+      <p style="margin:0 0 4px;font-size:12px;color:#666;">주최자 연락처</p>
+      <p style="margin:0;font-size:14px;font-weight:600;">${escapeHtml(contact)}</p>
+    </div>
+
+    ${
+      cancelPolicyHtml
+        ? `
+    <div style="margin:20px 0 0;padding:16px;border:1px solid #e5e5e5;border-radius:8px;font-size:13px;color:#444;">
+      <p style="margin:0 0 8px;font-size:12px;color:#666;font-weight:600;">취소·환불 규정</p>
+      ${cancelPolicyHtml}
+    </div>`
+        : ""
+    }
+
+    <p style="margin:24px 0 0;font-size:11px;color:#999;text-align:center;">
+      이 메일은 어스테이지에서 자동 발송되었습니다.
+    </p>
+  </div>
+</div>
+  `.trim();
+
+  await sendEmail({
+    to,
+    subject: byOwner
+      ? `[어스테이지] ${eventTitle} 예약이 취소되었습니다`
+      : `[어스테이지] ${eventTitle} 예약 취소 완료`,
+    html,
+  });
+}
+
+interface OwnerCancelNoticeParams {
+  to: string;
+  /** 취소한 참석자 이름 */
+  attendeeName: string;
+  attendeeEmail: string;
+  quantity: number;
+  eventTitle: string;
+  eventDate: string;
+  /** 스테이지 상세(명단) URL */
+  manageUrl: string;
+  /** 취소 시점의 예약 상태 — 유료 스테이지에서 환불 필요 여부 판단용 */
+  wasConfirmed: boolean;
+}
+
+/** 참석자가 스스로 취소했을 때 주최자에게 보내는 알림 */
+export async function sendOwnerCancelNotice({
+  to,
+  attendeeName,
+  attendeeEmail,
+  quantity,
+  eventTitle,
+  eventDate,
+  manageUrl,
+  wasConfirmed,
+}: OwnerCancelNoticeParams): Promise<void> {
+  const html = `
+<div style="max-width:480px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a1a;">
+  <div style="padding:32px 24px;border:1px solid #e5e5e5;border-radius:12px;">
+    <h1 style="font-size:20px;margin:0 0 24px;color:#2b8a8a;">참석자가 예약을 취소했습니다</h1>
+
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+      <tr>
+        <td style="padding:8px 0;color:#666;width:80px;">스테이지</td>
+        <td style="padding:8px 0;font-weight:600;">${escapeHtml(eventTitle)}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0;color:#666;">일시</td>
+        <td style="padding:8px 0;">${eventDate}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0;color:#666;">참석자</td>
+        <td style="padding:8px 0;">${escapeHtml(attendeeName)} (${quantity}매)</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0;color:#666;">이메일</td>
+        <td style="padding:8px 0;">${escapeHtml(attendeeEmail)}</td>
+      </tr>
+    </table>
+
+    <p style="margin:20px 0 0;font-size:13px;color:#666;">
+      ${
+        wasConfirmed
+          ? "입금이 확인된 예약이었습니다. 환불 처리가 필요한지 확인해 주세요."
+          : "입금 대기 상태였던 예약입니다. 좌석은 자동으로 반환되었습니다."
+      }
+    </p>
+
+    ${footerHtml(manageUrl, "예매 명단 확인하기")}
+  </div>
+</div>
+  `.trim();
+
+  await sendEmail({
+    to,
+    subject: `[어스테이지] ${eventTitle} 예약 취소 — ${attendeeName}`,
+    html,
+  });
+}
+
 interface BookingConfirmedParams {
   to: string;
   name: string;

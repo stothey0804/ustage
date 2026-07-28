@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { sanitizeEventHtml } from "@/lib/sanitize";
 
 const lookupSchema = z.object({
   event_id: z.string().uuid(),
@@ -57,7 +58,9 @@ export async function POST(req: Request) {
 
   const { data: bookings, error } = await adminSupabase
     .from("bookings")
-    .select("*, events!inner(id, title, event_date, venue, bank_info, slug, contact, price)")
+    .select(
+      "*, events!inner(id, title, event_date, event_end_date, venue, bank_info, slug, contact, price, cancel_policy)"
+    )
     .eq("event_id", event_id)
     .ilike("email", emailPattern)
     .is("user_id", null)
@@ -115,9 +118,17 @@ export async function POST(req: Request) {
 
       const { password_hash, ...safeBooking } = booking;
       void password_hash;
+      // 취소 규정은 CKEditor HTML — 클라이언트에서 그대로 렌더하므로 여기서 정화한다.
+      const { cancel_policy, ...event } = booking.events;
       // bank_info는 소유자가 입력한 그대로 노출한다. 마스킹이 필요하면 소유자가 직접 입력.
       return {
         ...safeBooking,
+        events: {
+          ...event,
+          cancel_policy_html: cancel_policy
+            ? sanitizeEventHtml(cancel_policy)
+            : null,
+        },
         tickets: tickets ?? [],
       };
     })

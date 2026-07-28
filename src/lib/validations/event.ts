@@ -19,6 +19,7 @@ export const eventSchema = z
     title: z.string().min(1, "스테이지 제목을 입력해 주세요."),
     description: z.string().optional(),
     booking_notice: z.string().optional(),
+    cancel_policy: z.string().optional(),
     poster_url: z.string().optional(),
     event_date: z.string().min(1, "스테이지 시작 일시를 입력해 주세요."),
     event_end_date: z.string().optional(),

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { BookingStatusBadge } from "@/components/StatusBadge";
+import { RichTextView } from "@/components/RichTextView";
 import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
@@ -35,6 +36,8 @@ interface BookingListProps {
   customFields?: CustomField[];
   /** 다운로드 파일명에 사용 */
   eventTitle?: string;
+  /** 취소·환불 규정 — 서버에서 sanitize된 HTML. 취소 확인 시 표시 */
+  cancelPolicyHtml?: string;
 }
 
 type FilterStatus = "all" | "pending" | "confirmed" | "cancelled" | "checked_in" | "not_checked_in";
@@ -143,12 +146,14 @@ export function BookingList({
   price = 0,
   customFields,
   eventTitle,
+  cancelPolicyHtml,
 }: BookingListProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [searchName, setSearchName] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<{ id: string; name: string } | null>(null);
   const [resetTarget, setResetTarget] = useState<{ id: string; name: string } | null>(null);
   const [resetPw, setResetPw] = useState("");
   const [selectedBooking, setSelectedBooking] = useState<BookingWithTickets | null>(null);
@@ -206,6 +211,13 @@ export function BookingList({
       setSelectedBooking(null);
       router.refresh();
     });
+  }
+
+  function handleCancelConfirm() {
+    if (!cancelTarget) return;
+    const bookingId = cancelTarget.id;
+    setCancelTarget(null);
+    handleStatusChange(bookingId, "cancelled");
   }
 
   function handleForceCheckIn(bookingId: string, ticketId?: string) {
@@ -433,7 +445,69 @@ export function BookingList({
           setSelectedBooking(null);
           setDeleteTarget({ id, name });
         }}
+        onRequestCancel={(id, name) => {
+          setSelectedBooking(null);
+          setCancelTarget({ id, name });
+        }}
       />
+
+      {/* 예매 취소 확인 Dialog — 취소·환불 규정을 함께 확인 */}
+      <Dialog
+        open={cancelTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setCancelTarget(null);
+        }}
+      >
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>예매 취소</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">
+                {cancelTarget?.name}
+              </span>
+              님의 예매를 취소 처리합니다. 발급된 입장 QR은 사용할 수 없게 되고
+              좌석은 반환됩니다.
+            </p>
+            {cancelPolicyHtml ? (
+              <div className="rounded-lg border bg-muted/40 px-3.5 py-3">
+                <p className="text-xs font-semibold">
+                  참석자에게 안내한 취소·환불 규정
+                </p>
+                <RichTextView
+                  html={cancelPolicyHtml}
+                  className="mt-2 text-xs text-muted-foreground"
+                />
+              </div>
+            ) : (
+              <p className="rounded-lg border bg-muted/40 px-3.5 py-3 text-xs text-muted-foreground">
+                이 스테이지에는 취소·환불 규정이 등록되어 있지 않습니다. 스테이지
+                수정에서 규정을 등록하면 참석자에게 신청·취소 시 안내됩니다.
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              환불이 필요한 경우 계좌 이체는 직접 처리해야 합니다.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCancelTarget(null)}
+              disabled={isPending}
+            >
+              닫기
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancelConfirm}
+              disabled={isPending}
+            >
+              예매 취소
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 삭제 확인 Dialog */}
       <Dialog
@@ -531,6 +605,7 @@ function BookingDetailDialog({
   onForceCheckIn,
   onResetPassword,
   onDelete,
+  onRequestCancel,
 }: {
   booking: BookingWithTickets | null;
   isFree: boolean;
@@ -542,6 +617,7 @@ function BookingDetailDialog({
   onForceCheckIn: (bookingId: string, ticketId?: string) => void;
   onResetPassword: (bookingId: string) => void;
   onDelete: (id: string, name: string) => void;
+  onRequestCancel: (id: string, name: string) => void;
 }) {
   if (!booking) return null;
 
@@ -715,7 +791,7 @@ function BookingDetailDialog({
                 size="sm"
                 variant="outline"
                 disabled={isPending}
-                onClick={() => onStatusChange(booking.id, "cancelled")}
+                onClick={() => onRequestCancel(booking.id, booking.name)}
               >
                 예매 취소
               </Button>

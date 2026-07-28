@@ -20,6 +20,16 @@ export const signupSchema = z
 
 export type SignupValues = z.infer<typeof signupSchema>;
 
+/** 카카오 등 이메일 없는 OAuth 계정이 사용할 이메일을 입력받는 온보딩 */
+export const emailSetupSchema = z.object({
+  email: z
+    .string()
+    .min(1, "이메일을 입력해 주세요.")
+    .email("올바른 이메일 형식이 아닙니다."),
+});
+
+export type EmailSetupValues = z.infer<typeof emailSetupSchema>;
+
 export const forgotPasswordSchema = z.object({
   email: z
     .string()

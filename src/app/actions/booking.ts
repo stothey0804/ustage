@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import bcrypt from "bcryptjs";
 import { createClient } from "@/lib/supabase/server";
-import { sendBookingConfirmed, getBaseUrl } from "@/lib/email";
+import {
+  sendBookingCancelled,
+  sendBookingConfirmed,
+  getBaseUrl,
+} from "@/lib/email";
+import { sanitizeEventHtml } from "@/lib/sanitize";
 import { formatKST } from "@/lib/date";
 
 type ActionResult = { error?: string; success?: boolean };
@@ -53,12 +58,59 @@ type ConfirmEmailTarget = {
   tickets: { ticket_number: number; qr_token: string }[];
 };
 
+type CancelEmailTarget = {
+  email: string;
+  name: string;
+  quantity: number;
+  eventTitle: string;
+  eventDate: string;
+  eventVenue: string;
+  contact: string;
+  cancelPolicyHtml?: string;
+};
+
 export async function updateBookingStatus(
   bookingId: string,
   status: "pending" | "confirmed" | "cancelled"
 ): Promise<ActionResult> {
   const ctx = await assertBookingOwner(bookingId);
   if ("error" in ctx) return { error: ctx.error };
+
+  // 주최자 취소 — 참석자에게 취소 통보 메일을 보낸다.
+  // (이미 cancelled였던 예약에는 중복 발송하지 않기 위해 갱신 전에 조회)
+  let cancelTarget: CancelEmailTarget | null = null;
+  if (status === "cancelled") {
+    const { data: full } = await ctx.supabase
+      .from("bookings")
+      .select(
+        "name, email, quantity, status, events!inner(title, event_date, venue, venue_address, contact, cancel_policy)"
+      )
+      .eq("id", bookingId)
+      .single();
+
+    if (full && full.status !== "cancelled" && full.email) {
+      const ev = full.events as {
+        title: string;
+        event_date: string;
+        venue: string;
+        venue_address: string | null;
+        contact: string;
+        cancel_policy: string | null;
+      };
+      cancelTarget = {
+        email: full.email,
+        name: full.name,
+        quantity: full.quantity ?? 1,
+        eventTitle: ev.title,
+        eventDate: formatKST(ev.event_date),
+        eventVenue: ev.venue_address || ev.venue,
+        contact: ev.contact,
+        cancelPolicyHtml: ev.cancel_policy
+          ? sanitizeEventHtml(ev.cancel_policy)
+          : undefined,
+      };
+    }
+  }
 
   // 확정(입금확인) 전환이면 갱신 전에 이전 상태·메일 정보를 조회
   // (이미 confirmed였던 예약에는 중복 발송하지 않기 위해)
@@ -125,6 +177,24 @@ export async function updateBookingStatus(
         eventVenue: target.eventVenue,
         confirmUrl,
         tickets: target.tickets,
+      }).catch((err) => console.error("[email]", err))
+    );
+  }
+
+  // 주최자 취소 통보 메일 — 응답 후 발송
+  if (cancelTarget) {
+    const target = cancelTarget;
+    after(() =>
+      sendBookingCancelled({
+        to: target.email,
+        name: target.name,
+        quantity: target.quantity,
+        eventTitle: target.eventTitle,
+        eventDate: target.eventDate,
+        eventVenue: target.eventVenue,
+        contact: target.contact,
+        cancelPolicyHtml: target.cancelPolicyHtml,
+        byOwner: true,
       }).catch((err) => console.error("[email]", err))
     );
   }

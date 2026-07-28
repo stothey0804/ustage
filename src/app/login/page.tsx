@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/auth/LoginForm";
+import { KakaoLoginButton } from "@/components/auth/KakaoLoginButton";
 import { createClient } from "@/lib/supabase/server";
 import { safeInternalPath } from "@/lib/utils";
 
@@ -41,6 +42,14 @@ export default async function LoginPage({ searchParams }: Props) {
             {error}
           </p>
         ) : null}
+
+        <KakaoLoginButton next={safeInternalPath(next)} label="카카오로 로그인" />
+
+        <div className="flex items-center gap-3">
+          <span className="h-px flex-1 bg-border" />
+          <span className="text-xs text-muted-foreground">또는 이메일로 로그인</span>
+          <span className="h-px flex-1 bg-border" />
+        </div>
 
         <LoginForm next={safeInternalPath(next)} />
 

@@ -273,10 +273,14 @@ ended  (행사 종료) → event_date 경과
 
 1. 카카오 개발자센터 → 애플리케이션 생성 → 카카오 로그인 활성화
    - Redirect URI: `https://<PROJECT_REF>.supabase.co/auth/v1/callback`
-   - 동의항목: 닉네임(필수). **이메일은 비즈앱 전환 없이는 받을 수 없다** → 앱에서 직접 입력받는 이유.
-   - 요청 스코프는 `lib/kakao.ts`의 `KAKAO_SCOPES`(`profile_nickname`)로 고정한다.
-     gotrue 기본값에 `account_email`이 들어 있어 그대로 두면 카카오가
-     "설정하지 않은 동의 항목: account_email"로 인가를 거절한다.
+   - 동의항목: **닉네임 · 프로필 사진 · 카카오계정(이메일) 세 개를 모두 켜야 한다.**
+     gotrue가 `account_email,profile_image,profile_nickname`을 항상 scope에 붙이고
+     (`lib/kakao.ts`의 `KAKAO_SCOPES`는 그 뒤에 덧붙을 뿐 대체하지 못한다 — 인가 URL로 확인),
+     설정되지 않은 항목이 섞이면 카카오가 "설정하지 않은 카카오 로그인 동의 항목"으로 거절한다.
+   - `account_email`은 **비즈 앱 전환**이 전제다. 이메일을 '선택 동의'로 두면 사용자가
+     거부할 수 있고, 그때는 이메일이 비어 오므로 `/onboarding/email` 흐름이 대비책이 된다.
+   - 동의항목 없이(수집 0) 가려면 Supabase provider를 우회해 카카오 OIDC + `signInWithIdToken`을
+     직접 구현해야 한다 — 구현본은 커밋 `0f16ddb`, 되돌린 커밋은 `8f9a5d1`.
 2. Supabase → Authentication → Providers → Kakao 활성화, REST API 키(Client ID)와
    Client Secret(보안 → Client Secret) 입력
 3. Supabase → Authentication → URL Configuration → Redirect URLs에

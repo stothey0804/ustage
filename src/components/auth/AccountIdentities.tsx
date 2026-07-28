@@ -15,6 +15,25 @@ const PROVIDER_LABEL: Record<string, string> = {
   kakao: "카카오",
 };
 
+/**
+ * 연결 실패 원인을 사용자가 조치할 수 있는 문구로 바꾼다.
+ * 원인 파악이 중요한 화면이라 알 수 없는 오류는 code/message를 그대로 덧붙인다.
+ */
+function describeLinkError(error: {
+  code?: string;
+  status?: number;
+  message?: string;
+}): string {
+  if (error.code === "manual_linking_disabled") {
+    return "카카오 연결 기능이 꺼져 있습니다. Supabase 설정에서 Manual linking을 켜주세요.";
+  }
+  if (error.code === "identity_already_exists") {
+    return "이 카카오 계정은 이미 다른 어스테이지 계정에 연결돼 있어요. 그 계정으로 로그인하거나, 먼저 해당 계정에서 연결을 해제해 주세요.";
+  }
+  const detail = error.code ?? (error.status ? `HTTP ${error.status}` : null);
+  return `카카오 연결에 실패했습니다${detail ? ` (${detail})` : ""}. ${error.message ?? ""}`.trim();
+}
+
 interface Props {
   /** 서버(getUser)에서 내려받은 연결된 로그인 수단 */
   identities: UserIdentity[];
@@ -45,11 +64,7 @@ export function AccountIdentities({ identities }: Props) {
 
     if (error) {
       console.error("[auth] linkIdentity", error);
-      toast.error(
-        error.code === "manual_linking_disabled"
-          ? "카카오 연결 기능이 꺼져 있습니다. Supabase 설정에서 Manual linking을 켜주세요."
-          : "카카오 연결에 실패했습니다. 잠시 후 다시 시도해 주세요.",
-      );
+      toast.error(describeLinkError(error), { duration: 10000 });
       setBusy(false);
       return;
     }

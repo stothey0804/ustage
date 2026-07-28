@@ -15,7 +15,13 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function AccountPage() {
+interface Props {
+  /** 카카오 연결 실패 시 /auth/callback이 붙여 보내는 원인 메시지 */
+  searchParams: Promise<{ error?: string }>;
+}
+
+export default async function AccountPage({ searchParams }: Props) {
+  const { error: linkError } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -38,6 +44,12 @@ export default async function AccountPage() {
         </Link>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">계정 설정</h1>
       </div>
+
+      {linkError ? (
+        <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          {linkError}
+        </p>
+      ) : null}
 
       {/* 이메일 */}
       <section className="space-y-3">

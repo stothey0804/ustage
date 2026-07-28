@@ -18,14 +18,21 @@ export async function GET(request: NextRequest) {
   // Open redirect 방지: 내부 경로만 허용.
   const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
 
+  const supabase = await createClient();
+
   if (error) {
     console.error("[auth/callback] error", error, errorDescription);
-    const failUrl = new URL("/login", origin);
+    // 계정 연결(linkIdentity)처럼 이미 로그인한 상태에서 온 실패는
+    // /login으로 보내면 원인을 볼 수 없다 — 출발한 화면으로 에러를 들고 돌아간다.
+    const {
+      data: { user: current },
+    } = await supabase.auth.getUser();
+    const failUrl = current
+      ? new URL(safeNext, origin)
+      : new URL("/login", origin);
     failUrl.searchParams.set("error", errorDescription ?? error);
     return NextResponse.redirect(failUrl);
   }
-
-  const supabase = await createClient();
 
   if (!code) {
     // 이메일 변경 확인처럼 Supabase가 서버에서 검증을 끝내고 code 없이 돌아오는 경우가 있다.

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { KAKAO_SCOPES } from "@/lib/kakao";
 import { safeInternalPath } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -34,7 +35,7 @@ export function KakaoLoginButton({
 
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "kakao",
-      options: { redirectTo: callback.toString() },
+      options: { redirectTo: callback.toString(), scopes: KAKAO_SCOPES },
     });
 
     if (oauthError) {

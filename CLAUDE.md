@@ -273,7 +273,10 @@ ended  (행사 종료) → event_date 경과
 
 1. 카카오 개발자센터 → 애플리케이션 생성 → 카카오 로그인 활성화
    - Redirect URI: `https://<PROJECT_REF>.supabase.co/auth/v1/callback`
-   - 동의항목: 닉네임(필수). **이메일은 비즈앱 심사 없이는 받을 수 없다** → 앱에서 직접 입력받는 이유.
+   - 동의항목: 닉네임(필수). **이메일은 비즈앱 전환 없이는 받을 수 없다** → 앱에서 직접 입력받는 이유.
+   - 요청 스코프는 `lib/kakao.ts`의 `KAKAO_SCOPES`(`profile_nickname`)로 고정한다.
+     gotrue 기본값에 `account_email`이 들어 있어 그대로 두면 카카오가
+     "설정하지 않은 동의 항목: account_email"로 인가를 거절한다.
 2. Supabase → Authentication → Providers → Kakao 활성화, REST API 키(Client ID)와
    Client Secret(보안 → Client Secret) 입력
 3. Supabase → Authentication → URL Configuration → Redirect URLs에

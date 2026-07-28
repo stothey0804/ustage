@@ -7,6 +7,7 @@ import { Link2, Loader2, Mail, Unlink } from "lucide-react";
 import { toast } from "sonner";
 
 import { createClient } from "@/lib/supabase/client";
+import { KAKAO_SCOPES } from "@/lib/kakao";
 import { Button } from "@/components/ui/button";
 
 const PROVIDER_LABEL: Record<string, string> = {
@@ -38,6 +39,7 @@ export function AccountIdentities({ identities }: Props) {
       provider: "kakao",
       options: {
         redirectTo: `${window.location.origin}/auth/callback?next=/dashboard/account`,
+        scopes: KAKAO_SCOPES,
       },
     });
 

@@ -1,15 +1,19 @@
 /**
  * 카카오 OAuth에 요청할 동의항목(scope).
  *
- * Supabase(gotrue)의 카카오 provider 기본값은
- * `account_email,profile_image,profile_nickname`이다. 그런데 `account_email`은
- * 카카오 앱에서 동의항목을 켜야(=비즈 앱 전환 필요) 요청할 수 있고, 켜지 않은 상태로
- * 요청하면 카카오가 "설정하지 않은 카카오 로그인 동의 항목을 포함해 인가 코드를
- * 요청했습니다"로 거절한다.
+ * Supabase(gotrue)의 카카오 provider는 scope를 **항상** 보낸다. 클라이언트가
+ * `scopes`를 주지 않으면 기본값 `account_email,profile_image,profile_nickname`을
+ * 그대로 사용하고, 주면 그 값으로 대체한다(auth-js는 값이 있을 때만 파라미터를 붙임).
+ * 즉 "아무것도 요청하지 않기"는 이 경로에서 불가능하고, 카카오는 앱에 설정되지 않은
+ * 항목이 섞이면 "설정하지 않은 카카오 로그인 동의 항목" 오류로 인가를 거절한다.
  *
- * 어스테이지는 이메일을 카카오에서 받지 않고 /onboarding/email에서 직접 입력받으므로
- * 닉네임만 요청한다. gotrue는 scopes 파라미터가 오면 기본값을 **대체**한다.
- * 나중에 비즈 앱 전환 후 이메일까지 받으려면 여기에 `account_email`을 추가하면 되고,
- * 사용자가 선택 동의를 거부한 경우에도 온보딩 화면이 그대로 대비책이 된다.
+ * 어스테이지는
+ *  - 이메일: /onboarding/email에서 직접 입력받는다 → `account_email` 요청하지 않음
+ *  - 프로필 사진: 쓰지 않는다 → `profile_image` 요청하지 않음
+ * 따라서 로그인 식별에 필요한 닉네임 하나만 요청한다. 닉네임은 gotrue가
+ * user_metadata에 넣어두기만 하고 앱에서 저장·표시하지 않는다.
+ *
+ * 카카오 콘솔(제품 설정 → 카카오 로그인 → 동의항목)에서 여기 적힌 항목이
+ * '필수 동의' 또는 '선택 동의'로 켜져 있어야 한다.
  */
 export const KAKAO_SCOPES = "profile_nickname";

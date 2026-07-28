@@ -33,18 +33,27 @@ export function KakaoLoginButton({
     const callback = new URL("/auth/callback", window.location.origin);
     callback.searchParams.set("next", safeInternalPath(next));
 
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+    // skipBrowserRedirect로 인가 URL을 받아 scope를 로그로 확인한 뒤 직접 이동한다.
+    // (카카오 동의항목 오류를 디버깅할 때 실제로 나간 scope를 바로 확인할 수 있다)
+    const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "kakao",
-      options: { redirectTo: callback.toString(), scopes: KAKAO_SCOPES },
+      options: {
+        redirectTo: callback.toString(),
+        scopes: KAKAO_SCOPES,
+        skipBrowserRedirect: true,
+      },
     });
 
-    if (oauthError) {
+    if (oauthError || !data?.url) {
       console.error("[auth] kakao oauth error", oauthError);
       setError("카카오 로그인을 시작할 수 없습니다. 잠시 후 다시 시도해 주세요.");
       setLoading(false);
       return;
     }
-    // 성공 시 카카오 인증 페이지로 이동하므로 로딩 상태를 유지한다.
+
+    console.info("[auth] kakao authorize", data.url);
+    window.location.assign(data.url);
+    // 카카오 인증 페이지로 이동하므로 로딩 상태를 유지한다.
   }
 
   return (

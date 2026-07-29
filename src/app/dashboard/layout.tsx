@@ -21,7 +21,9 @@ export default async function DashboardLayout({
     <>
       <Header userEmail={accountEmail ?? undefined} />
       {pendingEmail ? <EmailVerifyBanner email={pendingEmail} /> : null}
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+      {/* 명단 관리(데스크톱)가 넓은 폭을 쓰므로 컨테이너는 여기서 제한하지 않고
+          각 페이지가 자신의 max-width를 정한다. */}
+      <main className="mx-auto w-full max-w-[1520px] flex-1 px-4 py-8 md:px-10">
         {children}
       </main>
     </>

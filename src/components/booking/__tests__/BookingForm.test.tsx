@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BookingForm } from "@/components/booking/BookingForm";
@@ -9,6 +9,8 @@ vi.mock("next/navigation", () => ({
 
 const BASE_PROPS = {
   eventId: "3b241101-e2bb-4255-8caf-4136c566a962",
+  eventTitle: "겨울의 끝, 세 번째 무대",
+  eventDateLabel: "2026년 2월 14일 (토) 19:30",
   price: 20000,
   bankInfo: "카카오뱅크 3333-123-456789 홍길동",
   customFields: [],
@@ -33,7 +35,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("BookingForm — 예매 불가/진입", () => {
+describe("BookingForm — 매수 선택(1단계)", () => {
   it("isOpen=false면 사유만 표시한다", () => {
     render(
       <BookingForm
@@ -54,9 +56,28 @@ describe("BookingForm — 예매 불가/진입", () => {
     );
     expect(screen.getByRole("button", { name: "비회원 예매" })).toBeInTheDocument();
   });
+
+  it("매수를 늘리면 총 결제금액이 갱신된다", async () => {
+    const u = user();
+    render(<BookingForm {...BASE_PROPS} />);
+
+    expect(screen.getByText("20,000원")).toBeInTheDocument();
+    await u.click(screen.getByRole("button", { name: "매수 늘리기" }));
+    expect(screen.getByText("40,000원")).toBeInTheDocument();
+  });
+
+  it("매수는 1매 미만으로 줄일 수 없고 잔여석 상한을 넘지 않는다", async () => {
+    const u = user();
+    render(<BookingForm {...BASE_PROPS} maxQuantity={2} />);
+
+    expect(screen.getByRole("button", { name: "매수 줄이기" })).toBeDisabled();
+    await u.click(screen.getByRole("button", { name: "매수 늘리기" }));
+    expect(screen.getByRole("button", { name: "매수 늘리기" })).toBeDisabled();
+    expect(screen.getByText("40,000원")).toBeInTheDocument();
+  });
 });
 
-describe("BookingForm — 신청 폼 모달", () => {
+describe("BookingForm — 예매자 정보(2단계)", () => {
   it("주의사항(noticeHtml)을 폼 상단에 렌더링한다", async () => {
     render(
       <BookingForm
@@ -68,11 +89,29 @@ describe("BookingForm — 신청 폼 모달", () => {
     expect(screen.getByText("환불 불가")).toBeInTheDocument();
   });
 
-  it("유료 스테이지는 총 입금액을 표시한다", async () => {
+  it("요약 카드에 스테이지와 매수를 보여주고 입금자명 필드를 노출한다", async () => {
     render(<BookingForm {...BASE_PROPS} isLoggedIn userEmail="me@example.com" />);
     await user().click(screen.getByRole("button", { name: "예매하기" }));
-    expect(screen.getByText("20,000원")).toBeInTheDocument();
+
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText(BASE_PROPS.eventTitle)).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/2026년 2월 14일 \(토\) 19:30 · 1매/),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText(/입금자명/)).toBeInTheDocument();
+  });
+
+  it("'예매자 이름과 동일합니다'가 기본 켜져 있고, 해제하면 입금자명을 직접 입력할 수 있다", async () => {
+    const u = user();
+    render(<BookingForm {...BASE_PROPS} isLoggedIn userEmail="me@example.com" />);
+    await u.click(screen.getByRole("button", { name: "예매하기" }));
+
+    const sameName = screen.getByLabelText("예매자 이름과 동일합니다");
+    expect(sameName).toBeChecked();
+    expect(screen.getByLabelText(/입금자명/)).toBeDisabled();
+
+    await u.click(sameName);
+    expect(screen.getByLabelText(/입금자명/)).toBeEnabled();
   });
 
   it("비회원은 4자 미만 비밀번호로 제출할 수 없다", async () => {
@@ -102,9 +141,12 @@ describe("BookingForm — 신청 폼 모달", () => {
   });
 });
 
-describe("BookingForm — 제출", () => {
-  it("로그인 회원의 무료 신청은 확인 모달 없이 바로 제출되고 완료 화면을 보여준다", async () => {
-    const fetchMock = mockFetch({ ok: true, json: {} });
+describe("BookingForm — 제출과 안내(3단계)", () => {
+  it("무료 신청은 확정 안내와 예약번호를 보여준다", async () => {
+    const fetchMock = mockFetch({
+      ok: true,
+      json: { bookingId: "3b241101-e2bb-4255-8caf-4136c566a962" },
+    });
     const u = user();
     render(
       <BookingForm
@@ -114,18 +156,15 @@ describe("BookingForm — 제출", () => {
         userEmail="me@example.com"
       />,
     );
-    await u.click(screen.getByRole("button", { name: "예매하기" }));
+    await u.click(screen.getByRole("button", { name: "참가 신청하기" }));
     await u.type(screen.getByLabelText(/이름/), "홍길동");
     await u.click(screen.getByRole("button", { name: "참가 신청" }));
 
     expect(
-      await screen.findByText("참가 신청이 완료되었습니다."),
+      await screen.findByText("참가가 확정되었습니다"),
     ).toBeInTheDocument();
+    expect(screen.getByText("BK-3B2411")).toBeInTheDocument();
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/bookings",
-      expect.objectContaining({ method: "POST" }),
-    );
     const body = JSON.parse(
       (fetchMock.mock.calls[0][1] as RequestInit).body as string,
     );
@@ -136,6 +175,21 @@ describe("BookingForm — 제출", () => {
       quantity: 1,
       additional: false,
     });
+  });
+
+  it("유료 예매는 입금 예상 시간 없이 제출할 수 없다", async () => {
+    const fetchMock = mockFetch({ ok: true, json: { bookingId: BASE_PROPS.eventId } });
+    const u = user();
+    render(<BookingForm {...BASE_PROPS} isLoggedIn userEmail="me@example.com" />);
+
+    await u.click(screen.getByRole("button", { name: "예매하기" }));
+    await u.type(screen.getByLabelText("이름 *"), "홍길동");
+    await u.click(screen.getByRole("button", { name: "입금 안내 받기" }));
+
+    expect(
+      await screen.findByText("입금 예상 시간을 입력해 주세요."),
+    ).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("이미 예매한 이메일(409 duplicate_email)이면 추가 예약 확인 모달을 띄운다", async () => {
@@ -149,7 +203,7 @@ describe("BookingForm — 제출", () => {
         userEmail="me@example.com"
       />,
     );
-    await u.click(screen.getByRole("button", { name: "예매하기" }));
+    await u.click(screen.getByRole("button", { name: "참가 신청하기" }));
     await u.type(screen.getByLabelText(/이름/), "홍길동");
     await u.click(screen.getByRole("button", { name: "참가 신청" }));
 
@@ -175,7 +229,7 @@ describe("BookingForm — 제출", () => {
         userEmail="me@example.com"
       />,
     );
-    await u.click(screen.getByRole("button", { name: "예매하기" }));
+    await u.click(screen.getByRole("button", { name: "참가 신청하기" }));
     await u.type(screen.getByLabelText(/이름/), "홍길동");
     await u.click(screen.getByRole("button", { name: "참가 신청" }));
     expect(

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CheckCircle, Loader2 } from "lucide-react";
+import { CheckCircle, Loader2, Minus, Plus } from "lucide-react";
 
 import {
   bookingFormSchema,
@@ -13,6 +13,7 @@ import {
 } from "@/lib/validations/booking";
 import { CustomFieldRenderer } from "./CustomFieldRenderer";
 import { formatDepositTime } from "@/lib/date";
+import { bookingCode } from "@/lib/booking-code";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +38,10 @@ import type { CustomField } from "@/lib/validations/event";
 
 interface BookingFormProps {
   eventId: string;
+  /** 요약 카드 표시용 */
+  eventTitle: string;
+  /** 요약 카드 표시용 — 이미 서식이 적용된 일시 문자열 */
+  eventDateLabel: string;
   price: number;
   bankInfo: string;
   /** 신청 폼 상단 주의사항 — 서버에서 sanitize된 HTML */
@@ -56,6 +61,8 @@ type Step = "idle" | "form" | "success";
 
 export function BookingForm({
   eventId,
+  eventTitle,
+  eventDateLabel,
   price,
   bankInfo,
   noticeHtml,
@@ -82,6 +89,10 @@ export function BookingForm({
     null
   );
   const [modalError, setModalError] = useState<string | null>(null);
+  // 입금자명을 예매자 이름과 동일하게 채울지 (기본 on)
+  const [sameName, setSameName] = useState(true);
+  // 제출 성공 후 안내에 쓰는 예약번호
+  const [createdCode, setCreatedCode] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const {
@@ -89,6 +100,7 @@ export function BookingForm({
     handleSubmit,
     control,
     setError,
+    setValue,
     watch,
     formState: { errors },
   } = useForm<BookingFormValues>({
@@ -107,12 +119,21 @@ export function BookingForm({
   const quantityValue = watch("quantity") || 1;
   const totalAmount = price * quantityValue;
 
+  const setQuantity = (next: number) => {
+    const clamped = Math.min(Math.max(next, 1), maxQuantity);
+    setValue("quantity", clamped, { shouldValidate: true });
+  };
+
   const onSubmit = (values: BookingFormValues) => {
     if (!isLoggedIn && (!values.password || values.password.length < 4)) {
       setError("password", { message: "비밀번호는 4자 이상이어야 합니다." });
       return;
     }
     if (!isFree) {
+      // "예매자 이름과 동일" 체크 시 입금자명을 이름으로 채운다.
+      if (sameName && values.name) {
+        values.depositor_name = values.name;
+      }
       if (!values.depositor_name) {
         setError("depositor_name", { message: "입금자명을 입력해 주세요." });
         return;
@@ -175,6 +196,9 @@ export function BookingForm({
       }
 
       setDuplicateOpen(false);
+      if (typeof json?.bookingId === "string") {
+        setCreatedCode(bookingCode(json.bookingId));
+      }
       setStep("success");
     });
   };
@@ -190,90 +214,185 @@ export function BookingForm({
     );
   }
 
-  // 예매 완료
+  // 3단계: 입금 안내 (무료는 확정 안내)
   if (step === "success") {
     return (
-      <div className="rounded-2xl border p-6 space-y-4">
-        <div className="flex items-center gap-3">
-          <CheckCircle className="size-6 text-green-600 shrink-0" />
-          <div>
-            <p className="font-medium">
-              {isFree ? "참가 신청이 완료되었습니다." : "예매가 완료되었습니다."}
-            </p>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {isFree
-                ? "참가가 확정되었습니다."
-                : "입금 확인 후 예매가 확정됩니다."}
-            </p>
-          </div>
+      <div className="space-y-5">
+        <StepIndicator current={3} />
+
+        {/* 금액 블록 */}
+        <div className="flex flex-col items-center gap-3 rounded-4xl bg-input/50 px-5 py-6 text-center">
+          {isFree ? (
+            <>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                <CheckCircle className="size-3.5" />
+                참가확정
+              </span>
+              <p className="text-xl font-bold tracking-tight">참가가 확정되었습니다</p>
+            </>
+          ) : (
+            <>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                <span className="size-1.5 rounded-full bg-current" />
+                입금대기
+              </span>
+              <p className="text-3xl font-bold tracking-tight">
+                {totalAmount.toLocaleString()}원
+              </p>
+            </>
+          )}
+          <p className="text-xs text-muted-foreground">
+            {quantityValue}매
+            {createdCode && (
+              <>
+                {" · 예약번호 "}
+                <span className="font-mono">{createdCode}</span>
+              </>
+            )}
+          </p>
         </div>
+
+        {/* 계좌 카드 */}
         {!isFree && (
-          <>
-            <Separator />
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                입금 계좌
-              </p>
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-medium">{bankInfo}</p>
-                <CopyButton value={bankInfo} label="계좌복사" />
-              </div>
+          <div className="space-y-3.5 rounded-4xl bg-card p-5 shadow-md ring-1 ring-foreground/5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[13px] text-muted-foreground">입금 계좌</span>
+              <CopyButton value={bankInfo} label="복사" />
             </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                입금 금액
-              </p>
-              <p className="text-sm font-medium">
+            <p className="font-mono text-[15px] font-medium break-all">
+              {bankInfo}
+            </p>
+            <Separator />
+            <div className="flex justify-between text-[13px]">
+              <span className="text-muted-foreground">입금 금액</span>
+              <span className="font-medium">
                 {totalAmount.toLocaleString()}원
                 {quantityValue > 1 && (
-                  <span className="text-muted-foreground font-normal ml-1">
+                  <span className="ml-1 font-normal text-muted-foreground">
                     ({price.toLocaleString()}원 × {quantityValue}매)
                   </span>
                 )}
-              </p>
+              </span>
             </div>
-          </>
+          </div>
         )}
-        <p className="text-xs text-muted-foreground">
-          {isLoggedIn ? (
-            <>
-              <Link href="/dashboard/bookings" className="text-primary underline underline-offset-2">
-                내 예약
-              </Link>
-              에서 예매 현황을 확인하실 수 있습니다.
-            </>
-          ) : (
-            "이 페이지 하단 '비회원 예약 조회'에서 예매 현황을 확인하실 수 있습니다."
-          )}
-        </p>
+
+        {/* 확인 사항 */}
+        <div className="space-y-1.5">
+          <p className="text-[13px] font-semibold">확인해주세요</p>
+          <ul className="space-y-1 text-[13px] leading-relaxed text-muted-foreground">
+            {!isFree && (
+              <>
+                <li>· 입금자명이 다르면 확인이 늦어질 수 있어요.</li>
+                <li>· 주최자가 입금을 확인하면 입장 QR이 담긴 확정 메일이 발송됩니다.</li>
+              </>
+            )}
+            {isFree && (
+              <li>· 입장 QR이 담긴 메일이 발송되었습니다.</li>
+            )}
+            <li>· 예약번호와 이메일은 예매 조회에 사용됩니다.</li>
+          </ul>
+        </div>
+
+        {isLoggedIn ? (
+          <Button asChild size="lg" variant="outline" className="w-full">
+            <Link href="/dashboard/bookings">예매 내역 보기</Link>
+          </Button>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            이 페이지 하단 &lsquo;비회원 예약 조회&rsquo;에서 예매 현황과 입장 QR을
+            확인하실 수 있습니다.
+          </p>
+        )}
       </div>
     );
   }
 
   return (
     <>
-      {isLoggedIn ? (
-        <Button size="lg" className="w-full" onClick={() => setStep("form")}>
-          예매하기
-        </Button>
-      ) : (
-        <div className="flex gap-3">
-          <Button size="lg" className="flex-1" asChild>
-            <a href={`/login?next=${encodeURIComponent(pathname)}`}>
-              로그인
-            </a>
-          </Button>
-          <Button size="lg" className="flex-1" variant="outline" onClick={() => setStep("form")}>
-            비회원 예매
-          </Button>
+      {/* 1단계: 매수 선택 + 총액 — 별도 화면 없이 상세 하단에서 바로 고른다 */}
+      <div className="space-y-3 rounded-4xl bg-card p-5 shadow-md ring-1 ring-foreground/5">
+        <div className="flex items-center justify-between">
+          <span className="text-[13px] font-medium">매수</span>
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              aria-label="매수 줄이기"
+              disabled={quantityValue <= 1}
+              onClick={() => setQuantity(quantityValue - 1)}
+            >
+              <Minus className="size-4" />
+            </Button>
+            <span className="min-w-5 text-center font-mono text-[15px]">
+              {quantityValue}
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              aria-label="매수 늘리기"
+              disabled={quantityValue >= maxQuantity}
+              onClick={() => setQuantity(quantityValue + 1)}
+            >
+              <Plus className="size-4" />
+            </Button>
+          </div>
         </div>
-      )}
+
+        {maxQuantity < 20 && (
+          <p className="text-xs text-muted-foreground">
+            잔여석 기준 최대 {maxQuantity}매까지 예매할 수 있어요.
+          </p>
+        )}
+
+        <div className="flex items-baseline justify-between">
+          <span className="text-xs text-muted-foreground">
+            {isFree ? "참가비" : "총 결제금액"}
+          </span>
+          <span className="text-lg font-bold">
+            {isFree ? "무료" : `${totalAmount.toLocaleString()}원`}
+          </span>
+        </div>
+
+        {isLoggedIn ? (
+          <Button size="lg" className="w-full" onClick={() => setStep("form")}>
+            {isFree ? "참가 신청하기" : "예매하기"}
+          </Button>
+        ) : (
+          <div className="flex gap-3">
+            <Button size="lg" className="flex-1" asChild>
+              <a href={`/login?next=${encodeURIComponent(pathname)}`}>로그인</a>
+            </Button>
+            <Button
+              size="lg"
+              className="flex-1"
+              variant="outline"
+              onClick={() => setStep("form")}
+            >
+              비회원 예매
+            </Button>
+          </div>
+        )}
+      </div>
 
       <Dialog open={step === "form"} onOpenChange={(open) => { if (!open) setStep("idle"); }}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md max-sm:top-0 max-sm:left-0 max-sm:h-dvh max-sm:max-h-dvh max-sm:max-w-full max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none max-sm:content-start max-sm:data-open:zoom-in-100 max-sm:data-open:slide-in-from-bottom-6 max-sm:data-closed:zoom-out-100 max-sm:data-closed:slide-out-to-bottom-6">
           <DialogHeader>
-            <DialogTitle>{isFree ? "참가 신청" : "예매하기"}</DialogTitle>
+            <DialogTitle>{isFree ? "참가 신청" : "예매자 정보"}</DialogTitle>
           </DialogHeader>
+
+          <StepIndicator current={2} />
+
+          {/* 요약 카드 — 무엇을 몇 매 신청하는지 계속 보이게 */}
+          <div className="flex flex-col gap-1 rounded-4xl bg-primary/8 px-4 py-3.5">
+            <span className="text-sm font-semibold">{eventTitle}</span>
+            <span className="text-xs text-muted-foreground">
+              {eventDateLabel} · {quantityValue}매
+              {!isFree && ` · ${totalAmount.toLocaleString()}원`}
+            </span>
+          </div>
 
           {noticeHtml && (
             <div
@@ -345,62 +464,32 @@ export function BookingForm({
                 </div>
               )}
 
-              <div className="space-y-1.5">
-                <Label htmlFor="quantity">
-                  매수 *{" "}
-                  {maxQuantity < 20 && (
-                    <span className="text-muted-foreground font-normal text-xs">
-                      (잔여석 기준 최대 {maxQuantity}매)
-                    </span>
-                  )}
-                </Label>
-                <Controller
-                  control={control}
-                  name="quantity"
-                  render={({ field }) => (
-                    <Select
-                      value={String(field.value ?? 1)}
-                      onValueChange={(v) => field.onChange(Number(v))}
-                    >
-                      <SelectTrigger id="quantity" className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: maxQuantity }, (_, i) => i + 1).map(
-                          (n) => (
-                            <SelectItem key={n} value={String(n)}>
-                              {n}매
-                            </SelectItem>
-                          )
-                        )}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {!isFree && (
-                  <p className="text-xs text-muted-foreground">
-                    총 입금액{" "}
-                    <span className="font-medium text-foreground">
-                      {totalAmount.toLocaleString()}원
-                    </span>
-                    {quantityValue > 1 &&
-                      ` (${price.toLocaleString()}원 × ${quantityValue}매)`}
-                  </p>
-                )}
-                {errors.quantity && (
-                  <p className="text-xs text-destructive">{errors.quantity.message}</p>
-                )}
-              </div>
-
               {!isFree && (
                 <>
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     <Label htmlFor="depositor_name">입금자명 *</Label>
                     <Input
                       id="depositor_name"
                       {...register("depositor_name")}
-                      placeholder="입금자 이름 (계좌 표시명)"
+                      placeholder="입금하실 분의 성함"
+                      disabled={sameName}
+                      className={sameName ? "bg-muted" : undefined}
                     />
+                    <label className="flex cursor-pointer items-center gap-2 text-[13px] text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        className="accent-primary"
+                        checked={sameName}
+                        onChange={(e) => {
+                          const next = e.target.checked;
+                          setSameName(next);
+                          if (next) {
+                            setValue("depositor_name", watch("name") ?? "");
+                          }
+                        }}
+                      />
+                      예매자 이름과 동일합니다
+                    </label>
                     {errors.depositor_name && (
                       <p className="text-xs text-destructive">
                         {errors.depositor_name.message}
@@ -463,6 +552,13 @@ export function BookingForm({
               </p>
             )}
 
+            {!isFree && (
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                다음 화면에서 계좌를 안내드립니다. 주최자가 입금을 확인하면 입장 QR이
+                담긴 확정 메일이 발송됩니다.
+              </p>
+            )}
+
             <div className="flex gap-3 pt-1">
               <Button
                 type="button"
@@ -471,11 +567,11 @@ export function BookingForm({
                 disabled={isPending}
                 className="flex-1"
               >
-                취소
+                이전
               </Button>
               <Button type="submit" disabled={isPending} className="flex-1">
                 {isPending && <Loader2 className="size-4 mr-2 animate-spin" />}
-                {isFree ? "참가 신청" : "예매 신청"}
+                {isFree ? "참가 신청" : "입금 안내 받기"}
               </Button>
             </div>
           </form>
@@ -579,5 +675,26 @@ export function BookingForm({
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+/**
+ * 예매 진행 인디케이터 — 매수 선택(1) → 정보 입력(2) → 입금 안내(3).
+ * 3분할 바로만 표현하고 단계 이름은 각 화면 제목이 담당한다.
+ */
+function StepIndicator({ current }: { current: 1 | 2 | 3 }) {
+  return (
+    <div className="flex gap-1.5" aria-label={`${current}단계 / 3단계`}>
+      {[1, 2, 3].map((step) => (
+        <span
+          key={step}
+          className={
+            step <= current
+              ? "h-[3px] flex-1 rounded-full bg-primary"
+              : "h-[3px] flex-1 rounded-full bg-secondary"
+          }
+        />
+      ))}
+    </div>
   );
 }

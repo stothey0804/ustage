@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/ustage-design-system-ee7714ae-032d-448f-b6e4-e3d2ab1f93e5/fonts/fonts.css">
+<link rel="stylesheet" href="_ds/ustage-design-system-ee7714ae-032d-448f-b6e4-e3d2ab1f93e5/tokens/colors.css">
+<link rel="stylesheet" href="_ds/ustage-design-system-ee7714ae-032d-448f-b6e4-e3d2ab1f93e5/tokens/typography.css">
+<link rel="stylesheet" href="_ds/ustage-design-system-ee7714ae-032d-448f-b6e4-e3d2ab1f93e5/tokens/radius.css">
+<link rel="stylesheet" href="_ds/ustage-design-system-ee7714ae-032d-448f-b6e4-e3d2ab1f93e5/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/ustage-design-system-ee7714ae-032d-448f-b6e4-e3d2ab1f93e5/tokens/elevation.css">
+<link rel="stylesheet" href="_ds/ustage-design-system-ee7714ae-032d-448f-b6e4-e3d2ab1f93e5/tokens/utilities.css">
+<link rel="stylesheet" href="_ds/ustage-design-system-ee7714ae-032d-448f-b6e4-e3d2ab1f93e5/styles.css">
+<script src="_ds/ustage-design-system-ee7714ae-032d-448f-b6e4-e3d2ab1f93e5/_ds_bundle.js"></script>
+<script src="./image-slot.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  :root { --font-sans: "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, -apple-system, sans-serif; }
+  body { margin: 0; background: var(--background); color: var(--foreground); font-family: var(--font-sans); }
+  a { color: var(--primary); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+</style>
+</helmet>
+
+<div style="padding: 56px 64px 80px; display: flex; flex-direction: column; gap: 40px; background: var(--background); min-height: 100vh; box-sizing: border-box">
+
+  <div style="display: flex; flex-direction: column; gap: 12px; max-width: 720px">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <x-import component-from-global-scope="UstageDesignSystem_ee7714.Wordmark" hint-size="80px,24px"></x-import>
+      <span style="font-size: 12px; color: var(--muted-foreground)">예매 flow · 모바일</span>
+    </div>
+    <h1 style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em">예매는 세 화면 안에서 끝납니다</h1>
+    <p style="margin: 0; font-size: 14px; line-height: 1.7; color: var(--muted-foreground); text-wrap: pretty">매수는 상세 화면 하단 바에서 바로 고르고, 정보 입력은 한 화면으로 모았습니다. 입금 안내에는 계좌 복사와 입금 기한을 함께 두어 이탈이 생기는 구간을 줄였습니다.</p>
+  </div>
+
+  <div style="display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start">
+
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; align-items: baseline; gap: 8px">
+        <span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--primary)">01</span>
+        <span style="font-size: 13px; font-weight: 600">스테이지 상세 · 매수 선택</span>
+      </div>
+      <div style="width: 390px; height: 844px; border-radius: 40px; background: var(--card); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.06); outline: 1px solid color-mix(in oklab, var(--foreground) 5%, transparent); overflow: hidden; display: flex; flex-direction: column">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 12px 8px">
+          <x-import component-from-global-scope="UstageDesignSystem_ee7714.Button" variant="ghost" size="icon-sm" hint-size="32px,32px">
+            <x-import component-from-global-scope="UstageDesignSystem_ee7714.Icon" name="chevron-left" hint-size="16px,16px"></x-import>
+          </x-import>
+          <span style="font-size: 12px; color: var(--muted-foreground)">예매</span>
+          <x-import component-from-global-scope="UstageDesignSystem_ee7714.Button" variant="ghost" size="xs" hint-size="52px,24px">공유</x-import>
+        </div>
+
+        <div style="flex: 1; overflow: hidden; padding: 4px 20px 20px; display: flex; flex-direction: column; gap: 18px">
+          <div style="position: relative; width: 100%; height: 208px">
+            <image-slot id="stage-poster" shape="rounded" radius="26" placeholder="스테이지 포스터를 올려주세요"></image-slot>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <div style="display: flex; align-items: center; gap: 8px">
+              <x-import component-from-global-scope="UstageDesignSystem_ee7714.EventStatusBadge" status="open" hint-size="72px,20px"></x-import>
+              <span style="font-size: 12px; color: var(--muted-foreground)">비공개 예매 링크</span>
+            </div>
+            <h2 style="margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.3">겨울의 끝, 세 번째 무대</h2>
+            <p style="margin: 0; font-size: 13px; color: var(--muted-foreground)">유하 · 어쿠스틱 단독 공연</p>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 26px; background: color-mix(in oklab, var(--input) 50%, transparent)">
+            <div style="display: flex; justify-content: space-between; font-size: 13px">
+              <span style="color: var(--muted-foreground)">일시</span>
+              <span style="font-weight: 500">2026년 2월 14일 (토) 19:30</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px">
+              <span style="color: var(--muted-foreground)">장소</span>
+              <span style="font-weight: 500">연남동 스튜디오 온</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px">
+              <span style="color: var(--muted-foreground)">가격</span>
+              <span style="font-weight: 500">{{ priceText }}</span>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <div style="display: flex; justify-content: space-between; align-items: baseline">
+              <span style="font-size: 13px; font-weight: 500">잔여 좌석</span>
+              <span style="font-family: 'Geist Mono', monospace; font-size: 13px; color: var(--primary)">{{ seatText }}</span>
+            </div>
+            <sc-if value="{{ showSeatBar }}" hint-placeholder-val="{{ true }}">
+              <div style="height: 6px; border-radius: 999px; background: var(--secondary); overflow: hidden">
+                <div style="height: 100%; border-radius: 999px; background: var(--primary); width: {{ seatPercent }}"></div>
+              </div>
+            </sc-if>
+            <p style="margin: 0; font-size: 12px; color: var(--muted-foreground)">입금 순서대로 좌석이 확정됩니다.</p>
+          </div>
+
+          <p style="margin: 0; font-size: 13px; line-height: 1.7; color: var(--muted-foreground); text-wrap: pretty">겨울에 쓴 곡들을 처음부터 끝까지 들려드리는 40석 규모의 공연입니다. 공연 시간은 약 90분, 지정석은 없습니다.</p>
+        </div>
+
+        <div style="border-top: 1px solid var(--border); background: var(--card); padding: 14px 20px 20px; display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; align-items: center; justify-content: space-between">
+            <span style="font-size: 13px; font-weight: 500">매수</span>
+            <div style="display: flex; align-items: center; gap: 12px">
+              <x-import component-from-global-scope="UstageDesignSystem_ee7714.Button" variant="outline" size="icon-sm" onClick="{{ dec }}" hint-size="32px,32px">−</x-import>
+              <span style="font-family: 'Geist Mono', monospace; font-size: 15px; min-width: 20px; text-align: center">{{ qty }}</span>
+              <x-import component-from-global-scope="UstageDesignSystem_ee7714.Button" variant="outline" size="icon-sm" onClick="{{ inc }}" hint-size="32px,32px">+</x-import>
+            </div>
+          </div>
+          <div style="display: flex; align-items: baseline; justify-content: space-between">
+            <span style="font-size: 12px; color: var(--muted-foreground)">총 결제금액</span>
+            <span style="font-size: 18px; font-weight: 700">{{ totalText }}</span>
+          </div>
+          <x-import component-from-global-scope="UstageDesignSystem_ee7714.Button" size="lg" class-name="w-full" hint-size="100%,40px">예매하기</x-import>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; align-items: baseline; gap: 8px">
+        <span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--primary)">02</span>
+        <span style="font-size: 13px; font-weight: 600">예매자 정보 · 한 화면</span>
+      </div>
+      <div style="width: 390px; height: 844px; border-radius: 40px; background: var(--card); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.06); outline: 1px solid color-mix(in oklab, var(--foreground) 5%, transparent); overflow: hidden; display: flex; flex-direction: column">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 12px 8px">
+          <x-import component-from-global-scope="UstageDesignSystem_ee7714.Button" variant="ghost" size="icon-sm" hint-size="32px,32px">
+            <x-import component-from-global-scope="UstageDesignSystem_ee7714.Icon" name="chevron-left" hint-size="16px,16px"></x-import>
+          </x-import>
+          <span style="font-size: 12px; color: var(--muted-foreground)">예매자 정보</span>
+          <span style="width: 32px"></span>
+        </div>
+
+        <div style="padding: 4px 20px 0; display: flex; gap: 6px">
+          <div style="flex: 1; height: 3px; border-radius: 999px; background: var(--primary)"></div>
+          <div style="flex: 1; height: 3px; border-radius: 999px; background: var(--primary)"></div>
+          <div style="flex: 1; height: 3px; border-radius: 999px; background: var(--secondary)"></div>
+        </div>
+
+        <div style="flex: 1; overflow: hidden; padding: 20px; display: flex; flex-direction: column; gap: 20px">
+          <div style="padding: 14px 16px; border-radius: 26px; background: color-mix(in oklab, var(--primary) 8%, transparent); display: flex; flex-direction: column; gap: 4px">
+            <span style="font-size: 14px; font-weight: 600">겨울의 끝, 세 번째 무대</span>
+            <span style="font-size: 12px; color: var(--muted-foreground)">2026년 2월 14일 (토) 19:30 · {{ qtyText }}</span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 16px">
+            <div style="display: flex; flex-direction: column; gap: 6px">
+              <x-import component-from-global-scope="UstageDesignSystem_ee7714.Label" hint-size="60px,16px">이름</x-import>
+              <x-import component-from-global-scope="UstageDesignSystem_ee7714.Input" placeholder="예매자 성함" default-value="김서연" hint-size="100%,40px"></x-import>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px">
+              <x-import component-from-global-scope="UstageDesignSystem_ee7714.Label" hint-size="60px,16px">연락처</x-import>
+              <x-import component-from-global-scope="UstageDesignSystem_ee7714.Input" placeholder="010-0000-0000" hint-size="100%,40px"></x-import>
+              <span style="font-size: 12px; color: var(--muted-foreground)">공연 변경 안내를 문자로 보내드려요.</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px">
+              <x-import component-from-global-scope="UstageDesignSystem_ee7714.Label" hint-size="60px,16px">이메일</x-import>
+              <x-import component-from-global-scope="UstageDesignSystem_ee7714.Input" placeholder="QR 티켓을 받을 이메일" hint-size="100%,40px"></x-import>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <x-import component-from-global-scope="UstageDesignSystem_ee7714.Label" hint-size="60px,16px">입금자명</x-import>
+              <x-import component-from-global-scope="UstageDesignSystem_ee7714.Input" placeholder="입금하실 분의 성함" hint-size="100%,40px"></x-import>
+              <button type="button" onClick="{{ toggleSameName }}" style="display: flex; align-items: center; gap: 8px; background: none; border: 0; padding: 0; cursor: pointer; text-align: left">
+                <span style="width: 18px; height: 18px; border-radius: 6px; display: grid; place-items: center; background: {{ sameNameBg }}; border: 1px solid {{ sameNameBorder }}; color: var(--primary-foreground); font-size: 11px">{{ sameNameMark }}</span>
+                <span style="font-size: 13px; color: var(--muted-foreground)">예매자 이름과 동일합니다</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div style="border-top: 1px solid var(--border); padding: 14px 20px 20px; display: flex; flex-direction: column; gap: 12px">
+          <div style="display: flex; align-items: baseline; justify-content: space-between">
+            <span style="font-size: 12px; color: var(--muted-foreground)">{{ qtyText }}</span>
+            <span style="font-size: 18px; font-weight: 700">{{ totalText }}</span>
+          </div>
+          <p style="margin: 0; font-size: 12px; line-height: 1.6; color: var(--muted-foreground)">다음 화면에서 계좌를 안내드립니다. 입금 확인 후 확정 메일이 발송됩니다.</p>
+          <x-import component-from-global-scope="UstageDesignSystem_ee7714.Button" size="lg" class-name="w-full" hint-size="100%,40px">입금 안내 받기</x-import>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; align-items: baseline; gap: 8px">
+        <span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--primary)">03</span>
+        <span style="font-size: 13px; font-weight: 600">입금 안내 · 기한 명시</span>
+      </div>
+      <div style="width: 390px; height: 844px; border-radius: 40px; background: var(--card); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.06); outline: 1px solid color-mix(in oklab, var(--foreground) 5%, transparent); overflow: hidden; display: flex; flex-direction: column">
+        <div style="display: flex; align-items: center; justify-content: center; padding: 14px 12px 8px">
+          <span style="font-size: 12px; color: var(--muted-foreground)">입금 안내</span>
+        </div>
+
+        <div style="flex: 1; overflow: hidden; padding: 12px 20px 20px; display: flex; flex-direction: column; gap: 20px">
+          <div style="display: flex; flex-direction: column; gap: 12px; align-items: center; padding: 24px 20px; border-radius: 26px; background: color-mix(in oklab, var(--input) 50%, transparent)">
+            <x-import component-from-global-scope="UstageDesignSystem_ee7714.BookingStatusBadge" status="pending" hint-size="80px,20px"></x-import>
+            <span style="font-size: 30px; font-weight: 700; letter-spacing: -0.02em">{{ totalText }}</span>
+            <span style="font-size: 12px; color: var(--muted-foreground)">{{ qtyText }} · 예약번호 BK-2026-0214-018</span>
+          </div>
+
+          <sc-if value="{{ showDeadline }}" hint-placeholder-val="{{ true }}">
+            <div style="display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-radius: 22px; background: color-mix(in oklab, var(--primary) 10%, transparent)">
+              <x-import component-from-global-scope="UstageDesignSystem_ee7714.Icon" name="calendar" class="size-4" hint-size="16px,16px"></x-import>
+              <span style="font-size: 13px; font-weight: 500; color: var(--primary)">2월 10일 23:59까지 입금</span>
+              <span style="margin-left: auto; font-family: 'Geist Mono', monospace; font-size: 13px; color: var(--primary)">{{ countdown }}</span>
+            </div>
+          </sc-if>
+
+          <div style="display: flex; flex-direction: column; gap: 14px; padding: 20px; border-radius: 26px; background: var(--card); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.06); outline: 1px solid color-mix(in oklab, var(--foreground) 5%, transparent)">
+            <div style="display: flex; justify-content: space-between; font-size: 13px">
+              <span style="color: var(--muted-foreground)">은행</span>
+              <span style="font-weight: 500">카카오뱅크</span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px">
+              <span style="font-family: 'Geist Mono', monospace; font-size: 15px; font-weight: 500">3333-01-2948571</span>
+              <x-import component-from-global-scope="UstageDesignSystem_ee7714.CopyButton" value="3333012948571" label="복사" hint-size="64px,24px"></x-import>
+            </div>
+            <x-import component-from-global-scope="UstageDesignSystem_ee7714.Separator" hint-size="100%,1px"></x-import>
+            <div style="display: flex; justify-content: space-between; font-size: 13px">
+              <span style="color: var(--muted-foreground)">예금주</span>
+              <span style="font-weight: 500">이유하</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px">
+              <span style="color: var(--muted-foreground)">입금자명</span>
+              <span style="font-weight: 500">김서연</span>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            <span style="font-size: 13px; font-weight: 600">확인해주세요</span>
+            <p style="margin: 0; font-size: 13px; line-height: 1.7; color: var(--muted-foreground)">입금자명이 다르면 확인이 늦어집니다. 주최자가 입금을 확인하면 QR 티켓이 담긴 확정 메일을 보내드려요. 기한까지 입금이 없으면 예매가 자동으로 취소됩니다.</p>
+          </div>
+        </div>
+
+        <div style="border-top: 1px solid var(--border); padding: 14px 20px 20px; display: flex; flex-direction: column; gap: 8px">
+          <x-import component-from-global-scope="UstageDesignSystem_ee7714.Button" size="lg" class-name="w-full" hint-size="100%,40px">입금했어요</x-import>
+          <x-import component-from-global-scope="UstageDesignSystem_ee7714.Button" variant="ghost" size="lg" class-name="w-full" hint-size="100%,40px">예매 내역 보기</x-import>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; align-items: baseline; gap: 8px">
+        <span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--primary)">04</span>
+        <span style="font-size: 13px; font-weight: 600">확정 · QR 티켓</span>
+      </div>
+      <div style="width: 390px; height: 844px; border-radius: 40px; background: var(--card); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.06); outline: 1px solid color-mix(in oklab, var(--foreground) 5%, transparent); overflow: hidden; display: flex; flex-direction: column">
+        <div style="display: flex; align-items: center; justify-content: center; padding: 14px 12px 8px">
+          <span style="font-size: 12px; color: var(--muted-foreground)">QR 티켓</span>
+        </div>
+
+        <div style="flex: 1; overflow: hidden; padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 20px; align-items: center">
+          <x-import component-from-global-scope="UstageDesignSystem_ee7714.BookingStatusBadge" status="confirmed" hint-size="80px,20px"></x-import>
+          <div style="text-align: center; display: flex; flex-direction: column; gap: 6px">
+            <h2 style="margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em">입금이 확인되었어요</h2>
+            <p style="margin: 0; font-size: 13px; color: var(--muted-foreground)">입장할 때 이 QR을 보여주세요.</p>
+          </div>
+
+          <div style="width: 100%; padding: 24px; border-radius: 26px; background: var(--card); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.06); outline: 1px solid color-mix(in oklab, var(--foreground) 5%, transparent); display: flex; flex-direction: column; gap: 16px; align-items: center">
+            <div style="width: 180px; height: 180px; border-radius: 16px; background: color-mix(in oklab, var(--input) 50%, transparent); display: grid; place-items: center; font-size: 12px; color: var(--muted-foreground)">QR 코드</div>
+            <span style="font-family: 'Geist Mono', monospace; font-size: 13px">BK-2026-0214-018</span>
+            <x-import component-from-global-scope="UstageDesignSystem_ee7714.Separator" hint-size="100%,1px"></x-import>
+            <div style="width: 100%; display: flex; flex-direction: column; gap: 10px">
+              <div style="display: flex; justify-content: space-between; font-size: 13px">
+                <span style="color: var(--muted-foreground)">일시</span>
+                <span style="font-weight: 500">2월 14일 (토) 19:30</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 13px">
+                <span style="color: var(--muted-foreground)">장소</span>
+                <span style="font-weight: 500">연남동 스튜디오 온</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 13px">
+                <span style="color: var(--muted-foreground)">매수</span>
+                <span style="font-weight: 500">{{ qtyText }}</span>
+              </div>
+            </div>
+          </div>
+
+          <p style="margin: 0; font-size: 12px; line-height: 1.6; color: var(--muted-foreground); text-align: center">공연 시작 30분 전부터 입장할 수 있습니다.</p>
+        </div>
+
+        <div style="border-top: 1px solid var(--border); padding: 14px 20px 20px; display: flex; gap: 8px">
+          <x-import component-from-global-scope="UstageDesignSystem_ee7714.Button" variant="outline" size="lg" class-name="flex-1" hint-size="120px,40px">캘린더에 저장</x-import>
+          <x-import component-from-global-scope="UstageDesignSystem_ee7714.Button" size="lg" class-name="flex-1" hint-size="120px,40px">티켓 공유</x-import>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;ticketPrice&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:25000,&quot;tsType&quot;:&quot;number&quot;,&quot;unit&quot;:&quot;원&quot;,&quot;min&quot;:0,&quot;max&quot;:100000,&quot;step&quot;:1000,&quot;section&quot;:&quot;스테이지&quot;},&quot;seatTotal&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:40,&quot;tsType&quot;:&quot;number&quot;,&quot;unit&quot;:&quot;석&quot;,&quot;min&quot;:10,&quot;max&quot;:200,&quot;step&quot;:5,&quot;section&quot;:&quot;스테이지&quot;},&quot;showSeatBar&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;표시&quot;},&quot;showDeadline&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;표시&quot;}}">
+class Component extends DCLogic {
+  state = { qty: 2, sameName: true };
+
+  renderVals() {
+    const price = this.props.ticketPrice ?? 25000;
+    const seatTotal = this.props.seatTotal ?? 40;
+    const seatTaken = 22;
+    const fmt = n => n.toLocaleString("ko-KR") + "원";
+    const qty = this.state.qty;
+    return {
+      qty,
+      qtyText: qty + "매",
+      priceText: price === 0 ? "무료" : fmt(price),
+      totalText: price === 0 ? "무료" : fmt(price * qty),
+      seatText: seatTaken + " / " + seatTotal + "석",
+      seatPercent: Math.round((seatTaken / seatTotal) * 100) + "%",
+      showSeatBar: this.props.showSeatBar ?? true,
+      showDeadline: this.props.showDeadline ?? true,
+      countdown: "2일 06:12",
+      inc: () => this.setState(s => ({ qty: Math.min(4, s.qty + 1) })),
+      dec: () => this.setState(s => ({ qty: Math.max(1, s.qty - 1) })),
+      toggleSameName: () => this.setState(s => ({ sameName: !s.sameName })),
+      sameNameMark: this.state.sameName ? "✓" : "",
+      sameNameBg: this.state.sameName ? "var(--primary)" : "transparent",
+      sameNameBorder: this.state.sameName ? "var(--primary)" : "var(--border)"
+    };
+  }
+}
+</script>
+</body>
+</html>

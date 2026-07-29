@@ -1,0 +1,11 @@
+/* ustage radii. This system is very round: fields/badges/menus at 3xl,
+   buttons/cards/dialogs at 4xl, avatars and status pills fully round.
+   Nothing in ustage uses a small radius — there is no `rounded-md` here. */
+:root {
+  --radius: 0.625rem;                        /* 10px — the base unit */
+  --radius-2xl: calc(var(--radius) * 1.6);   /* 16px — menu items, select items */
+  --radius-3xl: calc(var(--radius) * 2.2);   /* 22px — inputs, badges, menus, popovers */
+  --radius-4xl: calc(var(--radius) * 2.6);   /* 26px — buttons, cards, dialogs */
+  --radius-full: 9999px;                     /* pills, avatars, status dots, tabs */
+  --cell-radius: var(--radius-4xl);          /* calendar day cells */
+}

@@ -163,16 +163,34 @@ export default async function EventPublicPage({
           value={event.price === 0 ? "무료입장" : `${event.price.toLocaleString()}원`}
         />
         {event.capacity && (
-          <InfoRow
-            icon={Users}
-            value={
-              remainingSeats === null
-                ? `좌석 ${event.capacity}석`
-                : remainingSeats <= 0
-                  ? `좌석 ${event.capacity}석 · 매진`
-                  : `좌석 ${event.capacity}석 · 잔여 ${remainingSeats}석`
-            }
-          />
+          <div className="space-y-2">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="flex items-center gap-2.5 text-sm font-medium">
+                <Users className="size-4 shrink-0 text-muted-foreground" />
+                잔여 좌석
+              </span>
+              <span className="font-mono text-sm text-primary">
+                {remainingSeats === null
+                  ? `${event.capacity}석`
+                  : remainingSeats <= 0
+                    ? "매진"
+                    : `${remainingSeats} / ${event.capacity}석`}
+              </span>
+            </div>
+            {remainingSeats !== null && (
+              <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
+                <div
+                  className="h-full rounded-full bg-primary"
+                  style={{
+                    width: `${Math.min(Math.round(((event.capacity - remainingSeats) / event.capacity) * 100), 100)}%`,
+                  }}
+                />
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              입금이 확인된 순서대로 좌석이 확정됩니다.
+            </p>
+          </div>
         )}
         {(event.booking_start || event.booking_end) && (
           <InfoRow
@@ -225,6 +243,8 @@ export default async function EventPublicPage({
         <h2 className="font-semibold">예매하기</h2>
         <BookingForm
           eventId={event.id}
+          eventTitle={event.title}
+          eventDateLabel={formatKST(event.event_date)}
           price={event.price}
           bankInfo={event.bank_info}
           noticeHtml={

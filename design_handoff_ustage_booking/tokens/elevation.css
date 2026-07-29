@@ -1,0 +1,20 @@
+/* ustage elevation. Surfaces are lifted with a soft shadow plus a 1px
+   hairline ring in the foreground colour at 5% (10% in dark) — never a
+   solid border. Overlays get a translucent black scrim with a light blur. */
+:root {
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);  /* Card */
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); /* Popover, DropdownMenu, Select */
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1); /* Dialog */
+
+  --ring-surface: oklch(0.17 0.02 185 / 5%);   /* the hairline on every raised surface */
+  --overlay-scrim: rgb(0 0 0 / 0.3);           /* dialog overlay */
+  --overlay-blur: 8px; /* @kind spacing */                          /* supports-backdrop-filter only */
+
+  --focus-ring-width: 3px; /* @kind spacing */                      /* focus-visible:ring-3 */
+  --focus-ring-color: oklch(0.55 0.12 185 / 30%);
+  --duration-fast: 100ms; /* @kind other */                       /* overlays open/close */
+  --duration-default: 150ms; /* @kind other */                    /* colour + shadow transitions */
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1); /* @kind other */
+}
+.dark { --ring-surface: oklch(0.95 0.01 185 / 10%); }

@@ -203,6 +203,178 @@ export async function updateBookingStatus(
   return { success: true };
 }
 
+/**
+ * 명단에서 선택한 여러 건을 한 번에 입금확인/취소 처리.
+ * 내 스테이지의 예매만 반영하고, 상태가 실제로 바뀐 건에만 메일을 보낸다.
+ */
+export async function updateBookingStatusBulk(
+  bookingIds: string[],
+  status: "pending" | "confirmed" | "cancelled"
+): Promise<ActionResult & { updated?: number }> {
+  if (bookingIds.length === 0) return { error: "선택된 예매가 없습니다." };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "로그인이 필요합니다." };
+
+  const { data: rows, error: readError } = await supabase
+    .from("bookings")
+    .select(
+      "id, name, email, quantity, status, user_id, event_id, booking_tickets(ticket_number, qr_token), events!inner(performer_id, title, event_date, venue, venue_address, slug, contact, cancel_policy)"
+    )
+    .in("id", bookingIds);
+
+  if (readError) {
+    console.error("[updateBookingStatusBulk] read", readError);
+    return { error: "예매 정보를 불러오지 못했습니다." };
+  }
+
+  type Row = NonNullable<typeof rows>[number];
+  const owned = (rows ?? []).filter(
+    (r) => (r.events as { performer_id: string }).performer_id === user.id
+  );
+
+  if (owned.length === 0) return { error: "권한이 없습니다." };
+
+  // 상태가 실제로 바뀌는 건만 갱신 대상 — 메일 중복 발송 방지
+  const changing = owned.filter((r) => r.status !== status);
+  if (changing.length === 0) return { success: true, updated: 0 };
+
+  const { error: updateError } = await supabase
+    .from("bookings")
+    .update({ status })
+    .in(
+      "id",
+      changing.map((r) => r.id)
+    );
+
+  if (updateError) {
+    console.error("[updateBookingStatusBulk] update", updateError);
+    return { error: "상태 변경에 실패했습니다." };
+  }
+
+  const baseUrl = getBaseUrl();
+  const eventInfo = (row: Row) =>
+    row.events as {
+      title: string;
+      event_date: string;
+      venue: string;
+      venue_address: string | null;
+      slug: string;
+      contact: string;
+      cancel_policy: string | null;
+    };
+
+  after(async () => {
+    for (const row of changing) {
+      if (!row.email) continue;
+      const ev = eventInfo(row);
+      const quantity = row.quantity ?? 1;
+
+      if (status === "confirmed") {
+        const tickets = (row.booking_tickets ?? [])
+          .slice()
+          .sort((a, b) => a.ticket_number - b.ticket_number)
+          .map((t) => ({
+            ticket_number: t.ticket_number,
+            qr_token: t.qr_token,
+          }));
+        if (tickets.length === 0) continue;
+        await sendBookingConfirmed({
+          to: row.email,
+          name: row.name,
+          quantity,
+          eventTitle: ev.title,
+          eventDate: formatKST(ev.event_date),
+          eventVenue: ev.venue_address || ev.venue,
+          confirmUrl: row.user_id
+            ? `${baseUrl}/dashboard/bookings/${row.id}`
+            : `${baseUrl}/e/${ev.slug}/me`,
+          tickets,
+        }).catch((err) => console.error("[email]", err));
+      }
+
+      if (status === "cancelled") {
+        await sendBookingCancelled({
+          to: row.email,
+          name: row.name,
+          quantity,
+          eventTitle: ev.title,
+          eventDate: formatKST(ev.event_date),
+          eventVenue: ev.venue_address || ev.venue,
+          contact: ev.contact,
+          cancelPolicyHtml: ev.cancel_policy
+            ? sanitizeEventHtml(ev.cancel_policy)
+            : undefined,
+          byOwner: true,
+        }).catch((err) => console.error("[email]", err));
+      }
+    }
+  });
+
+  revalidatePath(`/dashboard/events/${changing[0].event_id}`);
+  return { success: true, updated: changing.length };
+}
+
+/** 확정 메일(입장 QR 포함) 재발송 — 이미 확정된 예매에만 가능 */
+export async function resendBookingConfirmation(
+  bookingId: string
+): Promise<ActionResult> {
+  const ctx = await assertBookingOwner(bookingId);
+  if ("error" in ctx) return { error: ctx.error };
+
+  const { data: booking } = await ctx.supabase
+    .from("bookings")
+    .select(
+      "id, name, email, quantity, status, user_id, booking_tickets(ticket_number, qr_token), events!inner(title, event_date, venue, venue_address, slug)"
+    )
+    .eq("id", bookingId)
+    .single();
+
+  if (!booking) return { error: "예매를 찾을 수 없습니다." };
+  if (booking.status !== "confirmed") {
+    return { error: "입금이 확인된 예매만 확정 메일을 보낼 수 있습니다." };
+  }
+  if (!booking.email) return { error: "이메일이 없어 발송할 수 없습니다." };
+
+  const tickets = (booking.booking_tickets ?? [])
+    .slice()
+    .sort((a, b) => a.ticket_number - b.ticket_number)
+    .map((t) => ({ ticket_number: t.ticket_number, qr_token: t.qr_token }));
+
+  if (tickets.length === 0) return { error: "발급된 티켓이 없습니다." };
+
+  const ev = booking.events as {
+    title: string;
+    event_date: string;
+    venue: string;
+    venue_address: string | null;
+    slug: string;
+  };
+  const baseUrl = getBaseUrl();
+  const email = booking.email;
+
+  after(() =>
+    sendBookingConfirmed({
+      to: email,
+      name: booking.name,
+      quantity: booking.quantity ?? 1,
+      eventTitle: ev.title,
+      eventDate: formatKST(ev.event_date),
+      eventVenue: ev.venue_address || ev.venue,
+      confirmUrl: booking.user_id
+        ? `${baseUrl}/dashboard/bookings/${booking.id}`
+        : `${baseUrl}/e/${ev.slug}/me`,
+      tickets,
+    }).catch((err) => console.error("[email]", err))
+  );
+
+  return { success: true };
+}
+
 export async function forceCheckIn(
   bookingId: string,
   ticketId?: string

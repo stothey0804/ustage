@@ -27,7 +27,7 @@ import { StatusTransition } from "@/components/dashboard/StatusTransition";
 import { EventLifecycle } from "@/components/dashboard/EventLifecycle";
 import { BookingLinkButton } from "@/components/dashboard/BookingLinkButton";
 import { EventQrShare } from "@/components/dashboard/EventQrShare";
-import { BookingList } from "@/components/dashboard/BookingList";
+import { BookingTable } from "@/components/dashboard/BookingTable";
 import { DeleteEventButton } from "@/components/dashboard/DeleteEventButton";
 
 export default async function EventDetailPage({
@@ -79,8 +79,8 @@ export default async function EventDetailPage({
     : undefined;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      {/* 헤더 */}
+    <div className="space-y-6">
+      {/* 헤더 — 상태·일시·장소를 제목 위에 두고 액션은 우측 정렬 (데스크톱 기준) */}
       <div>
         <Link
           href="/dashboard/events"
@@ -89,12 +89,15 @@ export default async function EventDetailPage({
           <ChevronLeft className="size-4" />
           내 스테이지
         </Link>
-        <div className="mt-2 flex items-start justify-between gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight leading-snug">
-            {event.title}
-          </h1>
-          <EventStatusBadge status={event.status} className="shrink-0 mt-0.5" />
+        <div className="mt-2 flex flex-wrap items-center gap-2.5">
+          <EventStatusBadge status={event.status} />
+          <span className="text-xs text-muted-foreground">
+            {formatKST(event.event_date)} · {event.venue}
+          </span>
         </div>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight leading-snug">
+          {event.title}
+        </h1>
       </div>
 
       {/* 액션 버튼 */}
@@ -122,27 +125,27 @@ export default async function EventDetailPage({
         <DeleteEventButton eventId={id} hasBookings={bookingCount > 0} />
       </div>
 
-      {/* 진행 상태 흐름 */}
-      <EventLifecycle event={event} />
-
-      {/* 상태 전환 */}
-      <StatusTransition eventId={id} currentStatus={status} />
+      {/* 진행 상태 흐름 + 상태 전환 — 넓은 화면에서 늘어지지 않게 폭을 제한 */}
+      <div className="max-w-3xl space-y-6">
+        <EventLifecycle event={event} />
+        <StatusTransition eventId={id} currentStatus={status} />
+      </div>
 
       <Separator />
 
-      {/* 탭: 스테이지 정보 / 예매 명단 */}
-      <Tabs defaultValue="info">
-        <TabsList className="w-full">
-          <TabsTrigger value="info" className="flex-1">
-            스테이지 정보
-          </TabsTrigger>
+      {/* 탭: 예매 명단(주 작업) / 스테이지 정보 */}
+      <Tabs defaultValue={bookingCount > 0 ? "bookings" : "info"}>
+        <TabsList className="w-full max-w-md">
           <TabsTrigger value="bookings" className="flex-1">
             예매 명단 ({bookingCount})
+          </TabsTrigger>
+          <TabsTrigger value="info" className="flex-1">
+            스테이지 정보
           </TabsTrigger>
         </TabsList>
 
         {/* 스테이지 정보 탭 */}
-        <TabsContent value="info" className="space-y-6 mt-4">
+        <TabsContent value="info" className="mt-4 max-w-3xl space-y-6">
           {/* 포스터 */}
           {event.poster_url && (
             <div className="relative h-64 w-full overflow-hidden rounded-lg border sm:h-80">
@@ -232,11 +235,13 @@ export default async function EventDetailPage({
 
         {/* 예매 명단 탭 */}
         <TabsContent value="bookings" className="mt-4">
-          <BookingList
+          <BookingTable
             initialBookings={bookings ?? []}
+            eventId={id}
+            eventTitle={event.title}
             isFree={event.price === 0}
             price={event.price}
-            eventTitle={event.title}
+            capacity={event.capacity}
             customFields={(event.custom_fields ?? []) as import("@/lib/validations/event").CustomField[]}
             cancelPolicyHtml={cancelPolicyHtml}
           />

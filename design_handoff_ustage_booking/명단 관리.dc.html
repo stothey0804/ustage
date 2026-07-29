@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/ustage-design-system-ee7714ae-032d-448f-b6e4-e3d2ab1f93e5/fonts/fonts.css">
+<link rel="stylesheet" href="_ds/ustage-design-system-ee7714ae-032d-448f-b6e4-e3d2ab1f93e5/tokens/colors.css">
+<link rel="stylesheet" href="_ds/ustage-design-system-ee7714ae-032d-448f-b6e4-e3d2ab1f93e5/tokens/typography.css">
+<link rel="stylesheet" href="_ds/ustage-design-system-ee7714ae-032d-448f-b6e4-e3d2ab1f93e5/tokens/radius.css">
+<link rel="stylesheet" href="_ds/ustage-design-system-ee7714ae-032d-448f-b6e4-e3d2ab1f93e5/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/ustage-design-system-ee7714ae-032d-448f-b6e4-e3d2ab1f93e5/tokens/elevation.css">
+<link rel="stylesheet" href="_ds/ustage-design-system-ee7714ae-032d-448f-b6e4-e3d2ab1f93e5/tokens/utilities.css">
+<link rel="stylesheet" href="_ds/ustage-design-system-ee7714ae-032d-448f-b6e4-e3d2ab1f93e5/styles.css">
+<script src="_ds/ustage-design-system-ee7714ae-032d-448f-b6e4-e3d2ab1f93e5/_ds_bundle.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  :root { --font-sans: "Pretendard Variable", Pretendard, ui-sans-serif, system-ui, -apple-system, sans-serif; }
+  body { margin: 0; background: var(--background); color: var(--foreground); font-family: var(--font-sans); }
+  a { color: var(--primary); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+</style>
+</helmet>
+
+<div style="min-width: 1480px; background: var(--background); min-height: 100vh; box-sizing: border-box; display: flex; flex-direction: column">
+
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 48px; border-bottom: 1px solid var(--border); background: var(--card)">
+    <div style="display: flex; align-items: center; gap: 24px">
+      <x-import component-from-global-scope="UstageDesignSystem_ee7714.Wordmark" hint-size="80px,24px"></x-import>
+      <div style="display: flex; gap: 4px">
+        <x-import component-from-global-scope="UstageDesignSystem_ee7714.Button" variant="secondary" size="sm" hint-size="80px,32px">명단</x-import>
+        <x-import component-from-global-scope="UstageDesignSystem_ee7714.Button" variant="ghost" size="sm" hint-size="80px,32px">스테이지</x-import>
+        <x-import component-from-global-scope="UstageDesignSystem_ee7714.Button" variant="ghost" size="sm" hint-size="80px,32px">정산</x-import>
+        <x-import component-from-global-scope="UstageDesignSystem_ee7714.Button" variant="ghost" size="sm" hint-size="80px,32px">내 티켓</x-import>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px">
+      <span style="font-size: 13px; color: var(--muted-foreground)">이유하</span>
+      <x-import component-from-global-scope="UstageDesignSystem_ee7714.Button" variant="ghost" size="icon-sm" aria-label="마이페이지" hint-size="32px,32px">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"></circle>
+          <circle cx="12" cy="10" r="4"></circle>
+          <path d="M18 20a6 6 0 0 0-12 0"></path>
+        </svg>
+      </x-import>
+    </div>
+  </div>
+
+  <div style="padding: 32px 48px 64px; display: flex; flex-direction: column; gap: 24px">
+
+    <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; align-items: center; gap: 10px">
+          <x-import component-from-global-scope="UstageDesignSystem_ee7714.EventStatusBadge" status="open" hint-size="72px,20px"></x-import>
+          <span style="font-size: 12px; color: var(--muted-foreground)">2026년 2월 14일 (토) 19:30 · 연남동 스튜디오 온</span>
+        </div>
+        <h1 style="margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.02em">겨울의 끝, 세 번째 무대</h1>
+      </div>
+      <div style="display: flex; gap: 8px">
+        <x-import component-from-global-scope="UstageDesignSystem_ee7714.Button" variant="outline" size="sm" hint-size="110px,32px">예매 링크 복사</x-import>
+        <x-import component-from-global-scope="UstageDesignSystem_ee7714.Button" variant="outline" size="sm" hint-size="90px,32px">명단 내보내기</x-import>
+        <x-import component-from-global-scope="UstageDesignSystem_ee7714.Button" variant="secondary" size="sm" hint-size="80px,32px">마감하기</x-import>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px">
+      <div style="padding: 20px 24px; border-radius: 26px; background: var(--card); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.06); outline: 1px solid color-mix(in oklab, var(--foreground) 5%, transparent); display: flex; flex-direction: column; gap: 6px">
+        <span style="font-size: 12px; color: var(--muted-foreground)">총 예매</span>
+        <span style="font-size: 24px; font-weight: 700">{{ statTotal }}</span>
+        <span style="font-size: 12px; color: var(--muted-foreground)">{{ statTickets }}</span>
+      </div>
+      <div style="padding: 20px 24px; border-radius: 26px; background: var(--card); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.06); outline: 1px solid color-mix(in oklab, var(--foreground) 5%, transparent); display: flex; flex-direction: column; gap: 6px">
+        <span style="font-size: 12px; color: var(--muted-foreground)">입금완료</span>
+        <span style="font-size: 24px; font-weight: 700; color: var(--primary)">{{ statConfirmed }}</span>
+        <span style="font-size: 12px; color: var(--muted-foreground)">{{ statConfirmedAmount }}</span>
+      </div>
+      <div style="padding: 20px 24px; border-radius: 26px; background: var(--card); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.06); outline: 1px solid color-mix(in oklab, var(--foreground) 5%, transparent); display: flex; flex-direction: column; gap: 6px">
+        <span style="font-size: 12px; color: var(--muted-foreground)">입금대기</span>
+        <span style="font-size: 24px; font-weight: 700">{{ statPending }}</span>
+        <span style="font-size: 12px; color: var(--muted-foreground)">가장 오래된 건 2일 경과</span>
+      </div>
+      <div style="padding: 20px 24px; border-radius: 26px; background: var(--card); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.06); outline: 1px solid color-mix(in oklab, var(--foreground) 5%, transparent); display: flex; flex-direction: column; gap: 10px">
+        <span style="font-size: 12px; color: var(--muted-foreground)">좌석</span>
+        <span style="font-size: 24px; font-weight: 700">{{ statSeats }}</span>
+        <div style="height: 6px; border-radius: 999px; background: var(--secondary); overflow: hidden">
+          <div style="height: 100%; border-radius: 999px; background: var(--primary); width: {{ seatPercent }}"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 24px; align-items: flex-start">
+
+      <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px">
+          <div style="display: flex; gap: 6px">
+            <sc-for list="{{ filters }}" as="f" hint-placeholder-count="4">
+              <button type="button" onClick="{{ f.select }}" style="height: 32px; padding: 0 14px; border-radius: 999px; border: 0; cursor: pointer; font-size: 13px; font-weight: 500; font-family: inherit; background: {{ f.bg }}; color: {{ f.color }}">{{ f.label }}</button>
+            </sc-for>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <div style="width: 240px">
+              <x-import component-from-global-scope="UstageDesignSystem_ee7714.Input" placeholder="이름 · 예약번호 · 입금자명 검색" value="{{ query }}" onChange="{{ onQuery }}" hint-size="240px,40px"></x-import>
+            </div>
+          </div>
+        </div>
+
+        <div style="border-radius: 26px; background: var(--card); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.06); outline: 1px solid color-mix(in oklab, var(--foreground) 5%, transparent); overflow: hidden">
+
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px; background: {{ bulkBg }}; border-bottom: 1px solid var(--border); min-height: 56px; box-sizing: border-box">
+            <div style="display: flex; align-items: center; gap: 12px">
+              <button type="button" onClick="{{ toggleAll }}" style="width: 18px; height: 18px; border-radius: 6px; display: grid; place-items: center; cursor: pointer; background: {{ allBg }}; border: 1px solid {{ allBorder }}; color: var(--primary-foreground); font-size: 11px; padding: 0">{{ allMark }}</button>
+              <span style="font-size: 13px; font-weight: 500">{{ bulkLabel }}</span>
+            </div>
+            <sc-if value="{{ hasSelection }}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; gap: 8px">
+                <x-import component-from-global-scope="UstageDesignSystem_ee7714.Button" size="sm" onClick="{{ confirmSelected }}" hint-size="110px,32px">입금 확인</x-import>
+                <x-import component-from-global-scope="UstageDesignSystem_ee7714.Button" variant="outline" size="sm" hint-size="110px,32px">확정 메일 보내기</x-import>
+                <x-import component-from-global-scope="UstageDesignSystem_ee7714.Button" variant="destructive" size="sm" onClick="{{ cancelSelected }}" hint-size="80px,32px">취소 처리</x-import>
+              </div>
+            </sc-if>
+          </div>
+
+          <div style="display: grid; box-sizing: border-box; grid-template-columns: 40px minmax(150px, 1fr) 140px 56px 88px 130px 120px 92px 96px; align-items: center; padding: 0 20px; height: 40px; font-size: 12px; color: var(--muted-foreground); border-bottom: 1px solid var(--border)">
+            <span></span>
+            <button type="button" onClick="{{ sortByName }}" style="background: none; border: 0; padding: 0; text-align: left; cursor: pointer; font: inherit; color: inherit">예매자{{ nameArrow }}</button>
+            <span>예약번호</span>
+            <span>매수</span>
+            <span>금액</span>
+            <span>입금자명</span>
+            <button type="button" onClick="{{ sortByDate }}" style="background: none; border: 0; padding: 0; text-align: left; cursor: pointer; font: inherit; color: inherit">신청일시{{ dateArrow }}</button>
+            <span>상태</span>
+            <span></span>
+          </div>
+
+          <sc-for list="{{ rows }}" as="row" hint-placeholder-count="8">
+            <div style="display: grid; box-sizing: border-box; grid-template-columns: 40px minmax(150px, 1fr) 140px 56px 88px 130px 120px 92px 96px; align-items: center; padding: {{ row.pad }} 20px; border-bottom: 1px solid var(--border); background: {{ row.bg }}; cursor: pointer" onClick="{{ row.open }}">
+              <button type="button" onClick="{{ row.toggle }}" style="width: 18px; height: 18px; border-radius: 6px; display: grid; place-items: center; cursor: pointer; background: {{ row.checkBg }}; border: 1px solid {{ row.checkBorder }}; color: var(--primary-foreground); font-size: 11px; padding: 0">{{ row.mark }}</button>
+              <div style="display: flex; align-items: center; gap: 10px; min-width: 0">
+                <x-import component-from-global-scope="UstageDesignSystem_ee7714.Avatar" size="sm" hint-size="32px,32px">
+                  <x-import component-from-global-scope="UstageDesignSystem_ee7714.AvatarFallback" hint-size="32px,32px">{{ row.initial }}</x-import>
+                </x-import>
+                <div style="display: flex; flex-direction: column; min-width: 0">
+                  <span style="font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ row.name }}</span>
+                  <span style="font-size: 12px; color: var(--muted-foreground)">{{ row.phone }}</span>
+                </div>
+              </div>
+              <span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted-foreground)">{{ row.code }}</span>
+              <span style="font-size: 13px">{{ row.qtyText }}</span>
+              <span style="font-size: 13px">{{ row.amountText }}</span>
+              <div style="display: flex; align-items: center; gap: 6px; min-width: 0">
+                <span style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ row.payer }}</span>
+                <sc-if value="{{ row.mismatch }}" hint-placeholder-val="{{ false }}">
+                  <span style="flex-shrink: 0; font-size: 11px; font-weight: 500; padding: 1px 8px; border-radius: 999px; background: color-mix(in oklab, var(--destructive) 10%, transparent); color: var(--destructive)">불일치</span>
+                </sc-if>
+              </div>
+              <span style="font-size: 13px; color: var(--muted-foreground)">{{ row.created }}</span>
+              <x-import component-from-global-scope="UstageDesignSystem_ee7714.BookingStatusBadge" status="{{ row.status }}" hint-size="72px,20px"></x-import>
+              <div style="display: flex; justify-content: flex-end">
+                <sc-if value="{{ row.actionable }}" hint-placeholder-val="{{ true }}">
+                  <x-import component-from-global-scope="UstageDesignSystem_ee7714.Button" variant="outline" size="xs" onClick="{{ row.confirm }}" hint-size="80px,24px">입금 확인</x-import>
+                </sc-if>
+              </div>
+            </div>
+          </sc-for>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; font-size: 12px; color: var(--muted-foreground)">
+            <span>{{ rowCountText }}</span>
+            <span>입금 확인은 되돌릴 수 있습니다.</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="width: 360px; flex-shrink: 0; border-radius: 26px; background: var(--card); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.06); outline: 1px solid color-mix(in oklab, var(--foreground) 5%, transparent); padding: 24px; display: flex; flex-direction: column; gap: 20px">
+        <sc-if value="{{ hasDetail }}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; flex-direction: column; gap: 20px">
+            <div style="display: flex; align-items: center; gap: 12px">
+              <x-import component-from-global-scope="UstageDesignSystem_ee7714.Avatar" hint-size="40px,40px">
+                <x-import component-from-global-scope="UstageDesignSystem_ee7714.AvatarFallback" hint-size="40px,40px">{{ detail.initial }}</x-import>
+              </x-import>
+              <div style="display: flex; flex-direction: column; gap: 2px">
+                <span style="font-size: 16px; font-weight: 600">{{ detail.name }}</span>
+                <span style="font-size: 12px; color: var(--muted-foreground)">{{ detail.phone }}</span>
+              </div>
+              <div style="margin-left: auto">
+                <x-import component-from-global-scope="UstageDesignSystem_ee7714.BookingStatusBadge" status="{{ detail.status }}" hint-size="72px,20px"></x-import>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 22px; background: color-mix(in oklab, var(--input) 50%, transparent)">
+              <div style="display: flex; justify-content: space-between; font-size: 13px">
+                <span style="color: var(--muted-foreground)">예약번호</span>
+                <span style="font-family: 'Geist Mono', monospace">{{ detail.code }}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 13px">
+                <span style="color: var(--muted-foreground)">매수</span>
+                <span style="font-weight: 500">{{ detail.qtyText }}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 13px">
+                <span style="color: var(--muted-foreground)">금액</span>
+                <span style="font-weight: 500">{{ detail.amountText }}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 13px">
+                <span style="color: var(--muted-foreground)">입금자명</span>
+                <span style="font-weight: 500">{{ detail.payer }}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 13px">
+                <span style="color: var(--muted-foreground)">이메일</span>
+                <span style="font-weight: 500">{{ detail.email }}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; font-size: 13px">
+                <span style="color: var(--muted-foreground)">신청일시</span>
+                <span style="font-weight: 500">{{ detail.createdFull }}</span>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <span style="font-size: 13px; font-weight: 600">진행</span>
+              <sc-for list="{{ detail.timeline }}" as="t" hint-placeholder-count="3">
+                <div style="display: flex; gap: 10px; align-items: baseline">
+                  <span style="width: 6px; height: 6px; border-radius: 999px; background: {{ t.dot }}; flex-shrink: 0; transform: translateY(-2px)"></span>
+                  <span style="font-size: 13px; flex: 1">{{ t.label }}</span>
+                  <span style="font-family: 'Geist Mono', monospace; font-size: 12px; color: var(--muted-foreground)">{{ t.at }}</span>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 6px">
+              <x-import component-from-global-scope="UstageDesignSystem_ee7714.Label" hint-size="60px,16px">주최자 메모</x-import>
+              <x-import component-from-global-scope="UstageDesignSystem_ee7714.Textarea" placeholder="이 예매자에게만 보이지 않는 메모입니다" rows="3" hint-size="100%,72px"></x-import>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <x-import component-from-global-scope="UstageDesignSystem_ee7714.Button" size="lg" class-name="w-full" onClick="{{ confirmDetail }}" hint-size="100%,40px">{{ detailPrimaryLabel }}</x-import>
+              <div style="display: flex; gap: 8px">
+                <x-import component-from-global-scope="UstageDesignSystem_ee7714.Button" variant="outline" size="sm" class-name="flex-1" hint-size="100px,32px">문자 보내기</x-import>
+                <x-import component-from-global-scope="UstageDesignSystem_ee7714.Button" variant="destructive" size="sm" class-name="flex-1" hint-size="100px,32px">예매 취소</x-import>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ noDetail }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 8px; padding: 40px 0; text-align: center">
+            <span style="font-size: 14px; font-weight: 500">예매자를 선택해주세요</span>
+            <p style="margin: 0; font-size: 13px; line-height: 1.6; color: var(--muted-foreground)">행을 누르면 예매 내역과 입금 진행을 여기에서 확인할 수 있습니다.</p>
+          </div>
+        </sc-if>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1520,&quot;height&quot;:1080},&quot;rowDensity&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;compact&quot;,&quot;comfortable&quot;],&quot;default&quot;:&quot;compact&quot;,&quot;tsType&quot;:&quot;\&quot;compact\&quot; | \&quot;comfortable\&quot;&quot;,&quot;section&quot;:&quot;명단 표시&quot;},&quot;highlightPending&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;명단 표시&quot;},&quot;seatTotal&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:40,&quot;tsType&quot;:&quot;number&quot;,&quot;unit&quot;:&quot;석&quot;,&quot;min&quot;:10,&quot;max&quot;:200,&quot;step&quot;:5,&quot;section&quot;:&quot;스테이지&quot;}}">
+const SEED = [
+  ["김서연", "010-2841-7723", "BK-2026-0214-018", 2, "김서연", "seoyeon@gmail.com", "2월 8일 21:14", "pending", false],
+  ["박도현", "010-3392-4410", "BK-2026-0214-017", 1, "박도현", "dohyun@naver.com", "2월 8일 19:02", "confirmed", false],
+  ["이수민", "010-7712-9034", "BK-2026-0214-016", 3, "이수민", "sumin@kakao.com", "2월 8일 17:48", "confirmed", false],
+  ["정한결", "010-4482-1190", "BK-2026-0214-015", 1, "정한결 어머니", "hangyeol@gmail.com", "2월 8일 12:31", "pending", true],
+  ["최유진", "010-9921-3374", "BK-2026-0214-014", 2, "최유진", "yujin@gmail.com", "2월 7일 22:55", "confirmed", false],
+  ["오세훈", "010-2210-6688", "BK-2026-0214-013", 1, "오세훈", "sehun@naver.com", "2월 7일 20:12", "confirmed", false],
+  ["한지우", "010-5540-2288", "BK-2026-0214-012", 2, "한지우", "jiwoo@gmail.com", "2월 7일 18:40", "pending", false],
+  ["문가영", "010-3318-9902", "BK-2026-0214-011", 1, "문가영", "gayoung@kakao.com", "2월 7일 15:09", "confirmed", false],
+  ["윤태오", "010-8823-4471", "BK-2026-0214-010", 4, "윤태오", "taeoh@gmail.com", "2월 6일 23:31", "confirmed", false],
+  ["강민서", "010-6612-3390", "BK-2026-0214-009", 1, "강민서", "minseo@naver.com", "2월 6일 20:18", "cancelled", false],
+  ["임하윤", "010-7781-2204", "BK-2026-0214-008", 2, "임하윤", "hayoon@gmail.com", "2월 6일 14:52", "confirmed", false],
+  ["서지호", "010-4429-8811", "BK-2026-0214-007", 1, "지호아빠", "jiho@kakao.com", "2월 6일 11:26", "pending", true]
+];
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      bookings: SEED.map((r, i) => ({
+        id: i, name: r[0], phone: r[1], code: r[2], qty: r[3],
+        payer: r[4], email: r[5], created: r[6], status: r[7], mismatch: r[8]
+      })),
+      filter: "all",
+      query: "",
+      sort: { key: "date", dir: "desc" },
+      selected: [],
+      detailId: 0
+    };
+  }
+
+  price() { return 25000; }
+  won(n) { return n.toLocaleString("ko-KR") + "원"; }
+
+  visible() {
+    const { bookings, filter, query, sort } = this.state;
+    const q = query.trim();
+    let list = bookings.filter(b => filter === "all" || b.status === filter);
+    if (q) list = list.filter(b => (b.name + b.code + b.payer).includes(q));
+    const dir = sort.dir === "asc" ? 1 : -1;
+    return list.slice().sort((a, b) =>
+      sort.key === "name" ? a.name.localeCompare(b.name, "ko") * dir : (b.id - a.id) * dir
+    );
+  }
+
+  setStatus(ids, status) {
+    this.setState(s => ({
+      bookings: s.bookings.map(b => (ids.includes(b.id) ? { ...b, status } : b)),
+      selected: []
+    }));
+  }
+
+  renderVals() {
+    const { bookings, selected, filter, sort, detailId } = this.state;
+    const pad = (this.props.rowDensity ?? "compact") === "compact" ? "9px" : "14px";
+    const highlight = this.props.highlightPending ?? true;
+    const seatTotal = this.props.seatTotal ?? 40;
+
+    const active = bookings.filter(b => b.status !== "cancelled");
+    const confirmed = bookings.filter(b => b.status === "confirmed");
+    const pending = bookings.filter(b => b.status === "pending");
+    const tickets = active.reduce((n, b) => n + b.qty, 0);
+    const seatsTaken = confirmed.reduce((n, b) => n + b.qty, 0);
+
+    const counts = {
+      all: bookings.length,
+      pending: pending.length,
+      confirmed: confirmed.length,
+      cancelled: bookings.filter(b => b.status === "cancelled").length
+    };
+    const filters = [
+      ["all", "전체"], ["pending", "입금대기"], ["confirmed", "입금완료"], ["cancelled", "취소"]
+    ].map(([key, label]) => ({
+      label: label + " " + counts[key],
+      bg: filter === key ? "var(--primary)" : "var(--secondary)",
+      color: filter === key ? "var(--primary-foreground)" : "var(--muted-foreground)",
+      select: () => this.setState({ filter: key, selected: [] })
+    }));
+
+    const list = this.visible();
+    const rows = list.map(b => {
+      const on = selected.includes(b.id);
+      const tint = highlight && b.status === "pending";
+      return {
+        ...b,
+        pad,
+        initial: b.name.slice(1),
+        qtyText: b.qty + "매",
+        amountText: b.status === "cancelled" ? "—" : this.won(this.price() * b.qty),
+        bg: on
+          ? "color-mix(in oklab, var(--primary) 8%, transparent)"
+          : tint ? "color-mix(in oklab, var(--input) 40%, transparent)" : "transparent",
+        checkBg: on ? "var(--primary)" : "transparent",
+        checkBorder: on ? "var(--primary)" : "var(--border)",
+        mark: on ? "✓" : "",
+        actionable: b.status === "pending",
+        toggle: e => {
+          e.stopPropagation();
+          this.setState(s => ({
+            selected: s.selected.includes(b.id) ? s.selected.filter(x => x !== b.id) : [...s.selected, b.id]
+          }));
+        },
+        open: () => this.setState({ detailId: b.id }),
+        confirm: e => { e.stopPropagation(); this.setStatus([b.id], "confirmed"); }
+      };
+    });
+
+    const allOn = list.length > 0 && list.every(b => selected.includes(b.id));
+    const d = bookings.find(b => b.id === detailId);
+    const detail = d && {
+      ...d,
+      initial: d.name.slice(1),
+      qtyText: d.qty + "매",
+      amountText: this.won(this.price() * d.qty),
+      createdFull: "2026년 " + d.created,
+      timeline: [
+        { label: "예매 신청", at: d.created, dot: "var(--primary)" },
+        { label: d.status === "pending" ? "입금 대기" : "입금 확인", at: d.status === "pending" ? "대기" : "2월 9일 09:20", dot: d.status === "pending" ? "var(--border)" : "var(--primary)" },
+        { label: "QR 티켓 발송", at: d.status === "confirmed" ? "2월 9일 09:21" : "예정", dot: d.status === "confirmed" ? "var(--primary)" : "var(--border)" }
+      ]
+    };
+
+    return {
+      filters, rows,
+      query: this.state.query,
+      onQuery: e => this.setState({ query: e.target.value, selected: [] }),
+      statTotal: bookings.length + "건",
+      statTickets: "티켓 " + tickets + "매",
+      statConfirmed: confirmed.length + "건",
+      statConfirmedAmount: this.won(this.price() * seatsTaken) + " 입금",
+      statPending: pending.length + "건",
+      statSeats: seatsTaken + " / " + seatTotal + "석",
+      seatPercent: Math.round((seatsTaken / seatTotal) * 100) + "%",
+      rowCountText: "총 " + list.length + "건 표시 · 입금완료 " + confirmed.length + "건 · 입금대기 " + pending.length + "건",
+      hasSelection: selected.length > 0,
+      bulkLabel: selected.length > 0 ? selected.length + "건 선택" : "전체 선택",
+      bulkBg: selected.length > 0 ? "color-mix(in oklab, var(--primary) 10%, transparent)" : "var(--card)",
+      allBg: allOn ? "var(--primary)" : "transparent",
+      allBorder: allOn ? "var(--primary)" : "var(--border)",
+      allMark: allOn ? "✓" : "",
+      toggleAll: () => this.setState({ selected: allOn ? [] : list.map(b => b.id) }),
+      confirmSelected: () => this.setStatus(selected, "confirmed"),
+      cancelSelected: () => this.setStatus(selected, "cancelled"),
+      sortByName: () => this.setState(s => ({ sort: { key: "name", dir: s.sort.key === "name" && s.sort.dir === "asc" ? "desc" : "asc" } })),
+      sortByDate: () => this.setState(s => ({ sort: { key: "date", dir: s.sort.key === "date" && s.sort.dir === "desc" ? "asc" : "desc" } })),
+      nameArrow: sort.key === "name" ? (sort.dir === "asc" ? " ↑" : " ↓") : "",
+      dateArrow: sort.key === "date" ? (sort.dir === "asc" ? " ↑" : " ↓") : "",
+      hasDetail: !!detail,
+      noDetail: !detail,
+      detail,
+      detailPrimaryLabel: detail && detail.status === "pending" ? "입금 확인하기" : "확정 메일 다시 보내기",
+      confirmDetail: () => detail && this.setStatus([detail.id], "confirmed")
+    };
+  }
+}
+</script>
+</body>
+</html>

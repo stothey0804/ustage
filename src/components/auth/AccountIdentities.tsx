@@ -72,6 +72,12 @@ export function AccountIdentities({ identities }: Props) {
   }
 
   async function unlink(identity: UserIdentity) {
+    // 이메일은 예매 안내·비밀번호 재설정·스태프 초대의 기준 주소다.
+    // 끊으면 계정을 되찾을 방법이 사라지므로 UI와 함수 양쪽에서 막는다.
+    if (identity.provider === "email") {
+      toast.error("이메일은 연결을 해제할 수 없어요. 주소를 바꾸려면 이메일 변경을 이용해 주세요.");
+      return;
+    }
     setBusy(true);
     const supabase = createClient();
     const { error } = await supabase.auth.unlinkIdentity(identity);
@@ -91,7 +97,7 @@ export function AccountIdentities({ identities }: Props) {
 
   const kakao = identities.find((i) => i.provider === "kakao");
   // 마지막 남은 수단을 해제하면 로그인할 방법이 사라진다.
-  const canUnlink = identities.length > 1;
+  const hasOtherMethod = identities.length > 1;
 
   return (
     <div className="space-y-3">
@@ -111,18 +117,24 @@ export function AccountIdentities({ identities }: Props) {
                 {PROVIDER_LABEL[identity.provider] ?? identity.provider}
               </span>
             </div>
-            {canUnlink && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-7 gap-1 text-xs"
-                disabled={busy}
-                onClick={() => unlink(identity)}
-              >
-                <Unlink className="size-3.5" />
-                연결 해제
-              </Button>
+            {identity.provider === "email" ? (
+              <span className="text-[11px] leading-snug text-muted-foreground">
+                안내 메일·비밀번호 재설정에 쓰여요
+              </span>
+            ) : (
+              hasOtherMethod && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1 text-xs"
+                  disabled={busy}
+                  onClick={() => unlink(identity)}
+                >
+                  <Unlink className="size-3.5" />
+                  연결 해제
+                </Button>
+              )
             )}
           </li>
         ))}
@@ -151,7 +163,7 @@ export function AccountIdentities({ identities }: Props) {
 
       <p className="text-xs text-muted-foreground leading-relaxed">
         카카오를 연결하면 다음부터는 카카오 버튼만 눌러 이 계정으로 로그인할 수
-        있어요. 이메일과 예매 내역은 그대로 유지됩니다.
+        있어요. 연결을 해제해도 이메일과 예매 내역은 끊기지 않고 그대로 남습니다.
       </p>
     </div>
   );

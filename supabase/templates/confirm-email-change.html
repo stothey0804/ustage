@@ -1,23 +1,41 @@
 <!-- Supabase Auth > Email Templates > Change Email Address -->
 <!-- 제목 권장: [어스테이지] 이메일 주소 인증을 완료해 주세요 -->
 <!--
-  카카오 로그인 계정이 /onboarding/email에서 주소를 등록할 때도 이 템플릿이 발송된다.
-  이때 기존 이메일({{ .Email }})은 비어 있고 {{ .NewEmail }}만 채워진다.
-  Supabase의 "Secure email change"가 켜져 있고 계정에 기존 이메일이 있으면
-  기존/신규 두 주소에 모두 발송되며, 양쪽 링크를 다 눌러야 변경이 완료된다.
+  이 템플릿은 두 경우에 모두 쓰인다. 그래서 조건 분기(Go template의 {{ if }}) 없이
+  두 상황에서 다 자연스럽게 읽히는 문구로 쓴다 — 렌더링이 어긋나면 그대로 메일에
+  노출되므로 프로덕션 메일에서는 분기를 쓰지 않는다.
+
+    1) 최초 등록 — 카카오 로그인 계정이 /onboarding/email에서 주소를 등록할 때.
+       {{ .Email }}은 비어 있고 {{ .NewEmail }}만 채워진다.
+       → 그래서 기존 주소({{ .Email }})는 본문에 찍지 않는다. 빈 값이면 문장이 깨진다.
+
+    2) 주소 변경 — 이미 계정 이메일이 있는 사용자가
+       /onboarding/email?mode=change 에서 다른 주소로 바꿀 때.
+       Supabase "Secure email change"가 켜져 있으면 기존·신규 두 주소에 모두
+       발송되고, 양쪽 링크를 다 눌러야 변경이 완료된다.
+
+  인증이 끝나기 전까지 계정 이메일은 바뀌지 않는다(앱은 그때까지 기존 주소로 메일을
+  보낸다). 최초 등록의 경우만 user_metadata.contact_email 덕분에 인증 전에도
+  새 주소로 예매 메일이 나간다.
 -->
-<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">어스테이지에서 사용할 이메일 주소를 인증해 주세요.</div>
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">어스테이지 계정 이메일로 사용할 주소를 인증해 주세요.</div>
 <div style="max-width:480px;margin:0 auto;padding:24px 12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#1a1a1a;">
   <p style="margin:0 0 16px;text-align:center;font-size:15px;font-weight:700;letter-spacing:-0.02em;color:#2b8a8a;">us.tage</p>
 
   <div style="padding:32px 24px;border:1px solid #e5e5e5;border-radius:12px;background:#ffffff;">
     <h1 style="font-size:20px;margin:0 0 12px;color:#2b8a8a;">이메일 주소를 인증해 주세요</h1>
 
-    <p style="margin:0 0 8px;font-size:14px;line-height:1.7;color:#1a1a1a;">
-      어스테이지 계정에서 사용할 이메일로
-      <strong>{{ .NewEmail }}</strong> 주소를 등록했어요.<br />
-      아래 버튼을 누르면 인증이 완료되고, 이 주소로 예매 확인 메일과 입장 QR을
-      받게 됩니다.
+    <p style="margin:0 0 16px;font-size:14px;line-height:1.7;color:#1a1a1a;">
+      어스테이지 계정 이메일을 아래 주소로 설정하려고 해요.
+    </p>
+
+    <p style="margin:0 0 16px;padding:12px 14px;background:#f4f8f8;border-radius:8px;font-size:15px;font-weight:600;line-height:1.5;word-break:break-all;color:#1a1a1a;">
+      {{ .NewEmail }}
+    </p>
+
+    <p style="margin:0;font-size:14px;line-height:1.7;color:#1a1a1a;">
+      아래 버튼을 누르면 인증이 완료되고, 이 주소로
+      <strong>예매 확인 메일 · 입장 QR · 비밀번호 재설정</strong> 메일이 발송됩니다.
     </p>
 
     <a href="{{ .ConfirmationURL }}" style="display:block;margin:24px 0 0;padding:14px;background:#2b8a8a;color:#ffffff;text-align:center;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">
@@ -33,15 +51,22 @@
 
     <hr style="margin:24px 0;border:none;border-top:1px solid #eeeeee;" />
 
+    <p style="margin:0 0 12px;font-size:13px;line-height:1.7;color:#444444;">
+      <strong>주소를 바꾸는 경우</strong>라면, 인증을 마치는 순간부터 새 주소로 바뀝니다.
+      그때까지는 기존 주소로 메일이 계속 발송돼요. 보안 설정에 따라 기존 주소로도 확인
+      메일이 갈 수 있고, 그때는 <strong>양쪽 링크를 모두</strong> 눌러야 변경이
+      완료됩니다.
+    </p>
+
     <p style="margin:0;font-size:12px;line-height:1.6;color:#666666;">
-      인증을 완료하면 카카오 로그인 외에 <strong>이메일+비밀번호 로그인과 비밀번호
-      재설정</strong>도 사용할 수 있어요. 인증 전에도 예매 메일은 이 주소로
+      인증을 마치면 카카오 로그인 외에 <strong>이메일+비밀번호 로그인과 비밀번호
+      재설정</strong>도 쓸 수 있어요. 비밀번호 재설정 메일은 인증된 계정 주소로만
       발송됩니다.
     </p>
 
     <p style="margin:12px 0 0;font-size:12px;line-height:1.6;color:#999999;">
-      인증 링크는 보안을 위해 일정 시간이 지나면 만료됩니다. 만료되었다면 계정
-      설정에서 인증 메일을 다시 받을 수 있어요.<br />
+      인증 링크는 보안을 위해 일정 시간이 지나면 만료됩니다. 만료되었다면 계정 설정 →
+      이메일에서 인증 메일을 다시 받을 수 있어요.<br />
       본인이 요청하지 않았다면 이 메일은 무시해 주세요 — 주소는 변경되지 않습니다.
     </p>
 

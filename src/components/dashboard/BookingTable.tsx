@@ -439,7 +439,7 @@ export function BookingTable({
         <div className="flex items-center gap-2">
           <Input
             className="w-60"
-            placeholder="이름 · 예약번호 · 입금자명 검색"
+            placeholder="이름 · 예매번호 · 입금자명 검색"
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);

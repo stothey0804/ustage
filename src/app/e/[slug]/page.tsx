@@ -29,6 +29,13 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+/**
+ * 포스터 기준 가로 너비(px). 예매 페이지 본문 폭도 이 값에 맞춘다 —
+ * 화면이 이보다 넓으면 이 폭으로 고정, 좁으면 100%(모바일과 동일)로 흐른다.
+ * 값을 바꾸면 아래 max-w-[calc(600px+2rem)]도 함께 바꿔야 한다(Tailwind는 정적 클래스만 읽는다).
+ */
+const POSTER_WIDTH = 600;
+
 function getBookingStatus(event: {
   status: string | null;
   booking_start: string | null;
@@ -113,15 +120,18 @@ export default async function EventPublicPage({
     : undefined;
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-8 space-y-6">
-      {/* 포스터 */}
+    // 본문 폭은 포스터 기준 너비(POSTER_WIDTH)에 맞춘다 —
+    // 그보다 넓은 화면에서는 그 폭으로 고정하고, 좁으면 모바일처럼 100%로 흐른다.
+    // (좌우 여백 px-4를 감안해 max-w에 2rem을 더한다)
+    <div className="mx-auto w-full max-w-[calc(600px+2rem)] px-4 py-8 space-y-6">
+      {/* 포스터 — 기준 너비를 넘겨 확대하지 않고, 좁은 화면에서만 축소된다 */}
       {event.poster_url && (
         <div className="relative w-full overflow-hidden rounded-2xl border">
           <Image
             src={event.poster_url}
             alt={`${event.title} 포스터`}
-            width={600}
-            height={900}
+            width={POSTER_WIDTH}
+            height={Math.round(POSTER_WIDTH * 1.5)}
             className="w-full h-auto object-contain bg-muted"
             priority
           />

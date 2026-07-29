@@ -76,7 +76,13 @@ export default async function AccountPage({ searchParams }: Props) {
         )}
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline" size="sm">
-            <Link href="/onboarding/email?next=/dashboard/account">
+            <Link
+              href={
+                accountEmail
+                  ? "/onboarding/email?mode=change&next=/dashboard/account"
+                  : "/onboarding/email?next=/dashboard/account"
+              }
+            >
               {accountEmail ? "이메일 변경" : "이메일 등록"}
             </Link>
           </Button>

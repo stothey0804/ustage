@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MailCheck } from "lucide-react";
 
-import { createClient } from "@/lib/supabase/client";
+import { requestPasswordReset } from "@/app/actions/auth";
 import {
   forgotPasswordSchema,
   type ForgotPasswordValues,
@@ -29,14 +29,10 @@ export function ForgotPasswordForm() {
 
   async function onSubmit(values: ForgotPasswordValues) {
     setServerError(null);
-    const supabase = createClient();
-    // 인증 메일 링크 → /auth/callback에서 code 교환 후 /reset-password로 이동
-    const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
-    });
-    if (error) {
-      console.error("[auth] reset request error", error);
-      setServerError("메일 발송에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+    // 가입 여부 확인·발송은 서버에서 한다 (미가입 주소에 "보냈다"고 하지 않기 위해).
+    const result = await requestPasswordReset(values.email);
+    if (result.error) {
+      setServerError(result.error);
       return;
     }
     setSent(true);

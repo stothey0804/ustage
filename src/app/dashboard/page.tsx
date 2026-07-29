@@ -4,7 +4,6 @@ import { Mic, Ticket } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { deriveAutoStatus } from "@/lib/auto-status";
-import { getAccountEmail } from "@/lib/account-email";
 import { formatKST } from "@/lib/date";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -24,13 +23,6 @@ function ddayLabel(iso: string): string {
   if (days > 0) return `D-${days}`;
   if (days === 0) return "오늘";
   return "지난 공연";
-}
-
-/** 인사말에 쓸 호칭 — 별도 프로필 이름이 없어 이메일 로컬파트를 쓴다. */
-function greetingName(email: string | null): string | null {
-  if (!email) return null;
-  const local = email.split("@")[0]?.trim();
-  return local ? local : null;
 }
 
 export default async function DashboardPage() {
@@ -102,21 +94,24 @@ export default async function DashboardPage() {
   const upcomingTicket = tickets[0] ?? null;
   const pendingTickets = tickets.filter((t) => t.status === "pending").length;
 
-  const name = greetingName(getAccountEmail(user));
   const isHost = events.length > 0;
+
+  // 표시할 이름(프로필)이 없어 호칭은 쓰지 않고 '지금 상황'만 한 줄로 말한다.
+  const headline = upcomingEvent
+    ? daysUntil(upcomingEvent.event_date) > 0
+      ? `공연이 ${ddayLabel(upcomingEvent.event_date)} 남았어요`
+      : "공연이 오늘이에요"
+    : upcomingTicket?.events
+      ? daysUntil(upcomingTicket.events.event_date) > 0
+        ? `다음 공연이 ${ddayLabel(upcomingTicket.events.event_date)} 남았어요`
+        : "다음 공연이 오늘이에요"
+      : "예정된 공연이 없어요";
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       {/* 인사 — 지금 신경 쓸 일 한 줄 */}
       <div className="space-y-1">
-        <h1 className="text-xl font-bold tracking-tight">
-          {name ? `${name}님, ` : ""}
-          {upcomingEvent
-            ? `공연이 ${ddayLabel(upcomingEvent.event_date)}${daysUntil(upcomingEvent.event_date) > 0 ? " 남았어요" : "이에요"}`
-            : upcomingTicket?.events
-              ? `다음 공연이 ${ddayLabel(upcomingTicket.events.event_date)}${daysUntil(upcomingTicket.events.event_date) > 0 ? " 남았어요" : "이에요"}`
-              : "반가워요"}
-        </h1>
+        <h1 className="text-xl font-bold tracking-tight">{headline}</h1>
         <p className="text-[13px] text-muted-foreground">
           {isHost
             ? pendingCount > 0

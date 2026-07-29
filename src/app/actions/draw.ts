@@ -46,7 +46,7 @@ export async function runDraw(
     return { error: `한 번에 최대 ${MAX_WINNERS_PER_DRAW}명까지 뽑을 수 있습니다.` };
   }
 
-  const ctx = await assertEventOwner(eventId);
+  const ctx = await assertEventOwner(eventId, "run_draw");
   if ("error" in ctx) return { error: ctx.error };
 
   const { supabase } = ctx;
@@ -133,7 +133,8 @@ export async function runDraw(
 export async function resetDraws(
   eventId: string
 ): Promise<{ error?: string; success?: boolean }> {
-  const ctx = await assertEventOwner(eventId);
+  // 기록 초기화는 소유자 전용 (현장 분쟁 근거를 지우는 파괴적 동작)
+  const ctx = await assertEventOwner(eventId, "reset_draws");
   if ("error" in ctx) return { error: ctx.error };
 
   const { error } = await ctx.supabase

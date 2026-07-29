@@ -23,6 +23,7 @@ export type Database = {
           qr_token: string
           checked_in: boolean
           checked_in_at: string | null
+          checked_in_by: string | null
         }
         Insert: {
           id?: string
@@ -33,6 +34,7 @@ export type Database = {
           qr_token?: string
           checked_in?: boolean
           checked_in_at?: string | null
+          checked_in_by?: string | null
         }
         Update: {
           id?: string
@@ -42,6 +44,7 @@ export type Database = {
           qr_token?: string
           checked_in?: boolean
           checked_in_at?: string | null
+          checked_in_by?: string | null
         }
         Relationships: [
           {
@@ -72,6 +75,7 @@ export type Database = {
           quantity: number
           qr_token: string | null
           status: string
+          status_updated_by: string | null
           user_id: string | null
         }
         Insert: {
@@ -93,6 +97,7 @@ export type Database = {
           quantity?: number
           qr_token?: string | null
           status?: string
+          status_updated_by?: string | null
           user_id?: string | null
         }
         Update: {
@@ -113,11 +118,56 @@ export type Database = {
           quantity?: number
           qr_token?: string | null
           status?: string
+          status_updated_by?: string | null
           user_id?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "bookings_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_staff: {
+        Row: {
+          accepted_at: string | null
+          event_id: string
+          expires_at: string
+          id: string
+          invite_token: string
+          invited_at: string
+          invited_email: string
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          event_id: string
+          expires_at?: string
+          id?: string
+          invite_token?: string
+          invited_at?: string
+          invited_email: string
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          event_id?: string
+          expires_at?: string
+          id?: string
+          invite_token?: string
+          invited_at?: string
+          invited_email?: string
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_staff_event_id_fkey"
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"

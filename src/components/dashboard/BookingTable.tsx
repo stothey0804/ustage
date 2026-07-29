@@ -34,6 +34,7 @@ import {
   downloadCsv,
 } from "@/lib/bookings-csv";
 import { cn } from "@/lib/utils";
+import { visibleBookingActions, type EventRole } from "@/lib/staff-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,6 +67,8 @@ interface Props {
   customFields?: CustomField[];
   /** 취소·환불 규정 — 서버에서 sanitize된 HTML */
   cancelPolicyHtml?: string;
+  /** 소유자/스태프 — 스태프에게는 파괴적 액션을 감춘다 (서버에서도 차단됨) */
+  role?: EventRole;
 }
 
 type FilterKey =
@@ -131,6 +134,7 @@ export function BookingTable({
   capacity,
   customFields,
   cancelPolicyHtml,
+  role = "owner",
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -701,6 +705,7 @@ export function BookingTable({
         <div className="w-full shrink-0 rounded-4xl bg-card p-6 shadow-md ring-1 ring-foreground/5 xl:w-[360px]">
           {detail ? (
             <DetailPanel
+              actions={visibleBookingActions(role)}
               booking={detail}
               isFree={isFree}
               price={price}
@@ -940,6 +945,7 @@ function CheckBox({
 }
 
 function DetailPanel({
+  actions,
   booking,
   isFree,
   price,
@@ -953,6 +959,7 @@ function DetailPanel({
   onResetPassword,
   onDelete,
 }: {
+  actions: ReturnType<typeof visibleBookingActions>;
   booking: BookingRow;
   isFree: boolean;
   price: number;
@@ -1179,16 +1186,18 @@ function DetailPanel({
               비밀번호 초기화
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex-1 gap-1 text-destructive hover:text-destructive"
-            disabled={isPending}
-            onClick={onDelete}
-          >
-            <Trash2 className="size-3.5" />
-            삭제
-          </Button>
+          {actions.canDelete && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex-1 gap-1 text-destructive hover:text-destructive"
+              disabled={isPending}
+              onClick={onDelete}
+            >
+              <Trash2 className="size-3.5" />
+              삭제
+            </Button>
+          )}
         </div>
       </div>
     </div>

@@ -32,7 +32,9 @@ import {
   DrawPanel,
   type PastDrawRound,
 } from "@/components/dashboard/DrawPanel";
+import { StaffPanel } from "@/components/dashboard/StaffPanel";
 import { maskEmail, maskName } from "@/lib/mask";
+import type { EventRole } from "@/lib/staff-permissions";
 import { DeleteEventButton } from "@/components/dashboard/DeleteEventButton";
 
 export default async function EventDetailPage({
@@ -48,14 +50,37 @@ export default async function EventDetailPage({
 
   if (!user) redirect("/login");
 
+  // 소유자 또는 스태프면 열 수 있다 (events SELECT는 공개 정책이라 필터 없이 조회)
   const { data: event } = await supabase
     .from("events")
     .select("*")
     .eq("id", id)
-    .eq("performer_id", user.id)
     .single();
 
   if (!event) notFound();
+
+  const isOwner = event.performer_id === user.id;
+  let role: EventRole = "owner";
+  if (!isOwner) {
+    const { data: staffRow } = await supabase
+      .from("event_staff")
+      .select("id")
+      .eq("event_id", id)
+      .eq("user_id", user.id)
+      .eq("status", "accepted")
+      .maybeSingle();
+    if (!staffRow) notFound();
+    role = "staff";
+  }
+
+  // 스태프 목록은 소유자에게만 (event_staff_select_owner 정책)
+  const { data: staffRows } = isOwner
+    ? await supabase
+        .from("event_staff")
+        .select("id, invited_email, status, invited_at, accepted_at")
+        .eq("event_id", id)
+        .order("invited_at", { ascending: true })
+    : { data: null };
 
   // 자동 상태 전환
   const newStatus = await autoTransitionStatus(event);
@@ -137,16 +162,24 @@ export default async function EventDetailPage({
         <h1 className="mt-2 text-2xl font-semibold tracking-tight leading-snug">
           {event.title}
         </h1>
+        {role === "staff" && (
+          <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+            <Users className="size-3.5" />
+            스태프로 참여 중 — 명단·입장·추첨을 도울 수 있어요
+          </p>
+        )}
       </div>
 
       {/* 액션 버튼 */}
       <div className="flex flex-wrap gap-2">
-        <Button asChild variant="outline" size="sm">
-          <Link href={`/dashboard/events/${id}/edit`}>
-            <Edit className="size-4 mr-1.5" />
-            수정
-          </Link>
-        </Button>
+        {isOwner && (
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/dashboard/events/${id}/edit`}>
+              <Edit className="size-4 mr-1.5" />
+              수정
+            </Link>
+          </Button>
+        )}
         <Button asChild variant="outline" size="sm">
           <Link href={`/dashboard/events/${id}/scan`}>
             <QrCode className="size-4 mr-1.5" />
@@ -161,26 +194,33 @@ export default async function EventDetailPage({
         </Button>
         <BookingLinkButton slug={event.slug} />
         <EventQrShare slug={event.slug} title={event.title} />
-        <DeleteEventButton eventId={id} hasBookings={bookingCount > 0} />
+        {isOwner && (
+          <DeleteEventButton eventId={id} hasBookings={bookingCount > 0} />
+        )}
       </div>
 
       {/* 진행 상태 흐름 + 상태 전환 — 넓은 화면에서 늘어지지 않게 폭을 제한 */}
       <div className="max-w-3xl space-y-6">
         <EventLifecycle event={event} />
-        <StatusTransition eventId={id} currentStatus={status} />
+        {isOwner && <StatusTransition eventId={id} currentStatus={status} />}
       </div>
 
       <Separator />
 
       {/* 탭: 예매 명단(주 작업) / 스테이지 정보 */}
       <Tabs defaultValue={bookingCount > 0 ? "bookings" : "info"}>
-        <TabsList className="w-full max-w-lg">
+        <TabsList className="w-full max-w-2xl">
           <TabsTrigger value="bookings" className="flex-1">
             예매 명단 ({bookingCount})
           </TabsTrigger>
           <TabsTrigger value="draw" className="flex-1">
             추첨
           </TabsTrigger>
+          {isOwner && (
+            <TabsTrigger value="staff" className="flex-1">
+              스태프 {staffRows && staffRows.length > 0 ? `(${staffRows.length})` : ""}
+            </TabsTrigger>
+          )}
           <TabsTrigger value="info" className="flex-1">
             스테이지 정보
           </TabsTrigger>
@@ -286,6 +326,7 @@ export default async function EventDetailPage({
             capacity={event.capacity}
             customFields={(event.custom_fields ?? []) as import("@/lib/validations/event").CustomField[]}
             cancelPolicyHtml={cancelPolicyHtml}
+            role={role}
           />
         </TabsContent>
 
@@ -296,8 +337,16 @@ export default async function EventDetailPage({
             candidateCount={drawCandidateNos.length}
             candidateNos={drawCandidateNos}
             pastRounds={pastRounds}
+            canReset={isOwner}
           />
         </TabsContent>
+
+        {/* 스태프 탭 (소유자 전용) */}
+        {isOwner && (
+          <TabsContent value="staff" className="mt-4">
+            <StaffPanel eventId={id} staff={staffRows ?? []} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

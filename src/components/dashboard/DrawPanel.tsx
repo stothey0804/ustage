@@ -31,6 +31,8 @@ interface Props {
   candidateNos: number[];
   /** 지난 회차 기록 (최신 회차 먼저) */
   pastRounds: PastDrawRound[];
+  /** 기록 초기화 노출 여부 — 소유자만 (서버에서도 차단됨) */
+  canReset?: boolean;
 }
 
 /** 숫자가 굴러가는 연출 최소 시간 — 결과가 즉시 와도 이만큼은 보여준다 */
@@ -48,6 +50,7 @@ export function DrawPanel({
   candidateCount,
   candidateNos,
   pastRounds,
+  canReset = true,
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -212,16 +215,18 @@ export function DrawPanel({
             <h3 className="text-[13px] font-semibold">
               추첨 기록 {pastRounds.length}회
             </h3>
-            <Button
-              type="button"
-              variant="ghost"
-              size="xs"
-              className="text-destructive hover:text-destructive"
-              disabled={isPending}
-              onClick={() => setResetOpen(true)}
-            >
-              기록 초기화
-            </Button>
+            {canReset && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="xs"
+                className="text-destructive hover:text-destructive"
+                disabled={isPending}
+                onClick={() => setResetOpen(true)}
+              >
+                기록 초기화
+              </Button>
+            )}
           </div>
 
           <div className="space-y-3">

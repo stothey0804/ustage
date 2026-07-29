@@ -18,14 +18,25 @@ export default async function ScanPage({
 
   if (!user) redirect("/login");
 
+  // 소유자 또는 스태프면 입장 확인을 할 수 있다
   const { data: event } = await supabase
     .from("events")
     .select("id, title, performer_id")
     .eq("id", id)
-    .eq("performer_id", user.id)
     .single();
 
   if (!event) notFound();
+
+  if (event.performer_id !== user.id) {
+    const { data: staffRow } = await supabase
+      .from("event_staff")
+      .select("id")
+      .eq("event_id", id)
+      .eq("user_id", user.id)
+      .eq("status", "accepted")
+      .maybeSingle();
+    if (!staffRow) notFound();
+  }
 
   return (
     <div className="mx-auto max-w-md space-y-6">

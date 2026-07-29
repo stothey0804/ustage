@@ -173,10 +173,33 @@ checked_in      boolean
 checked_in_at   timestamptz nullable
 ```
 
+**event_staff** — 스테이지 공동 관리자(스태프)
+
+```
+id              uuid PK
+event_id        uuid → events (on delete cascade)
+invited_email   text             # 초대받은 이메일 (가입 여부는 조회하지 않음)
+user_id         uuid nullable → auth.users  # 수락 시 그 세션의 계정으로 채워짐
+invite_token    uuid UNIQUE default gen_random_uuid()
+status          text             # 'pending' | 'accepted'
+expires_at      timestamptz      # 기본 now() + 7일
+invited_at      timestamptz
+accepted_at     timestamptz nullable
+
+# UNIQUE: invite_token, (event_id, lower(invited_email)), (event_id, user_id) where user_id not null
+# RLS: SELECT만 — 소유자는 자기 스테이지 행, 스태프는 자기 행.
+#      INSERT/UPDATE/DELETE 정책 없음 → 쓰기는 service_role(서버 액션)만.
+```
+
 ### RLS 정책 원칙
 
 - `events`: 소유자(performer_id)는 자신의 이벤트만 CUD, 모든 사람이 SELECT 가능 (slug 기반 접근)
 - `bookings`: 소유자는 자기 이벤트의 예매만 조회/수정, 로그인 사용자는 자신의 예매(user_id) SELECT 가능, INSERT는 누구나 가능 (예매 제출)
+- `bookings` / `booking_tickets` / `event_draws`의 호스트 정책은 소유자 대신
+  `public.can_manage_event(event_id)` (security definer)를 쓴다 — 소유자 **또는**
+  수락한 스태프. `event_staff`를 정책 안에서 직접 조회하면 재귀가 나므로 함수로 감쌌다.
+  단 파괴적 동작(`events` CUD, `bookings` DELETE, `event_draws` DELETE)은 **소유자 전용 유지**.
+- 감사용으로 `bookings.status_updated_by`, `booking_tickets.checked_in_by`에 처리한 계정을 남긴다.
 - 비밀번호 검증과 QR 토큰 조회는 **service_role**을 쓰는 API Route에서만 처리
 - 예매 생성은 `create_booking` RPC(이벤트 행 잠금 + 단일 트랜잭션)로 정원 초과를 방지하고,
   `(event_id, lower(email))` 부분 유니크 인덱스가 중복 예매를 차단 — `supabase/migrations/` 참고.
@@ -426,6 +449,49 @@ ended  (행사 종료) → event_date 경과
 - `confirmNow`(유료 기본 on, 무료는 항상 확정)면 즉시 confirmed + 입장 QR 확정 메일,
   아니면 pending + 입금 안내 메일. `depositor_name = 이름`, `deposited_at = "현장 예매"`.
 
+### 스테이지 스태프 (공동 관리자)
+
+한 스테이지를 **소유자 + 스태프(최대 10명)** 가 함께 운영한다.
+역할은 2종이며 권한 판정은 **`lib/staff-permissions.ts`의 매트릭스 한 곳**에만 있다.
+
+| 동작 | 소유자 | 스태프 |
+| --- | --- | --- |
+| 명단 열람 · CSV 내보내기 | ✅ | ✅ |
+| QR 입장 처리 / 강제 입장 | ✅ | ✅ |
+| 입금 확인 · 예매 취소 · 확정 메일 재발송 | ✅ | ✅ |
+| 조회 비밀번호 초기화 · 현장 예매 · 추첨 실행 | ✅ | ✅ |
+| 예매 삭제 · 추첨 기록 초기화 | ✅ | ❌ |
+| 스테이지 수정·삭제·상태 전환, 스태프 관리 | ✅ | ❌ |
+
+- CSV는 명단 열람과 기술적으로 분리되지 않으므로(이미 로드된 목록으로 만든다)
+  열람을 허용하면 함께 허용한다 — 막아도 실질 보호가 아니다.
+- 모든 서버 액션·API는 `lib/event-access.ts`의 `assertEventAccess(eventId, capability)` /
+  `assertBookingAccess(bookingId, capability)`를 단일 관문으로 지난다. RLS는 같은 경계를
+  DB에서 한 번 더 막는 이중 방어이고, **동작 단위 허용은 매트릭스가 결정한다.**
+- UI도 같은 함수로 감춘다: 스테이지 상세는 스태프에게 수정/삭제/상태 전환/스태프 탭을
+  숨기고 헤더에 "스태프" 배지를 띄운다. 명단 상세는 `visibleBookingActions(role)`로
+  삭제 버튼을, 추첨 탭은 `canReset`으로 기록 초기화를 가린다.
+  `/dashboard/events` 목록에는 스태프로 참여한 스테이지도 함께 나오고 카드에 배지가 붙는다.
+
+**초대 흐름** (`app/actions/staff.ts`, `components/dashboard/StaffPanel.tsx`)
+
+1. 소유자가 이메일을 입력 → `event_staff` 행 생성(pending) + 초대 링크 메일(`sendStaffInvite`).
+   **가입 여부를 조회하지 않고 항상 같은 성공 문구를 반환한다** — 소유자에게 "이 이메일이
+   가입돼 있는지"를 알려주면 계정 열거가 된다. 초대 남발 방지로 계정당 시간당 10회 제한.
+2. 수신자가 `/dashboard/staff/accept/[token]`을 열면 `/dashboard` 하위이므로 proxy가
+   로그인(및 카카오 이메일 등록)을 먼저 강제하고, 그 다음 수락된다.
+3. 수락은 **링크를 누른 그 세션의 `auth.uid()`** 를 연결한다. 카카오 계정은
+   `auth.users.email`이 없고 `user_metadata.contact_email`은 신뢰 경계가 아니어서
+   이메일 매칭으로 계정을 특정하지 않는다. 초대받은 주소와 다른 계정으로 수락해도
+   허용되며(가족 계정 등), 링크 소지 자체가 인증이다.
+4. 만료 7일, 중복 수락은 `status='pending'` 조건부 갱신으로 차단.
+   경계 판정은 순수 함수 `validateInviteAcceptance`가 담당(자기 스테이지·만료·중복).
+5. 재초대는 토큰·만료를 새로 발급(재발송과 동일). 제외는 소유자가 즉시 가능하고,
+   스태프도 `leaveEventStaff`로 스스로 나올 수 있다.
+
+> 마이그레이션 `supabase/migrations/20260731100000_event_staff.sql`은
+> **코드 배포 전에** 적용해야 한다(새 코드가 `event_staff`와 감사 컬럼을 조회한다).
+
 ### 앱 진입부 내비게이션 (Z2~Z7 반영)
 
 - 계정은 하나이고 주최자·참석자를 겸하므로 **역할 전환 UI를 두지 않는다.**
@@ -578,6 +644,8 @@ SUPABASE_SERVICE_ROLE_KEY=      # 서버 전용, NEXT_PUBLIC 붙이지 말 것
 | slug 기반 참석자 URL          | 공연 ID 노출 없이 공유 가능, 메인에서 검색 불가         |
 | App Router 서버 컴포넌트 우선 | 예매 폼 외 대부분 읽기 전용, SEO 불필요하지만 성능 이점 |
 | Supabase RLS                  | 공연자별 데이터 격리를 DB 레벨에서 보장                 |
+| 스태프 권한을 매트릭스 1곳에  | 액션·API·UI가 같은 함수를 쓰므로 규칙이 갈라지지 않음    |
+| 초대는 이메일+토큰 수락       | 가입 여부를 노출하지 않고, 카카오처럼 이메일 없는 계정도 연결 가능 |
 | 카카오 로그인 후 이메일 직접 입력 | 카카오가 비즈앱 심사 전에는 이메일 미제공 — 예매 메일·QR 발송에 주소가 필수 |
 | 이메일 인증 전에도 진입 허용   | 카카오 간편함 유지. 미인증은 배너로 안내하고, 로그인·비밀번호 재설정만 제한 |
 | 셀프 취소는 API(service_role)  | 참석자 UPDATE 권한을 RLS로 열지 않고 본인 확인·상태 검증을 서버에 모음 |

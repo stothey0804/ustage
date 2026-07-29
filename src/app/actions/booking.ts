@@ -16,43 +16,47 @@ import { onsiteBookingSchema } from "@/lib/validations/booking";
 import { sanitizeEventHtml } from "@/lib/sanitize";
 import { formatKST } from "@/lib/date";
 import { formatBookingNoRange } from "@/lib/booking-code";
+import {
+  assertBookingAccess,
+  assertEventAccess,
+  myStaffEventIds,
+} from "@/lib/event-access";
+import type { EventCapability, EventRole } from "@/lib/staff-permissions";
 
 type ActionResult = { error?: string; success?: boolean };
 
 type OwnerContext = {
   supabase: Awaited<ReturnType<typeof createClient>>;
   eventId: string;
+  /** 감사 추적용 — 누가 처리했는지 기록한다 */
+  userId: string;
 };
 
-/** 로그인 + 해당 예매가 속한 스테이지의 소유자인지 확인. 실패 시 error 반환. */
+/**
+ * 로그인 + 이 예매를 그 동작으로 다룰 수 있는지 확인 (소유자 또는 스태프).
+ * 실제 판정은 lib/event-access의 단일 관문이 한다.
+ */
 async function assertBookingOwner(
-  bookingId: string
+  bookingId: string,
+  capability: EventCapability
 ): Promise<OwnerContext | { error: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return { error: "로그인이 필요합니다." };
-
-  const { data: booking } = await supabase
-    .from("bookings")
-    .select("id, event_id, events!inner(performer_id)")
-    .eq("id", bookingId)
-    .single();
-
-  if (
-    !booking ||
-    (booking.events as { performer_id: string }).performer_id !== user.id
-  ) {
-    return { error: "권한이 없습니다." };
-  }
-
-  return { supabase, eventId: booking.event_id };
+  const access = await assertBookingAccess(bookingId, capability);
+  if ("error" in access) return { error: access.error };
+  return {
+    supabase: access.supabase,
+    eventId: access.eventId,
+    userId: access.userId,
+  };
 }
 
-/** 로그인 + 스테이지 소유자인지 확인. 실패 시 error 반환. */
-export async function assertEventOwner(eventId: string): Promise<
+/**
+ * 스테이지 단위 권한 확인. 기존 호출부 호환을 위해 남겨둔 얇은 래퍼로,
+ * capability를 넘겨 소유자 전용/스태프 허용을 구분한다.
+ */
+export async function assertEventOwner(
+  eventId: string,
+  capability: EventCapability = "manage_staff"
+): Promise<
   | {
       supabase: Awaited<ReturnType<typeof createClient>>;
       event: {
@@ -65,28 +69,19 @@ export async function assertEventOwner(eventId: string): Promise<
         venue: string;
         venue_address: string | null;
       };
+      role: EventRole;
+      userId: string;
     }
   | { error: string }
 > {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return { error: "로그인이 필요합니다." };
-
-  const { data: event } = await supabase
-    .from("events")
-    .select(
-      "id, title, slug, price, bank_info, event_date, venue, venue_address"
-    )
-    .eq("id", eventId)
-    .eq("performer_id", user.id)
-    .single();
-
-  if (!event) return { error: "스테이지를 찾을 수 없거나 권한이 없습니다." };
-
-  return { supabase, event };
+  const access = await assertEventAccess(eventId, capability);
+  if ("error" in access) return { error: access.error };
+  return {
+    supabase: access.supabase,
+    event: access.event,
+    role: access.role,
+    userId: access.userId,
+  };
 }
 
 type ConfirmEmailTarget = {
@@ -121,7 +116,10 @@ export async function updateBookingStatus(
   bookingId: string,
   status: "pending" | "confirmed" | "cancelled"
 ): Promise<ActionResult> {
-  const ctx = await assertBookingOwner(bookingId);
+  const ctx = await assertBookingOwner(
+    bookingId,
+    status === "cancelled" ? "cancel_booking" : "confirm_payment"
+  );
   if ("error" in ctx) return { error: ctx.error };
 
   // 주최자 취소 — 참석자에게 취소 통보 메일을 보낸다.
@@ -208,7 +206,7 @@ export async function updateBookingStatus(
 
   const { error } = await ctx.supabase
     .from("bookings")
-    .update({ status })
+    .update({ status, status_updated_by: ctx.userId })
     .eq("id", bookingId);
 
   if (error) {
@@ -291,8 +289,12 @@ export async function updateBookingStatusBulk(
   }
 
   type Row = NonNullable<typeof rows>[number];
+  // 내가 소유한 스테이지 + 스태프로 참여한 스테이지의 예매만 처리한다
+  const staffEventIds = new Set(await myStaffEventIds(supabase, user.id));
   const owned = (rows ?? []).filter(
-    (r) => (r.events as { performer_id: string }).performer_id === user.id
+    (r) =>
+      (r.events as { performer_id: string }).performer_id === user.id ||
+      staffEventIds.has(r.event_id)
   );
 
   if (owned.length === 0) return { error: "권한이 없습니다." };
@@ -303,7 +305,7 @@ export async function updateBookingStatusBulk(
 
   const { error: updateError } = await supabase
     .from("bookings")
-    .update({ status })
+    .update({ status, status_updated_by: user.id })
     .in(
       "id",
       changing.map((r) => r.id)
@@ -383,7 +385,7 @@ export async function updateBookingStatusBulk(
 export async function resendBookingConfirmation(
   bookingId: string
 ): Promise<ActionResult> {
-  const ctx = await assertBookingOwner(bookingId);
+  const ctx = await assertBookingOwner(bookingId, "resend_confirmation");
   if ("error" in ctx) return { error: ctx.error };
 
   const { data: booking } = await ctx.supabase
@@ -486,7 +488,7 @@ export async function createOnsiteBooking(input: {
     return { error: parsed.error.issues[0]?.message ?? "입력값을 확인해 주세요." };
   }
 
-  const ctx = await assertEventOwner(input.eventId);
+  const ctx = await assertEventOwner(input.eventId, "onsite_booking");
   if ("error" in ctx) return { error: ctx.error };
 
   const { event } = ctx;
@@ -628,12 +630,16 @@ export async function forceCheckIn(
   bookingId: string,
   ticketId?: string
 ): Promise<ActionResult> {
-  const ctx = await assertBookingOwner(bookingId);
+  const ctx = await assertBookingOwner(bookingId, "check_in");
   if ("error" in ctx) return { error: ctx.error };
 
   let query = ctx.supabase
     .from("booking_tickets")
-    .update({ checked_in: true, checked_in_at: new Date().toISOString() })
+    .update({
+      checked_in: true,
+      checked_in_at: new Date().toISOString(),
+      checked_in_by: ctx.userId,
+    })
     .eq("booking_id", bookingId)
     .eq("checked_in", false);
 
@@ -660,7 +666,7 @@ export async function resetBookingPassword(
     return { error: "비밀번호는 4자 이상이어야 합니다." };
   }
 
-  const ctx = await assertBookingOwner(bookingId);
+  const ctx = await assertBookingOwner(bookingId, "reset_booking_password");
   if ("error" in ctx) return { error: ctx.error };
 
   const hash = await bcrypt.hash(newPassword, 10);
@@ -679,7 +685,7 @@ export async function resetBookingPassword(
 }
 
 export async function deleteBooking(bookingId: string): Promise<ActionResult> {
-  const ctx = await assertBookingOwner(bookingId);
+  const ctx = await assertBookingOwner(bookingId, "delete_booking");
   if ("error" in ctx) return { error: ctx.error };
 
   const { error } = await ctx.supabase

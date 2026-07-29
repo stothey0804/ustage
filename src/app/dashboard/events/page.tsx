@@ -4,6 +4,7 @@ import { Calendar, MapPin, Mic, Plus, Users } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { deriveAutoStatus } from "@/lib/auto-status";
+import { myStaffEventIds } from "@/lib/event-access";
 import { formatKST } from "@/lib/date";
 import { Button } from "@/components/ui/button";
 import { EventStatusBadge } from "@/components/StatusBadge";
@@ -34,11 +35,12 @@ export default async function EventsPage() {
 
   if (!user) redirect("/login");
 
-  const { data: events, error } = await supabase
+  const COLUMNS =
+    "id, title, event_date, event_end_date, venue, status, capacity, slug, booking_start, booking_end, performer_id";
+
+  const { data: ownEvents, error } = await supabase
     .from("events")
-    .select(
-      "id, title, event_date, event_end_date, venue, status, capacity, slug, booking_start, booking_end"
-    )
+    .select(COLUMNS)
     .eq("performer_id", user.id)
     .order("event_date", { ascending: false });
 
@@ -46,6 +48,21 @@ export default async function EventsPage() {
     console.error("[events list]", error);
     throw new Error("스테이지 목록을 불러오지 못했습니다.");
   }
+
+  // 스태프로 참여 중인 스테이지도 함께 보여준다
+  const staffEventIds = await myStaffEventIds(supabase, user.id);
+  const { data: staffEvents } = staffEventIds.length
+    ? await supabase
+        .from("events")
+        .select(COLUMNS)
+        .in("id", staffEventIds)
+        .order("event_date", { ascending: false })
+    : { data: [] };
+
+  const events = [...(ownEvents ?? []), ...(staffEvents ?? [])].sort((a, b) =>
+    (b.event_date ?? "").localeCompare(a.event_date ?? "")
+  );
+  const staffIdSet = new Set(staffEventIds);
 
   // 카드 하단 상태 노트용 입금대기 건수 — 내 스테이지 전체를 한 번에 집계
   const eventIds = events.map((e) => e.id);
@@ -67,6 +84,7 @@ export default async function EventsPage() {
   const derived = events.map((event) => ({
     event,
     status: (deriveAutoStatus(event) ?? event.status ?? "draft") as string,
+    isStaff: staffIdSet.has(event.id),
   }));
   const openCount = derived.filter((d) => d.status === "open").length;
 
@@ -116,7 +134,7 @@ export default async function EventsPage() {
       </div>
 
       <div className="flex flex-col gap-2.5">
-        {derived.map(({ event, status }) => {
+        {derived.map(({ event, status, isStaff }) => {
           const pending = pendingByEvent.get(event.id) ?? 0;
           const isDraft = status === "draft";
           return (
@@ -129,6 +147,12 @@ export default async function EventsPage() {
                 <span className="text-xs text-muted-foreground">
                   {whenLabel(event.event_date, event.event_end_date)}
                 </span>
+                {isStaff && (
+                  <span className="ml-auto inline-flex h-5 items-center gap-1.5 rounded-full bg-secondary px-2 text-xs font-medium text-muted-foreground">
+                    <Users className="size-3" />
+                    스태프
+                  </span>
+                )}
               </div>
 
               <div className="space-y-1">
@@ -170,12 +194,12 @@ export default async function EventsPage() {
                 <Button asChild variant="outline" size="xs" className="shrink-0">
                   <Link
                     href={
-                      isDraft
+                      isDraft && !isStaff
                         ? `/dashboard/events/${event.id}/edit`
                         : `/dashboard/events/${event.id}`
                     }
                   >
-                    {isDraft ? "이어 쓰기" : "명단"}
+                    {isDraft && !isStaff ? "이어 쓰기" : "명단"}
                   </Link>
                 </Button>
               </div>

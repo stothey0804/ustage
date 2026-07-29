@@ -181,4 +181,39 @@ describe("DrawPanel", () => {
     expect(screen.getByText("1회차 · 1명")).toBeInTheDocument();
     expect(screen.getByText(/지금까지 당첨 2명/)).toBeInTheDocument();
   });
+  it("스태프(canReset=false)에게는 기록 초기화를 보여주지 않는다", () => {
+    renderPanel({
+      canReset: false,
+      pastRounds: [
+        {
+          round: 1,
+          winners: [
+            { attendeeNo: 3, maskedName: "이*민", maskedEmail: "sumi***@b.com" },
+          ],
+        },
+      ],
+    });
+
+    expect(screen.getByText("추첨 기록 1회")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "기록 초기화" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("소유자에게는 기록 초기화를 보여준다", () => {
+    renderPanel({
+      pastRounds: [
+        {
+          round: 1,
+          winners: [
+            { attendeeNo: 3, maskedName: "이*민", maskedEmail: "sumi***@b.com" },
+          ],
+        },
+      ],
+    });
+
+    expect(
+      screen.getByRole("button", { name: "기록 초기화" }),
+    ).toBeInTheDocument();
+  });
 });

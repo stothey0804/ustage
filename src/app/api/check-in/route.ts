@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
+import { assertEventAccess } from "@/lib/event-access";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const checkInSchema = z.object({
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
 
   const { qr_token, event_id } = parsed.data;
 
-  // 인증 확인 — 스테이지 소유자만 입장확인 가능
+  // 인증 확인 — 스테이지 소유자 또는 스태프만 입장확인 가능
   const supabase = await createClient();
   const {
     data: { user },
@@ -37,19 +38,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
   }
 
-  // 스테이지 소유자 확인
-  const { data: event } = await supabase
-    .from("events")
-    .select("id, performer_id, title")
-    .eq("id", event_id)
-    .eq("performer_id", user.id)
-    .single();
-
-  if (!event) {
-    return NextResponse.json(
-      { error: "스테이지를 찾을 수 없거나 권한이 없습니다." },
-      { status: 403 }
-    );
+  const access = await assertEventAccess(event_id, "check_in");
+  if ("error" in access) {
+    return NextResponse.json({ error: access.error }, { status: 403 });
   }
 
   // QR 토큰으로 티켓 조회 (service_role)
@@ -124,7 +115,11 @@ export async function POST(req: Request) {
   // 입장 성공 — checked_in=false 조건부 갱신으로 동시 스캔 시 한 기기만 성공
   const { data: updated, error: updateError } = await admin
     .from("booking_tickets")
-    .update({ checked_in: true, checked_in_at: new Date().toISOString() })
+    .update({
+      checked_in: true,
+      checked_in_at: new Date().toISOString(),
+      checked_in_by: user.id,
+    })
     .eq("id", ticket.id)
     .eq("checked_in", false)
     .select("id");

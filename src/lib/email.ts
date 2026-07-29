@@ -234,6 +234,67 @@ export async function sendBookingConfirmation({
   });
 }
 
+interface StaffInviteParams {
+  to: string;
+  eventTitle: string;
+  eventDate: string;
+  eventVenue: string;
+  /** 초대 수락 링크 (토큰 포함) */
+  acceptUrl: string;
+}
+
+/** 스테이지 스태프 초대 메일 — 링크 클릭이 곧 이메일 소유 증명이다 */
+export async function sendStaffInvite({
+  to,
+  eventTitle,
+  eventDate,
+  eventVenue,
+  acceptUrl,
+}: StaffInviteParams): Promise<void> {
+  const html = `
+<div style="max-width:480px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a1a;">
+  <div style="padding:32px 24px;border:1px solid #e5e5e5;border-radius:12px;">
+    <h1 style="font-size:20px;margin:0 0 24px;color:#2b8a8a;">스테이지 스태프로 초대받았습니다</h1>
+
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">
+      <tr>
+        <td style="padding:8px 0;color:#666;width:80px;">스테이지</td>
+        <td style="padding:8px 0;font-weight:600;">${escapeHtml(eventTitle)}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0;color:#666;">일시</td>
+        <td style="padding:8px 0;">${eventDate}</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 0;color:#666;">장소</td>
+        <td style="padding:8px 0;">${escapeHtml(eventVenue)}</td>
+      </tr>
+    </table>
+
+    <p style="margin:20px 0 0;font-size:13px;line-height:1.7;color:#666;">
+      수락하면 이 스테이지의 <strong style="color:#1a1a1a;">예매 명단 확인, 입금 확인, QR 입장 처리,
+      현장 예매, 추첨</strong>을 할 수 있습니다. 스테이지 수정·삭제와 스태프 관리는 주최자만 할 수 있어요.
+    </p>
+    <p style="margin:12px 0 0;font-size:12px;line-height:1.6;color:#999;">
+      참석자의 이름·이메일 등 개인정보를 보게 되므로, 명단은 행사 운영 목적으로만 사용해 주세요.
+    </p>
+
+    ${footerHtml(acceptUrl, "초대 수락하기")}
+
+    <p style="margin:12px 0 0;font-size:11px;line-height:1.6;color:#999;text-align:center;">
+      초대 링크는 7일 후 만료됩니다. 본인이 요청하지 않았다면 이 메일은 무시해 주세요.
+    </p>
+  </div>
+</div>
+  `.trim();
+
+  await sendEmail({
+    to,
+    subject: `[어스테이지] ${eventTitle} 스태프 초대`,
+    html,
+  });
+}
+
 interface BookingCancelledParams {
   to: string;
   name: string;

@@ -115,7 +115,7 @@ type CancelEmailTarget = {
 export async function updateBookingStatus(
   bookingId: string,
   status: "pending" | "confirmed" | "cancelled"
-): Promise<ActionResult> {
+): Promise<ActionResult & { updated?: number; mailed?: number }> {
   const ctx = await assertBookingOwner(
     bookingId,
     status === "cancelled" ? "cancel_booking" : "confirm_payment"
@@ -124,6 +124,9 @@ export async function updateBookingStatus(
 
   // 주최자 취소 — 참석자에게 취소 통보 메일을 보낸다.
   // (이미 cancelled였던 예약에는 중복 발송하지 않기 위해 갱신 전에 조회)
+  // 갱신 전 상태 — 실제로 바뀌었는지(=메일이 나갔는지) 판단에 쓴다.
+  // 되돌리기(pending)는 조회하지 않으므로 null로 남는다.
+  let previousStatus: string | null = null;
   let cancelTarget: CancelEmailTarget | null = null;
   if (status === "cancelled") {
     const { data: full } = await ctx.supabase
@@ -134,6 +137,7 @@ export async function updateBookingStatus(
       .eq("id", bookingId)
       .single();
 
+    previousStatus = full?.status ?? null;
     if (full && full.status !== "cancelled" && full.email) {
       const ev = full.events as {
         title: string;
@@ -170,6 +174,7 @@ export async function updateBookingStatus(
       .eq("id", bookingId)
       .single();
 
+    previousStatus = full?.status ?? null;
     if (full && full.status !== "confirmed" && full.email) {
       const ev = full.events as {
         title: string;
@@ -256,7 +261,11 @@ export async function updateBookingStatus(
   }
 
   revalidatePath(`/dashboard/events/${ctx.eventId}`);
-  return { success: true };
+  // 실제로 바뀐/메일이 예약된 건수 — 화면 안내 문구가 사실과 어긋나지 않게 한다
+  const mailed =
+    (confirmTarget && confirmTarget.tickets.length > 0) || cancelTarget ? 1 : 0;
+  const updated = previousStatus === null || previousStatus !== status ? 1 : 0;
+  return { success: true, updated, mailed };
 }
 
 /**
@@ -266,7 +275,7 @@ export async function updateBookingStatus(
 export async function updateBookingStatusBulk(
   bookingIds: string[],
   status: "pending" | "confirmed" | "cancelled"
-): Promise<ActionResult & { updated?: number }> {
+): Promise<ActionResult & { updated?: number; mailed?: number }> {
   if (bookingIds.length === 0) return { error: "선택된 예매가 없습니다." };
 
   const supabase = await createClient();
@@ -301,7 +310,7 @@ export async function updateBookingStatusBulk(
 
   // 상태가 실제로 바뀌는 건만 갱신 대상 — 메일 중복 발송 방지
   const changing = owned.filter((r) => r.status !== status);
-  if (changing.length === 0) return { success: true, updated: 0 };
+  if (changing.length === 0) return { success: true, updated: 0, mailed: 0 };
 
   const { error: updateError } = await supabase
     .from("bookings")
@@ -377,8 +386,15 @@ export async function updateBookingStatusBulk(
     }
   });
 
+  // after() 안에서는 셀 수 없으므로 발송 대상을 미리 센다
+  const mailed = changing.filter((row) => {
+    if (!row.email) return false;
+    if (status === "confirmed") return (row.booking_tickets ?? []).length > 0;
+    return status === "cancelled";
+  }).length;
+
   revalidatePath(`/dashboard/events/${changing[0].event_id}`);
-  return { success: true, updated: changing.length };
+  return { success: true, updated: changing.length, mailed };
 }
 
 /** 확정 메일(입장 QR 포함) 재발송 — 이미 확정된 예매에만 가능 */

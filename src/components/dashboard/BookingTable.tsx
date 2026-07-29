@@ -306,13 +306,32 @@ export function BookingTable({
         toast.error(result.error);
         return;
       }
-      toast.success(
-        status === "confirmed"
-          ? `입금 확인 ${ids.length}건 처리했습니다.`
-          : status === "cancelled"
-            ? `취소 ${ids.length}건 처리했습니다.`
-            : "입금 확인을 되돌렸습니다."
-      );
+      // 메일은 상태가 실제로 바뀐 건에만 자동 발송된다 —
+      // 문구가 사실과 어긋나지 않게 서버가 돌려준 건수를 그대로 쓴다.
+      const changed = result.updated ?? ids.length;
+      const mailed = result.mailed ?? 0;
+      const label = isFree ? "참가 확정" : "입금 확인";
+
+      if (status === "confirmed") {
+        if (changed === 0) {
+          toast.info(
+            "이미 확정된 예매입니다. 메일을 다시 보내려면 '확정 메일 재발송'을 눌러주세요."
+          );
+        } else {
+          toast.success(
+            `${label} ${changed}건 처리했습니다.` +
+              (mailed > 0 ? " 입장 QR 확정 메일을 보냈어요." : "")
+          );
+        }
+      } else if (status === "cancelled") {
+        toast.success(
+          `취소 ${changed}건 처리했습니다.` +
+            (mailed > 0 ? " 참석자에게 취소 안내 메일을 보냈어요." : "")
+        );
+      } else {
+        toast.success(`${label}을 되돌렸습니다. 메일은 보내지 않아요.`);
+      }
+
       resetSelection();
       router.refresh();
     });
@@ -567,7 +586,7 @@ export function BookingTable({
                       onClick={() => resendConfirmed(selected)}
                     >
                       <Mail className="size-3.5" />
-                      확정 메일 보내기
+                      확정 메일 재발송
                     </Button>
                     <Button
                       variant="destructive"
@@ -735,9 +754,8 @@ export function BookingTable({
                   {!isFree && ` · 입금대기 ${stats.pendingCount}건`}
                 </span>
                 <span>
-                  {isFree
-                    ? "참가 확정은 되돌릴 수 있습니다."
-                    : "입금 확인은 되돌릴 수 있습니다."}
+                  {isFree ? "참가 확정" : "입금 확인"}하면 입장 QR 확정 메일이
+                  자동 발송됩니다 · 되돌릴 수 있어요
                 </span>
               </div>
             </div>
@@ -1174,14 +1192,19 @@ function DetailPanel({
 
       <div className="space-y-2">
         {booking.status === "pending" && (
-          <Button
-            size="lg"
-            className="w-full"
-            disabled={isPending}
-            onClick={onConfirm}
-          >
-            {isFree ? "참가 확정하기" : "입금 확인하기"}
-          </Button>
+          <>
+            <Button
+              size="lg"
+              className="w-full"
+              disabled={isPending}
+              onClick={onConfirm}
+            >
+              {isFree ? "참가 확정하기" : "입금 확인하기"}
+            </Button>
+            <p className="px-1 text-[11px] leading-snug text-muted-foreground">
+              누르면 참석자에게 입장 QR 확정 메일이 자동으로 갑니다.
+            </p>
+          </>
         )}
         {booking.status === "confirmed" && (
           <>
@@ -1192,7 +1215,7 @@ function DetailPanel({
               onClick={onResend}
             >
               <Mail className="size-4" />
-              확정 메일 다시 보내기
+              확정 메일 재발송
             </Button>
             {!isFree && (
               <Button

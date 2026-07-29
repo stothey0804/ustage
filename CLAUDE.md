@@ -387,7 +387,11 @@ ended  (행사 종료) → event_date 경과
 ### 이메일 발송 (Resend)
 
 - 신청완료 메일: 유료 = 입금 안내(계좌·금액), 무료 = 즉시 확정이므로 입장 QR 포함
-- 입금확인(pending→confirmed) 시: 입장 QR 포함 확정 메일 발송 (`sendBookingConfirmed`)
+- 입금확인(pending→confirmed) 시: 입장 QR 포함 확정 메일 **자동 발송**(`sendBookingConfirmed`).
+  명단의 '확정 메일 재발송' 버튼은 재발송 전용(`resendBookingConfirmation`)이며 이미
+  confirmed인 예매에만 동작한다. 상태가 실제로 바뀐 건에만 보내므로 중복 발송은 없고,
+  액션이 `updated`/`mailed` 건수를 돌려줘 토스트 문구가 실제 발송과 어긋나지 않는다.
+  발송은 `after()`라 응답 뒤에 일어나고 실패는 로그만 남는다(화면에는 성공으로 보인다).
 - 참석자 셀프 취소 시: 참석자에게 취소 완료 메일(`sendBookingCancelled`, 취소 규정·연락처 포함),
   주최자에게 취소 알림(`sendOwnerCancelNotice`) — 주최자 주소는 `getAccountEmail`로 해석
 - 주최자 취소(pending/confirmed → cancelled) 시: 참석자에게 취소 통보 메일

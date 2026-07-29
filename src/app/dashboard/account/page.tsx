@@ -32,6 +32,11 @@ export default async function AccountPage({ searchParams }: Props) {
 
   const accountEmail = getAccountEmail(user);
   const pending = isEmailPendingVerification(user);
+  // 변경 요청은 했지만 아직 확정되지 않은 새 주소.
+  // Supabase의 Secure email change가 켜져 있으면 기존·새 주소 양쪽 링크를 모두
+  // 눌러야 완료되는데, 이걸 표시하지 않으면 "변경이 씹혔다"고 오해하게 된다.
+  const pendingChange =
+    (user as { new_email?: string | null }).new_email ?? null;
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
@@ -92,6 +97,26 @@ export default async function AccountPage({ searchParams }: Props) {
             </Button>
           )}
         </div>
+        {pendingChange && (
+          <div className="space-y-1.5 rounded-md border border-amber-300/60 bg-amber-50 p-3 dark:border-amber-700/50 dark:bg-amber-950/30">
+            <p className="text-xs font-medium text-amber-900 dark:text-amber-200">
+              {pendingChange}로 변경 대기 중
+            </p>
+            <p className="text-xs leading-relaxed text-amber-900/90 dark:text-amber-200/90">
+              <span className="font-medium">{pendingChange}</span>로 보낸 인증 메일의
+              링크를 눌러야 변경이 완료됩니다. 보안 설정에 따라{" "}
+              {accountEmail ? (
+                <>
+                  기존 주소(<span className="font-medium">{accountEmail}</span>)로도
+                </>
+              ) : (
+                <>기존 주소로도</>
+              )}{" "}
+              확인 메일이 갔다면 <span className="font-medium">양쪽 링크를 모두</span>{" "}
+              눌러야 해요. 완료 전까지는 기존 주소로 메일이 발송됩니다.
+            </p>
+          </div>
+        )}
         {pending && (
           <p className="text-xs text-muted-foreground leading-relaxed">
             인증을 마치면 이메일+비밀번호 로그인과 비밀번호 재설정도 사용할 수

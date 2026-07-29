@@ -34,6 +34,25 @@ function describeLinkError(error: {
   return `카카오 연결에 실패했습니다${detail ? ` (${detail})` : ""}. ${error.message ?? ""}`.trim();
 }
 
+/**
+ * 해제 실패 원인을 그대로 알려준다 — 예전에는 "잠시 후 다시 시도"로 뭉뚱그려
+ * 사용자가 왜 안 되는지 알 수 없었다.
+ */
+function describeUnlinkError(error: {
+  code?: string;
+  status?: number;
+  message?: string;
+}): string {
+  if (error.code === "single_identity_not_deletable") {
+    return "로그인 수단이 하나뿐이라 해제할 수 없어요. 다른 수단을 먼저 연결해 주세요.";
+  }
+  if (error.code === "manual_linking_disabled") {
+    return "연결 관리 기능이 꺼져 있습니다. Supabase 설정에서 Manual linking을 켜주세요.";
+  }
+  const detail = error.code ?? (error.status ? `HTTP ${error.status}` : null);
+  return `연결 해제에 실패했습니다${detail ? ` (${detail})` : ""}. ${error.message ?? ""}`.trim();
+}
+
 interface Props {
   /** 서버(getUser)에서 내려받은 연결된 로그인 수단 */
   identities: UserIdentity[];
@@ -85,7 +104,7 @@ export function AccountIdentities({ identities }: Props) {
 
     if (error) {
       console.error("[auth] unlinkIdentity", error);
-      toast.error("연결 해제에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+      toast.error(describeUnlinkError(error), { duration: 10000 });
       return;
     }
 
@@ -96,6 +115,8 @@ export function AccountIdentities({ identities }: Props) {
   }
 
   const kakao = identities.find((i) => i.provider === "kakao");
+  // 카카오만 연결된 계정 — 구조적으로 해제가 불가능하므로 이유를 안내한다
+  const kakaoOnly = !!kakao && identities.length === 1;
   // 마지막 남은 수단을 해제하면 로그인할 방법이 사라진다.
   const hasOtherMethod = identities.length > 1;
 
@@ -121,20 +142,28 @@ export function AccountIdentities({ identities }: Props) {
               <span className="text-[11px] leading-snug text-muted-foreground">
                 안내 메일·비밀번호 재설정에 쓰여요
               </span>
+            ) : hasOtherMethod ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 gap-1 text-xs"
+                disabled={busy}
+                onClick={() => unlink(identity)}
+              >
+                <Unlink className="size-3.5" />
+                연결 해제
+              </Button>
             ) : (
-              hasOtherMethod && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 gap-1 text-xs"
-                  disabled={busy}
-                  onClick={() => unlink(identity)}
-                >
-                  <Unlink className="size-3.5" />
-                  연결 해제
-                </Button>
-              )
+              // Supabase는 마지막 남은 수단의 해제를 거부한다
+              // (single_identity_not_deletable). 버튼을 숨기면 "왜 없지?"가 되므로
+              // 비활성 버튼과 사유를 함께 보여준다.
+              <span
+                className="text-[11px] leading-snug text-muted-foreground"
+                title="로그인 수단이 하나뿐이면 해제할 수 없습니다."
+              >
+                유일한 로그인 수단이라 해제할 수 없어요
+              </span>
             )}
           </li>
         ))}
@@ -165,6 +194,16 @@ export function AccountIdentities({ identities }: Props) {
         카카오를 연결하면 다음부터는 카카오 버튼만 눌러 이 계정으로 로그인할 수
         있어요. 연결을 해제해도 이메일과 예매 내역은 끊기지 않고 그대로 남습니다.
       </p>
+
+      {kakaoOnly && (
+        <p className="rounded-md border bg-muted/40 p-3 text-xs leading-relaxed text-muted-foreground">
+          이 계정은 <span className="font-medium text-foreground">카카오로 가입</span>해
+          로그인 수단이 카카오 하나뿐입니다. 이메일 주소를 등록해도 이메일+비밀번호
+          로그인 수단이 따로 생기지는 않기 때문에, 카카오 연결은 해제할 수 없어요.
+          카카오 없이 쓰려면 이메일+비밀번호로 새 계정을 만들고 그 계정에 카카오를
+          연결해 주세요 — 그 계정에서는 해제도 가능합니다.
+        </p>
+      )}
     </div>
   );
 }

@@ -146,9 +146,16 @@ export function EmailSetupForm({
           <p className="text-xs text-muted-foreground">
             {isChange ? (
               <>
-                메일함(스팸함 포함)에서 링크를 눌러야 변경이 완료됩니다. 그때까지는
-                기존 주소({currentEmail})로 메일이 발송돼요. 설정에 따라 기존
-                주소로도 확인 메일이 갈 수 있습니다.
+                메일함(스팸함 포함)에서 링크를 눌러야 변경이 완료됩니다.
+                {currentEmail ? (
+                  <>
+                    {" "}
+                    보안 설정에 따라 <strong>기존 주소({currentEmail})로도</strong>{" "}
+                    확인 메일이 가는데, 그 경우 <strong>양쪽 링크를 모두</strong>{" "}
+                    눌러야 변경이 끝납니다 — 기존 주소 메일함도 확인해 주세요.
+                  </>
+                ) : null}{" "}
+                완료 전까지는 기존 주소로 메일이 발송돼요.
               </>
             ) : (
               <>

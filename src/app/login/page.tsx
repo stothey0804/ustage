@@ -1,16 +1,10 @@
-import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { LoginForm } from "@/components/auth/LoginForm";
-import { KakaoLoginButton } from "@/components/auth/KakaoLoginButton";
-import { createClient } from "@/lib/supabase/server";
 import { safeInternalPath } from "@/lib/utils";
 
-export const metadata: Metadata = {
-  title: "로그인",
-  robots: { index: false, follow: true },
-};
-
+/**
+ * 로그인 화면은 메인(`/`)으로 통합됐다. 이 경로는 기존 링크·리다이렉트
+ * (proxy의 `?next=`, 예매 폼의 로그인 버튼, 메일 링크 등)를 살리기 위한 얇은 리다이렉트다.
+ */
 interface Props {
   searchParams: Promise<{ next?: string; error?: string }>;
 }
@@ -18,58 +12,12 @@ interface Props {
 export default async function LoginPage({ searchParams }: Props) {
   const { next, error } = await searchParams;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const params = new URLSearchParams();
+  const safeNext = safeInternalPath(next);
+  // 기본값(/dashboard)일 때는 파라미터를 붙이지 않는다 — 주소가 깔끔해진다.
+  if (safeNext !== "/dashboard") params.set("next", safeNext);
+  if (error) params.set("error", error);
 
-  if (user) {
-    redirect(safeInternalPath(next));
-  }
-
-  return (
-    <main className="flex flex-1 items-center justify-center px-6 py-16">
-      <div className="flex w-full max-w-sm flex-col gap-8">
-        <header className="flex flex-col gap-2 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">로그인</h1>
-          <p className="text-sm text-muted-foreground">
-            이메일과 비밀번호로 로그인하세요.
-          </p>
-        </header>
-
-        {error ? (
-          <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-            {error}
-          </p>
-        ) : null}
-
-        <KakaoLoginButton next={safeInternalPath(next)} label="카카오로 로그인" />
-
-        <div className="flex items-center gap-3">
-          <span className="h-px flex-1 bg-border" />
-          <span className="text-xs text-muted-foreground">또는 이메일로 로그인</span>
-          <span className="h-px flex-1 bg-border" />
-        </div>
-
-        <LoginForm next={safeInternalPath(next)} />
-
-        <div className="flex flex-col gap-3 text-center text-sm text-muted-foreground">
-          <p>
-            <Link
-              href="/forgot-password"
-              className="font-medium underline underline-offset-4"
-            >
-              비밀번호를 잊으셨나요?
-            </Link>
-          </p>
-          <p>
-            아직 계정이 없으신가요?{" "}
-            <Link href="/signup" className="font-medium underline underline-offset-4">
-              회원가입
-            </Link>
-          </p>
-        </div>
-      </div>
-    </main>
-  );
+  const query = params.toString();
+  redirect(query ? `/?${query}` : "/");
 }

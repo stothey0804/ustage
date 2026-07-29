@@ -464,6 +464,18 @@ export async function POST(req: Request) {
 
   const bookingId = created.bookingId;
 
+  // 예매번호(스테이지별 순번)는 DB 트리거가 채우므로 생성 후 읽어 온다.
+  // 마이그레이션 미적용 환경에서는 컬럼이 없어 null → 화면은 uuid 파생 코드로 폴백한다.
+  let bookingNo: number | null = null;
+  {
+    const { data: noRow } = await admin
+      .from("bookings")
+      .select("booking_no")
+      .eq("id", bookingId)
+      .single();
+    bookingNo = noRow?.booking_no ?? null;
+  }
+
   // 무료 스테이지는 즉시 확정 — 신청완료 메일에 입장 QR을 포함
   let emailTickets: { ticket_number: number; qr_token: string }[] | undefined;
   if (event.price === 0) {
@@ -494,8 +506,9 @@ export async function POST(req: Request) {
       totalAmount: event.price * data.quantity,
       confirmUrl,
       tickets: emailTickets,
+      bookingNo,
     }).catch((err) => console.error("[email]", err))
   );
 
-  return NextResponse.json({ bookingId }, { status: 201 });
+  return NextResponse.json({ bookingId, bookingNo }, { status: 201 });
 }

@@ -119,6 +119,7 @@ bank_info       text             # "카카오뱅크 3333-123-456789 홍길동"
 contact         text             # 오픈카톡 URL 또는 전화번호
 custom_fields   jsonb            # [{id, label, type, required}]
 slug            text UNIQUE      # 참석자 접근용 URL 식별자
+booking_seq     integer          # 예매번호 발급 카운터 (트리거가 증분, 재사용 없음)
 status          text             # 'draft' | 'open' | 'closed' | 'ended'
 capacity        integer nullable
 booking_start   timestamptz      # 예매 시작일시
@@ -131,6 +132,7 @@ created_at      timestamptz
 ```
 id              uuid PK
 event_id        uuid → events
+booking_no      integer          # 스테이지별 예매 순번 (트리거 자동 부여, (event_id, booking_no) UNIQUE)
 user_id         uuid nullable → auth.users  # 로그인 참석자 연결 (비회원은 NULL)
 name            text
 email           text             # 예매자 이메일 (확인 메일 발송, 비회원 조회 키, 중복 예매 방지)
@@ -144,6 +146,17 @@ created_at      timestamptz
 
 # 레거시(미사용): checked_in, checked_in_at, qr_token, payment_confirmed(_at)
 #   → QR/체크인은 booking_tickets로 이관됨. DB 정리 대상.
+```
+
+**event_draws** — 현장 추첨 기록 (회차별 당첨자 1행)
+
+```
+id              uuid PK
+event_id        uuid → events (cascade)
+booking_id      uuid nullable → bookings (on delete set null)
+booking_no      integer          # 삭제 대비 스냅샷
+round           integer          # 이벤트 내 회차 (1부터)
+created_at      timestamptz
 ```
 
 **booking_tickets** — 예매 1건당 quantity개 생성, QR/입장은 티켓 단위
@@ -180,8 +193,8 @@ npx supabase gen types typescript --project-id <PROJECT_ID> > src/types/database
 
 | 경로                           | 접근   | 설명                                           |
 | ------------------------------ | ------ | ---------------------------------------------- |
-| `/`                            | 누구나 | 랜딩 — 로그인/회원가입 버튼                    |
-| `/login`                       | 누구나 | 로그인 + "비회원 예약정보 조회" 링크           |
+| `/`                            | 누구나 | **메인 = 로그인** (이메일+비밀번호 · 카카오) + FAQ. 로그인 상태면 `next`로 이동 |
+| `/login`                       | 누구나 | `/`로 리다이렉트 (기존 링크·`?next=` 호환용)   |
 | `/signup`                      | 누구나 | 회원가입                                       |
 | `/onboarding/email`            | 로그인 | 카카오 계정 이메일 등록 (계정 이메일 없으면 강제 진입) |
 | `/dashboard`                   | 로그인 | 홈 — "내 이벤트 관리" / "내 예약 조회" 선택    |
@@ -358,6 +371,44 @@ ended  (행사 종료) → event_date 경과
   보관하고 Supabase 대시보드 Email Templates에 붙여 쓴다. 파일 첫 줄 주석에 대응 슬롯이 적혀 있다.
 - QR은 CID 인라인 첨부 (Gmail이 data: URI 이미지를 차단하므로)
 - 발신자: `RESEND_FROM_EMAIL` 환경변수 (검증된 도메인 주소여야 함)
+
+### 예매번호 (bookings.booking_no)
+
+- **스테이지별 예매 순번**이다. `events.booking_seq` 카운터를 `bookings_assign_no`
+  BEFORE INSERT 트리거가 증분해 붙인다 — 예매 생성 경로가 셋(공개 RPC / 비원자 폴백 /
+  현장 예매)이라 코드가 아니라 DB가 채운다. 삭제해도 번호를 **재사용하지 않는다**
+  (추첨 기록이 번호를 근거로 남기 때문). 취소된 예매도 번호를 유지한다.
+- 기존 데이터는 마이그레이션에서 `created_at` 오름차순으로 backfill했다.
+- 표시는 `lib/booking-code.ts`의 `formatBookingNo(no, id)` → `#7`.
+  마이그레이션 미적용 환경에서는 기존 uuid 파생 코드(`BK-XXXXXX`)로 폴백한다.
+  검색은 `matchesBookingNo`가 `#12`·`12`·구형 `BK-` 모두 매칭한다.
+- 노출: 명단 테이블·상세 패널, CSV, 예매 완료(입금 안내) 화면, 접수·확정 메일,
+  **내 티켓/예약 상세는 상태 배지 하단에 primary 컬러**로.
+
+### 현장 추첨 (`/dashboard/events/[id]` 추첨 탭)
+
+- 대상은 **입장 완료된 예매**뿐이다(티켓 1장 이상 `checked_in`, 취소 제외).
+  2매 중 1매만 입장했어도 후보에 포함한다 — 그 사람은 현장에 와 있다.
+- 추첨 단위는 **예매(booking) 1건**. 당첨자 식별값(예매번호·이름·이메일)이 예매 단위
+  속성이라, 티켓 단위로 뽑으면 같은 사람의 티켓 2장을 구분할 수 없다.
+- 여러 번 추첨하며 회차(`round`)가 쌓인다. **이전 당첨자 제외** 체크박스가 기본 on.
+  기록은 `event_draws`에 저장해 새로고침·재접속에도 유지되고, 현장 분쟁의 근거가 된다.
+  `booking_no`를 스냅샷으로 남겨 예매가 삭제돼도 회차 기록은 보존된다.
+- 추첨은 서버에서 `node:crypto`의 `randomInt`로 수행한다(클라이언트 난수 금지).
+  순수 로직은 `lib/lottery.ts`, 마스킹은 `lib/mask.ts` — 둘 다 vitest로 검증한다.
+- 결과 표기: 예매번호 + 이름 마스킹(`김*영`) + 이메일 앞 4자만(`seyo***@ustage.im`).
+  로컬파트가 4자 이하면 첫 글자만 남긴다(전체 노출 방지).
+
+### 현장 예매 (`createOnsiteBooking`)
+
+- 주최자가 명단 툴바 "현장 예매 추가"에서 비회원 예매를 대신 만든다.
+- **스테이지 상태를 검사하지 않는다** — 행사 당일(closed/ended)에 쓰는 기능이라
+  `create_booking`(open 필수) 대신 `create_onsite_booking` RPC를 쓴다.
+  좌석 정원과 중복 이메일은 그대로 막는다(중복은 재확인 후 추가 예매로 허용).
+- 조회 비밀번호는 **4자리 숫자를 자동 생성**해 평문을 응답에 한 번만 실어 준다.
+  주최자가 현장에서 알려주는 용도이며, 이후에는 명단의 비밀번호 초기화로만 재발급한다.
+- `confirmNow`(유료 기본 on, 무료는 항상 확정)면 즉시 confirmed + 입장 QR 확정 메일,
+  아니면 pending + 입금 안내 메일. `depositor_name = 이름`, `deposited_at = "현장 예매"`.
 
 ### 앱 진입부 내비게이션 (Z2~Z7 반영)
 

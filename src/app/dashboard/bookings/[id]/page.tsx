@@ -16,6 +16,7 @@ import { sanitizeEventHtml } from "@/lib/sanitize";
 import { VenueMapLinks } from "@/components/booking/VenueMapLinks";
 import { CopyButton } from "@/components/ui/copy-button";
 import { BookingStatusBadge } from "@/components/StatusBadge";
+import { formatBookingNo } from "@/lib/booking-code";
 
 export default async function BookingDetailPage({
   params,
@@ -105,11 +106,16 @@ export default async function BookingDetailPage({
               "예약 상세"
             )}
           </h1>
-          <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
-            <BookingStatusBadge status={status} isFree={isFree} />
-            {quantity > 1 && (
-              <Badge variant="outline">{quantity}매</Badge>
-            )}
+          <div className="flex shrink-0 flex-col items-end gap-1 mt-0.5">
+            <div className="flex items-center gap-1.5">
+              <BookingStatusBadge status={status} isFree={isFree} />
+              {quantity > 1 && (
+                <Badge variant="outline">{quantity}매</Badge>
+              )}
+            </div>
+            <span className="font-mono text-[13px] font-medium text-primary">
+              {formatBookingNo(booking.booking_no, booking.id)}
+            </span>
           </div>
         </div>
       </div>

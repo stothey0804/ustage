@@ -28,6 +28,11 @@ import { EventLifecycle } from "@/components/dashboard/EventLifecycle";
 import { BookingLinkButton } from "@/components/dashboard/BookingLinkButton";
 import { EventQrShare } from "@/components/dashboard/EventQrShare";
 import { BookingTable } from "@/components/dashboard/BookingTable";
+import {
+  DrawPanel,
+  type PastDrawRound,
+} from "@/components/dashboard/DrawPanel";
+import { maskEmail, maskName } from "@/lib/mask";
 import { DeleteEventButton } from "@/components/dashboard/DeleteEventButton";
 
 export default async function EventDetailPage({
@@ -77,6 +82,36 @@ export default async function EventDetailPage({
   const cancelPolicyHtml = event.cancel_policy
     ? sanitizeEventHtml(event.cancel_policy)
     : undefined;
+
+  // 추첨 대상 = 취소되지 않고 티켓 1장 이상 입장 완료된 예매 (lib/lottery와 같은 기준)
+  const drawCandidateCount = (bookings ?? []).filter(
+    (b) =>
+      b.status !== "cancelled" &&
+      (b.booking_tickets ?? []).some((t) => t.checked_in)
+  ).length;
+
+  // 지난 추첨 기록 — 예매가 삭제돼도 booking_no 스냅샷으로 회차를 보여준다
+  const { data: drawRows } = await supabase
+    .from("event_draws")
+    .select("round, booking_no, booking_id")
+    .eq("event_id", id)
+    .order("round", { ascending: false });
+
+  const bookingById = new Map((bookings ?? []).map((b) => [b.id, b]));
+  const roundMap = new Map<number, PastDrawRound["winners"]>();
+  for (const row of drawRows ?? []) {
+    const booking = row.booking_id ? bookingById.get(row.booking_id) : undefined;
+    const winners = roundMap.get(row.round) ?? [];
+    winners.push({
+      bookingNo: row.booking_no,
+      maskedName: booking ? maskName(booking.name) : "?",
+      maskedEmail: booking?.email ? maskEmail(booking.email) : "?",
+    });
+    roundMap.set(row.round, winners);
+  }
+  const pastRounds: PastDrawRound[] = [...roundMap.entries()]
+    .sort((a, b) => b[0] - a[0])
+    .map(([round, winners]) => ({ round, winners }));
 
   return (
     <div className="space-y-6">
@@ -135,9 +170,12 @@ export default async function EventDetailPage({
 
       {/* 탭: 예매 명단(주 작업) / 스테이지 정보 */}
       <Tabs defaultValue={bookingCount > 0 ? "bookings" : "info"}>
-        <TabsList className="w-full max-w-md">
+        <TabsList className="w-full max-w-lg">
           <TabsTrigger value="bookings" className="flex-1">
             예매 명단 ({bookingCount})
+          </TabsTrigger>
+          <TabsTrigger value="draw" className="flex-1">
+            추첨
           </TabsTrigger>
           <TabsTrigger value="info" className="flex-1">
             스테이지 정보
@@ -244,6 +282,15 @@ export default async function EventDetailPage({
             capacity={event.capacity}
             customFields={(event.custom_fields ?? []) as import("@/lib/validations/event").CustomField[]}
             cancelPolicyHtml={cancelPolicyHtml}
+          />
+        </TabsContent>
+
+        {/* 추첨 탭 */}
+        <TabsContent value="draw" className="mt-4">
+          <DrawPanel
+            eventId={id}
+            candidateCount={drawCandidateCount}
+            pastRounds={pastRounds}
           />
         </TabsContent>
       </Tabs>

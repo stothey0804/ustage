@@ -196,7 +196,10 @@ export function BookingForm({
       }
 
       setDuplicateOpen(false);
-      if (typeof json?.bookingId === "string") {
+      if (typeof json?.bookingNo === "number") {
+        setCreatedCode(`#${json.bookingNo}`);
+      } else if (typeof json?.bookingId === "string") {
+        // 예매번호 마이그레이션 미적용 환경 폴백
         setCreatedCode(bookingCode(json.bookingId));
       }
       setStep("success");

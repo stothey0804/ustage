@@ -30,3 +30,31 @@ export const bookingFormSchema = z.object({
 });
 
 export type BookingFormValues = z.infer<typeof bookingFormSchema>;
+
+/**
+ * 현장 예매 — 주최자가 명단에서 비회원 예매를 대신 만든다.
+ * 현장에서 빠르게 입력해야 하므로 항목을 최소로 둔다(입금자명·입금시간은 서버가 채움).
+ */
+export const onsiteBookingSchema = z.object({
+  name: z.string().trim().min(1, "이름을 입력해 주세요."),
+  email: z
+    .string()
+    .trim()
+    .min(1, "이메일을 입력해 주세요.")
+    .email("올바른 이메일 형식이 아닙니다."),
+  quantity: z
+    .number()
+    .int()
+    .min(1, "최소 1매 이상이어야 합니다.")
+    .max(20, "최대 20매까지 예매할 수 있습니다."),
+  /** 미입력 시 서버가 4자리 숫자를 자동 생성해 알려준다 */
+  password: z
+    .string()
+    .trim()
+    .min(4, "비밀번호는 4자 이상이어야 합니다.")
+    .optional(),
+  /** true면 즉시 입금확인(확정) 상태로 만들고 입장 QR 메일을 보낸다 */
+  confirmNow: z.boolean(),
+});
+
+export type OnsiteBookingValues = z.infer<typeof onsiteBookingSchema>;

@@ -24,20 +24,20 @@ import {
   updateBookingStatus,
   updateBookingStatusBulk,
 } from "@/app/actions/booking";
-import { bookingCode, matchesBookingCode } from "@/lib/booking-code";
+import { formatBookingNo, matchesBookingNo } from "@/lib/booking-code";
 import {
   buildBookingsCsv,
   bookingStatusLabel,
   downloadCsv,
 } from "@/lib/bookings-csv";
 import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { BookingStatusBadge } from "@/components/StatusBadge";
 import { RichTextView } from "@/components/RichTextView";
+import { OnsiteBookingDialog } from "@/components/dashboard/OnsiteBookingDialog";
 import {
   Dialog,
   DialogContent,
@@ -119,12 +119,6 @@ function oldestPendingDays(bookings: BookingRow[]): number | null {
   return Math.floor((Date.now() - oldest) / (24 * 60 * 60 * 1000));
 }
 
-function initials(name: string): string {
-  const trimmed = name.trim();
-  if (trimmed.length <= 2) return trimmed || "?";
-  return trimmed.slice(-2);
-}
-
 export function BookingTable({
   initialBookings,
   eventId,
@@ -142,7 +136,6 @@ export function BookingTable({
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("created");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [dense, setDense] = useState(true);
   const [selected, setSelected] = useState<string[]>([]);
   const [detailId, setDetailId] = useState<string | null>(
     initialBookings[0]?.id ?? null
@@ -228,7 +221,7 @@ export function BookingTable({
         b.name.toLowerCase().includes(q) ||
         (b.email ?? "").toLowerCase().includes(q) ||
         b.depositor_name.toLowerCase().includes(q) ||
-        matchesBookingCode(b.id, query)
+        matchesBookingNo(b.booking_no, b.id, query)
       );
     });
 
@@ -453,15 +446,7 @@ export function BookingTable({
               resetSelection();
             }}
           />
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-8 text-xs"
-            onClick={() => setDense((d) => !d)}
-          >
-            {dense ? "여유롭게" : "빽빽하게"}
-          </Button>
+          <OnsiteBookingDialog eventId={eventId} isFree={isFree} price={price} />
           <Button
             type="button"
             variant="outline"
@@ -561,7 +546,7 @@ export function BookingTable({
                   예매자
                   {sortKey === "name" ? (sortDir === "asc" ? " ↑" : " ↓") : ""}
                 </button>
-                <span>예약번호</span>
+                <span>예매번호</span>
                 <span>매수</span>
                 <span>{isFree ? "참가비" : "금액"}</span>
                 <span>입금자명</span>
@@ -589,9 +574,6 @@ export function BookingTable({
                   const { quantity, checkedIn, allCheckedIn } =
                     ticketStats(booking);
                   const isSelected = selected.includes(booking.id);
-                  const mismatch =
-                    !isFree &&
-                    booking.depositor_name.trim() !== booking.name.trim();
                   const isDetail = detailId === booking.id;
 
                   return (
@@ -607,8 +589,7 @@ export function BookingTable({
                         }
                       }}
                       className={cn(
-                        "grid cursor-pointer items-center border-b px-5 text-left transition-colors",
-                        dense ? "py-2.5" : "py-3.5",
+                        "grid cursor-pointer items-center border-b px-5 py-2.5 text-left transition-colors",
                         isSelected
                           ? "bg-primary/8"
                           : booking.status === "pending"
@@ -631,22 +612,17 @@ export function BookingTable({
                         }}
                       />
 
-                      <div className="flex min-w-0 items-center gap-2.5">
-                        <Avatar size="sm">
-                          <AvatarFallback>{initials(booking.name)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex min-w-0 flex-col">
-                          <span className="truncate text-[13px] font-medium">
-                            {booking.name}
-                          </span>
-                          <span className="truncate text-xs text-muted-foreground">
-                            {booking.email ?? "-"}
-                          </span>
-                        </div>
+                      <div className="flex min-w-0 flex-col">
+                        <span className="truncate text-[13px] font-medium">
+                          {booking.name}
+                        </span>
+                        <span className="truncate text-xs text-muted-foreground">
+                          {booking.email ?? "-"}
+                        </span>
                       </div>
 
                       <span className="font-mono text-xs text-muted-foreground">
-                        {bookingCode(booking.id)}
+                        {formatBookingNo(booking.booking_no, booking.id)}
                       </span>
                       <span className="text-[13px]">{quantity}매</span>
                       <span className="text-[13px]">
@@ -657,16 +633,9 @@ export function BookingTable({
                             : won(price * quantity)}
                       </span>
 
-                      <div className="flex min-w-0 items-center gap-1.5">
-                        <span className="truncate text-[13px]">
-                          {isFree ? "—" : booking.depositor_name}
-                        </span>
-                        {mismatch && (
-                          <span className="shrink-0 rounded-full bg-destructive/10 px-2 py-px text-[11px] font-medium text-destructive">
-                            불일치
-                          </span>
-                        )}
-                      </div>
+                      <span className="truncate text-[13px]">
+                        {isFree ? "—" : booking.depositor_name}
+                      </span>
 
                       <span className="text-[13px] text-muted-foreground">
                         {formatCreated(booking.created_at)}
@@ -1029,9 +998,6 @@ function DetailPanel({
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
-        <Avatar>
-          <AvatarFallback>{initials(booking.name)}</AvatarFallback>
-        </Avatar>
         <div className="flex min-w-0 flex-col">
           <span className="truncate text-base font-semibold">{booking.name}</span>
           <span className="truncate text-xs text-muted-foreground">
@@ -1044,7 +1010,11 @@ function DetailPanel({
       </div>
 
       <div className="space-y-3 rounded-3xl bg-input/50 p-4 text-[13px]">
-        <DetailRow label="예약번호" mono value={bookingCode(booking.id)} />
+        <DetailRow
+          label="예매번호"
+          mono
+          value={formatBookingNo(booking.booking_no, booking.id)}
+        />
         <DetailRow label="매수" value={`${quantity}매`} />
         {!isFree && (
           <>

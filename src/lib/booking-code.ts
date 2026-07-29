@@ -17,3 +17,28 @@ export function matchesBookingCode(id: string, query: string): boolean {
   if (!q) return false;
   return bookingCode(id).includes(q) || id.toUpperCase().includes(q);
 }
+
+/**
+ * 화면·메일에 쓰는 예매번호 표시. `bookings.booking_no`는 스테이지별 예매 순번이다.
+ * 마이그레이션(20260729100000_booking_number.sql) 미적용 환경에서는 번호가 없으므로
+ * 기존 uuid 파생 코드로 폴백한다.
+ */
+export function formatBookingNo(
+  no: number | null | undefined,
+  id: string
+): string {
+  return no != null ? `#${no}` : bookingCode(id);
+}
+
+/** 검색어가 예매번호(`#12`, `12`) 또는 구형 BK 코드와 매칭되는지 */
+export function matchesBookingNo(
+  no: number | null | undefined,
+  id: string,
+  query: string
+): boolean {
+  const q = query.trim().replace(/^#/, "");
+  if (no != null && q !== "" && /^\d+$/.test(q) && String(no).includes(q)) {
+    return true;
+  }
+  return matchesBookingCode(id, query);
+}

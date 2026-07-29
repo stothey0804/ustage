@@ -3,12 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import bcrypt from "bcryptjs";
+import { randomInt } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   sendBookingCancelled,
+  sendBookingConfirmation,
   sendBookingConfirmed,
   getBaseUrl,
 } from "@/lib/email";
+import { onsiteBookingSchema } from "@/lib/validations/booking";
 import { sanitizeEventHtml } from "@/lib/sanitize";
 import { formatKST } from "@/lib/date";
 
@@ -46,10 +50,49 @@ async function assertBookingOwner(
   return { supabase, eventId: booking.event_id };
 }
 
+/** 로그인 + 스테이지 소유자인지 확인. 실패 시 error 반환. */
+export async function assertEventOwner(eventId: string): Promise<
+  | {
+      supabase: Awaited<ReturnType<typeof createClient>>;
+      event: {
+        id: string;
+        title: string;
+        slug: string;
+        price: number;
+        bank_info: string;
+        event_date: string;
+        venue: string;
+        venue_address: string | null;
+      };
+    }
+  | { error: string }
+> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "로그인이 필요합니다." };
+
+  const { data: event } = await supabase
+    .from("events")
+    .select(
+      "id, title, slug, price, bank_info, event_date, venue, venue_address"
+    )
+    .eq("id", eventId)
+    .eq("performer_id", user.id)
+    .single();
+
+  if (!event) return { error: "스테이지를 찾을 수 없거나 권한이 없습니다." };
+
+  return { supabase, event };
+}
+
 type ConfirmEmailTarget = {
   email: string;
   name: string;
   quantity: number;
+  bookingNo: number | null;
   userId: string | null;
   eventTitle: string;
   eventDate: string;
@@ -119,7 +162,7 @@ export async function updateBookingStatus(
     const { data: full } = await ctx.supabase
       .from("bookings")
       .select(
-        "name, email, quantity, status, user_id, booking_tickets(ticket_number, qr_token), events!inner(title, event_date, venue, venue_address, slug)"
+        "booking_no, name, email, quantity, status, user_id, booking_tickets(ticket_number, qr_token), events!inner(title, event_date, venue, venue_address, slug)"
       )
       .eq("id", bookingId)
       .single();
@@ -136,6 +179,7 @@ export async function updateBookingStatus(
         email: full.email,
         name: full.name,
         quantity: full.quantity ?? 1,
+        bookingNo: full.booking_no ?? null,
         userId: full.user_id,
         eventTitle: ev.title,
         eventDate: formatKST(ev.event_date),
@@ -177,6 +221,7 @@ export async function updateBookingStatus(
         eventVenue: target.eventVenue,
         confirmUrl,
         tickets: target.tickets,
+        bookingNo: target.bookingNo,
       }).catch((err) => console.error("[email]", err))
     );
   }
@@ -223,7 +268,7 @@ export async function updateBookingStatusBulk(
   const { data: rows, error: readError } = await supabase
     .from("bookings")
     .select(
-      "id, name, email, quantity, status, user_id, event_id, booking_tickets(ticket_number, qr_token), events!inner(performer_id, title, event_date, venue, venue_address, slug, contact, cancel_policy)"
+      "id, booking_no, name, email, quantity, status, user_id, event_id, booking_tickets(ticket_number, qr_token), events!inner(performer_id, title, event_date, venue, venue_address, slug, contact, cancel_policy)"
     )
     .in("id", bookingIds);
 
@@ -294,6 +339,7 @@ export async function updateBookingStatusBulk(
             ? `${baseUrl}/dashboard/bookings/${row.id}`
             : `${baseUrl}/e/${ev.slug}/me`,
           tickets,
+          bookingNo: row.booking_no ?? null,
         }).catch((err) => console.error("[email]", err));
       }
 
@@ -329,7 +375,7 @@ export async function resendBookingConfirmation(
   const { data: booking } = await ctx.supabase
     .from("bookings")
     .select(
-      "id, name, email, quantity, status, user_id, booking_tickets(ticket_number, qr_token), events!inner(title, event_date, venue, venue_address, slug)"
+      "id, booking_no, name, email, quantity, status, user_id, booking_tickets(ticket_number, qr_token), events!inner(title, event_date, venue, venue_address, slug)"
     )
     .eq("id", bookingId)
     .single();
@@ -369,10 +415,181 @@ export async function resendBookingConfirmation(
         ? `${baseUrl}/dashboard/bookings/${booking.id}`
         : `${baseUrl}/e/${ev.slug}/me`,
       tickets,
+      bookingNo: booking.booking_no ?? null,
     }).catch((err) => console.error("[email]", err))
   );
 
   return { success: true };
+}
+
+/**
+ * 현장 예매 — 주최자가 명단에서 비회원 예매를 대신 만든다.
+ *
+ * 공개 예매 API와 다른 점:
+ *  - **스테이지 상태를 검사하지 않는다.** 현장 예매는 보통 마감·종료 상태에서 쓴다.
+ *    (게이트는 "이 스테이지의 소유자인가"뿐)
+ *  - 좌석 정원은 그대로 검사한다 — 좌석은 물리적 제약이라 주최자도 초과할 수 없다.
+ *  - 비회원 조회 비밀번호를 지정하지 않으면 4자리 숫자를 만들어 **평문을 한 번 돌려준다.**
+ *    주최자가 그 자리에서 참석자에게 알려주는 용도다(이후에는 초기화로만 재발급).
+ *  - `confirmNow`면 즉시 확정 + 입장 QR 확정 메일, 아니면 입금 안내 메일.
+ */
+export async function createOnsiteBooking(input: {
+  eventId: string;
+  name: string;
+  email: string;
+  quantity: number;
+  password?: string;
+  confirmNow: boolean;
+  /** 중복 이메일 재확인 후 재시도 */
+  allowDuplicate?: boolean;
+}): Promise<
+  | { error: string; code?: "duplicate_email" }
+  | {
+      success: true;
+      bookingId: string;
+      bookingNo: number | null;
+      /** 자동 생성한 경우에만 — 주최자가 참석자에게 알려줘야 한다 */
+      generatedPassword: string | null;
+    }
+> {
+  const parsed = onsiteBookingSchema.safeParse({
+    name: input.name,
+    email: input.email,
+    quantity: input.quantity,
+    password: input.password || undefined,
+    confirmNow: input.confirmNow,
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "입력값을 확인해 주세요." };
+  }
+
+  const ctx = await assertEventOwner(input.eventId);
+  if ("error" in ctx) return { error: ctx.error };
+
+  const { event } = ctx;
+  const values = parsed.data;
+  const email = values.email.toLowerCase();
+  const isFree = event.price === 0;
+  // 무료 스테이지는 입금 개념이 없으므로 항상 확정
+  const status: "pending" | "confirmed" =
+    isFree || values.confirmNow ? "confirmed" : "pending";
+
+  const generatedPassword = values.password
+    ? null
+    : String(randomInt(0, 10000)).padStart(4, "0");
+  const passwordHash = await bcrypt.hash(
+    values.password ?? generatedPassword!,
+    10
+  );
+
+  const admin = createAdminClient();
+  // database.ts에 RPC 타입이 없어 이 지점에서만 우회 캐스팅 (기존 예매 API와 동일 패턴)
+  const rpc = admin.rpc.bind(admin) as unknown as (
+    fn: string,
+    args: Record<string, unknown>
+  ) => PromiseLike<{
+    data: unknown;
+    error: { code?: string; message?: string } | null;
+  }>;
+
+  const { data, error } = await rpc("create_onsite_booking", {
+    p_event_id: event.id,
+    p_name: values.name,
+    p_email: email,
+    p_password_hash: passwordHash,
+    p_quantity: values.quantity,
+    p_status: status,
+    p_allow_duplicate: input.allowDuplicate ?? false,
+  });
+
+  if (error) {
+    const message = error.message ?? "";
+
+    if (message.includes("DUPLICATE_EMAIL")) {
+      return {
+        error: "이미 이 이메일로 예매된 내역이 있습니다.",
+        code: "duplicate_email",
+      };
+    }
+    const capacityMatch = message.match(/CAPACITY_EXCEEDED:(\d+)/);
+    if (capacityMatch) {
+      const remaining = Number(capacityMatch[1]);
+      return {
+        error:
+          remaining <= 0
+            ? "좌석이 모두 찼습니다. 좌석 한도를 늘린 뒤 다시 시도해 주세요."
+            : `잔여 좌석이 ${remaining}석입니다. 매수를 조정해 주세요.`,
+      };
+    }
+    if (message.includes("INVALID_QUANTITY")) {
+      return { error: "최대 20매까지 예매할 수 있습니다." };
+    }
+    if (error.code === "PGRST202" || message.includes("create_onsite_booking")) {
+      console.warn(
+        "[createOnsiteBooking] create_onsite_booking RPC가 없습니다. " +
+          "supabase/migrations/20260729110000_onsite_booking.sql을 적용하세요."
+      );
+      return {
+        error:
+          "현장 예매 기능이 아직 준비되지 않았습니다(마이그레이션 미적용). 관리자에게 문의해 주세요.",
+      };
+    }
+
+    console.error("[createOnsiteBooking]", error);
+    return { error: "현장 예매 생성에 실패했습니다." };
+  }
+
+  const bookingId = data as string;
+
+  const { data: created } = await admin
+    .from("bookings")
+    .select("booking_no, booking_tickets(ticket_number, qr_token)")
+    .eq("id", bookingId)
+    .single();
+
+  const bookingNo = created?.booking_no ?? null;
+  const tickets = (created?.booking_tickets ?? [])
+    .slice()
+    .sort((a, b) => a.ticket_number - b.ticket_number)
+    .map((t) => ({ ticket_number: t.ticket_number, qr_token: t.qr_token }));
+
+  // 비회원이므로 확인 링크는 비회원 조회 페이지
+  const confirmUrl = `${getBaseUrl()}/e/${event.slug}/me`;
+  const eventVenue = event.venue_address || event.venue;
+  const eventDate = formatKST(event.event_date);
+
+  after(() => {
+    if (status === "confirmed") {
+      return sendBookingConfirmed({
+        to: email,
+        name: values.name,
+        quantity: values.quantity,
+        eventTitle: event.title,
+        eventDate,
+        eventVenue,
+        confirmUrl,
+        tickets,
+        bookingNo,
+      }).catch((err) => console.error("[email]", err));
+    }
+    return sendBookingConfirmation({
+      to: email,
+      name: values.name,
+      quantity: values.quantity,
+      eventTitle: event.title,
+      eventDate,
+      eventVenue,
+      isFree,
+      bankInfo: event.bank_info,
+      totalAmount: event.price * values.quantity,
+      confirmUrl,
+      bookingNo,
+    }).catch((err) => console.error("[email]", err));
+  });
+
+  revalidatePath(`/dashboard/events/${event.id}`);
+  return { success: true, bookingId, bookingNo, generatedPassword };
 }
 
 export async function forceCheckIn(

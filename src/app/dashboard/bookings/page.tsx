@@ -4,7 +4,7 @@ import { Ticket } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { formatKST } from "@/lib/date";
-import { bookingCode } from "@/lib/booking-code";
+import { formatBookingNo } from "@/lib/booking-code";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { BookingStatusBadge } from "@/components/StatusBadge";
@@ -13,6 +13,7 @@ const LIST_DATE_FORMAT = "yyyy. M. d. (EEE) HH:mm";
 
 type TicketRow = {
   id: string;
+  booking_no: number | null;
   status: string;
   quantity: number | null;
   created_at: string | null;
@@ -45,7 +46,7 @@ export default async function BookingsPage() {
   const { data, error } = await supabase
     .from("bookings")
     .select(
-      "id, status, quantity, created_at, events(id, title, event_date, event_end_date, venue, price, slug)"
+      "id, booking_no, status, quantity, created_at, events(id, title, event_date, event_end_date, venue, price, slug)"
     )
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
@@ -92,17 +93,20 @@ export default async function BookingsPage() {
       {/* 다가오는 티켓 — 입장에 바로 쓰는 한 장을 크게 */}
       {upcoming?.events && (
         <section className="space-y-3.5 rounded-4xl bg-card p-5 shadow-md ring-1 ring-foreground/5">
-          <div className="flex items-center gap-2">
-            <BookingStatusBadge
-              status={upcoming.status}
-              isFree={upcoming.events.price === 0}
-            />
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex flex-col items-start gap-1">
+              <BookingStatusBadge
+                status={upcoming.status}
+                isFree={upcoming.events.price === 0}
+              />
+              <span className="font-mono text-[13px] font-medium text-primary">
+                {formatBookingNo(upcoming.booking_no, upcoming.id)}
+              </span>
+            </div>
             <span className="text-xs text-muted-foreground">
               {daysUntil(upcoming.events.event_date) > 0
-                ? `${daysUntil(upcoming.events.event_date)}일 뒤`
-                : "오늘"}{" "}
-              · 예약번호{" "}
-              <span className="font-mono">{bookingCode(upcoming.id)}</span>
+                ? `${daysUntil(upcoming.events.event_date)}일 뒤 입장`
+                : "오늘 입장"}
             </span>
           </div>
 
@@ -175,11 +179,15 @@ function TicketSection({
                   : `${row.quantity ?? 1}매`}
               </p>
             </div>
-            <BookingStatusBadge
-              status={row.status}
-              isFree={row.events?.price === 0}
-              className="shrink-0"
-            />
+            <div className="flex shrink-0 flex-col items-end gap-1">
+              <BookingStatusBadge
+                status={row.status}
+                isFree={row.events?.price === 0}
+              />
+              <span className="font-mono text-xs font-medium text-primary">
+                {formatBookingNo(row.booking_no, row.id)}
+              </span>
+            </div>
           </Link>
         ))}
       </div>

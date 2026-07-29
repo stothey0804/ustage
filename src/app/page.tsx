@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
+
+import { createClient } from "@/lib/supabase/server";
+import { safeInternalPath } from "@/lib/utils";
+import { LoginForm } from "@/components/auth/LoginForm";
+import { KakaoLoginButton } from "@/components/auth/KakaoLoginButton";
+import { BrandMark } from "@/components/BrandMark";
 import { Wordmark } from "@/components/Wordmark";
 
 export const metadata: Metadata = {
@@ -94,78 +100,124 @@ const JSON_LD = {
   ],
 };
 
-export default function Home() {
+interface Props {
+  searchParams: Promise<{ next?: string; error?: string }>;
+}
+
+/**
+ * 메인 = 로그인. 별도 랜딩을 두지 않고 첫 화면에서 바로 로그인한다
+ * (핸드오프 Z1). `/login`은 이 경로로 리다이렉트만 한다.
+ * FAQ·구조화 데이터는 검색 노출을 위해 로그인 블록 아래에 유지한다.
+ */
+export default async function Home({ searchParams }: Props) {
+  const { next, error } = await searchParams;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) redirect(safeInternalPath(next));
+
   return (
-    <main className="flex flex-1 items-center justify-center px-6 py-24">
+    <main className="flex flex-1 flex-col">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}
       />
-      <section className="flex w-full max-w-xl flex-col items-center gap-8 text-center">
-        <div className="flex flex-col gap-3">
-          <h1>
-            <Wordmark className="text-5xl sm:text-6xl" />
-            <span className="sr-only">어스테이지</span>
+
+      {/* 상단 브랜드 — 시안에는 없지만 첫 화면임을 알리는 마크 + 워드마크 */}
+      <header className="mx-auto flex w-full max-w-sm items-center gap-2 px-6 pt-6">
+        <BrandMark className="size-8" />
+        <Wordmark className="text-xl" />
+      </header>
+
+      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-8 px-6 py-12">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl font-bold leading-snug tracking-tight">
+            작은 공연의 예매를
+            <br />
+            링크 하나로
           </h1>
-          <p className="text-sm font-medium text-muted-foreground">어스테이지</p>
-          <p className="text-base text-muted-foreground">
-            소규모 공연·강연을 위한 예매 서비스 <br />
-            어스테이지입니다.
-          </p>
-          <p className="text-base text-muted-foreground">
-            공연자가 링크를 공유하면, <br />
-            참석자는 그 링크로만 예매할 수 있어요.
-          </p>
-          <p className="text-base text-muted-foreground">
-            티켓 예매부터 QR 입장까지 제공해드려요.
+          <p className="text-[13px] leading-relaxed text-muted-foreground">
+            예매한 티켓과 내가 여는 스테이지를 한 계정에서 관리합니다.
           </p>
         </div>
 
-        <Link
-          href="/guide"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline underline-offset-4 hover:text-primary/80"
-        >
-          <Sparkles className="size-4" />
-          어스테이지 사용방법
-        </Link>
+        {error ? (
+          <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+            {error}
+          </p>
+        ) : null}
 
-        <div className="flex flex-col items-center gap-3 sm:flex-row">
-          <Button asChild size="lg">
-            <Link href="/login">로그인</Link>
-          </Button>
-          <Button asChild size="lg" variant="outline">
-            <Link href="/signup">회원가입</Link>
-          </Button>
+        <LoginForm next={safeInternalPath(next)} />
+
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-3">
+            <span className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground">또는</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+          <KakaoLoginButton
+            next={safeInternalPath(next)}
+            label="카카오로 계속하기"
+          />
         </div>
 
-        <p className="text-xs text-muted-foreground">
-          예매 링크를 받으셨나요?{" "}
-          <span className="font-medium text-foreground">
-            링크를 직접 열어 예매하세요.
-          </span>
-        </p>
+        <div className="flex flex-col gap-3 text-center text-sm text-muted-foreground">
+          <p>
+            아직 계정이 없으신가요?{" "}
+            <Link href="/signup" className="font-medium underline underline-offset-4">
+              회원가입
+            </Link>
+          </p>
+          <p>
+            <Link
+              href="/forgot-password"
+              className="font-medium underline underline-offset-4"
+            >
+              비밀번호를 잊으셨나요?
+            </Link>
+          </p>
+        </div>
 
-        <section
-          aria-labelledby="faq-heading"
-          className="mt-6 w-full border-t pt-8 text-left"
-        >
-          <h2
-            id="faq-heading"
-            className="mb-4 text-center text-lg font-semibold tracking-tight"
+        <div className="flex flex-col gap-3 border-t pt-6">
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            예매 링크를 받으셨다면 로그인 없이도 예매할 수 있어요. 받은 링크를 직접
+            열고, 예매 내역은 그 링크의 &lsquo;비회원 예약 조회&rsquo;에서 이메일과
+            비밀번호로 확인하세요.
+          </p>
+          <Link
+            href="/guide"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline underline-offset-4 hover:text-primary/80"
           >
-            자주 묻는 질문
-          </h2>
-          <dl className="space-y-4">
-            {FAQS.map(({ q, a }) => (
-              <div key={q} className="rounded-2xl border bg-card p-5">
-                <dt className="font-medium text-foreground">{q}</dt>
-                <dd className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                  {a}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </section>
+            <Sparkles className="size-4" />
+            어스테이지 사용방법
+          </Link>
+        </div>
+      </div>
+
+      {/* 검색 노출용 FAQ — 로그인 화면 아래에 둔다 */}
+      <section
+        aria-labelledby="faq-heading"
+        className="mx-auto w-full max-w-xl px-6 pb-16"
+      >
+        <h2
+          id="faq-heading"
+          className="mb-4 text-center text-lg font-semibold tracking-tight"
+        >
+          자주 묻는 질문
+        </h2>
+        <dl className="space-y-4">
+          {FAQS.map(({ q, a }) => (
+            <div key={q} className="rounded-4xl bg-card p-5 shadow-md ring-1 ring-foreground/5">
+              <dt className="font-medium text-foreground">{q}</dt>
+              <dd className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                {a}
+              </dd>
+            </div>
+          ))}
+        </dl>
       </section>
     </main>
   );

@@ -2,10 +2,11 @@ import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 
 import type { CustomField } from "@/lib/validations/event";
-import { bookingCode } from "@/lib/booking-code";
+import { formatBookingNo } from "@/lib/booking-code";
 
 export type CsvBooking = {
   id: string;
+  booking_no?: number | null;
   name: string;
   email?: string | null;
   quantity: number | null;
@@ -54,7 +55,7 @@ export function buildBookingsCsv(
     const quantity = b.quantity ?? 1;
     const answers = (b.custom_answers ?? {}) as Record<string, unknown>;
     return [
-      bookingCode(b.id),
+      formatBookingNo(b.booking_no, b.id),
       b.name,
       b.email ?? "",
       quantity,

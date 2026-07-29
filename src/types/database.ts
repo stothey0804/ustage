@@ -51,6 +51,7 @@ export type Database = {
       }
       bookings: {
         Row: {
+          booking_no: number
           checked_in: boolean | null
           checked_in_at: string | null
           created_at: string | null
@@ -70,6 +71,8 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          /** bookings_assign_no 트리거가 채운다 — 코드에서 지정하지 않는다 */
+          booking_no?: number
           checked_in?: boolean | null
           checked_in_at?: string | null
           created_at?: string | null
@@ -89,6 +92,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          booking_no?: number
           checked_in?: boolean | null
           checked_in_at?: string | null
           created_at?: string | null
@@ -117,11 +121,54 @@ export type Database = {
           },
         ]
       }
+      event_draws: {
+        Row: {
+          booking_id: string | null
+          booking_no: number
+          created_at: string
+          event_id: string
+          id: string
+          round: number
+        }
+        Insert: {
+          booking_id?: string | null
+          booking_no: number
+          created_at?: string
+          event_id: string
+          id?: string
+          round: number
+        }
+        Update: {
+          booking_id?: string | null
+          booking_no?: number
+          created_at?: string
+          event_id?: string
+          id?: string
+          round?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_draws_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_draws_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           bank_info: string
           booking_end: string | null
           booking_notice: string | null
+          booking_seq: number
           booking_start: string | null
           cancel_policy: string | null
           capacity: number | null
@@ -147,6 +194,7 @@ export type Database = {
           bank_info: string
           booking_end?: string | null
           booking_notice?: string | null
+          booking_seq?: number
           booking_start?: string | null
           cancel_policy?: string | null
           capacity?: number | null
@@ -172,6 +220,7 @@ export type Database = {
           bank_info?: string
           booking_end?: string | null
           booking_notice?: string | null
+          booking_seq?: number
           booking_start?: string | null
           cancel_policy?: string | null
           capacity?: number | null

@@ -1,0 +1,278 @@
+{
+  "pkg": "ustage",
+  "globalName": "Ustage",
+  "shape": "package",
+  "srcDir": "src/components",
+  "tsconfig": "tsconfig.json",
+  "buildCmd": "node .ds-sync/node_modules/@tailwindcss/cli/dist/index.mjs -i .design-sync/tailwind-entry.css -o .design-sync/.cache/ds-styles.css",
+  "cssEntry": ".design-sync/.cache/ds-styles.css",
+  "extraFonts": [
+    ".design-sync/fonts/ustage-fonts.css"
+  ],
+  "entry": ".design-sync/entry.tsx",
+  "componentSrcMap": {
+    "Avatar": "src/components/ui/avatar.tsx",
+    "AvatarBadge": "src/components/ui/avatar.tsx",
+    "AvatarFallback": "src/components/ui/avatar.tsx",
+    "AvatarGroup": "src/components/ui/avatar.tsx",
+    "AvatarGroupCount": "src/components/ui/avatar.tsx",
+    "AvatarImage": "src/components/ui/avatar.tsx",
+    "Badge": "src/components/ui/badge.tsx",
+    "BookingStatusBadge": "src/components/StatusBadge.tsx",
+    "BrandMark": "src/components/BrandMark.tsx",
+    "Button": "src/components/ui/button.tsx",
+    "Calendar": "src/components/ui/calendar.tsx",
+    "CalendarDayButton": "src/components/ui/calendar.tsx",
+    "Card": "src/components/ui/card.tsx",
+    "CardAction": "src/components/ui/card.tsx",
+    "CardContent": "src/components/ui/card.tsx",
+    "CardDescription": "src/components/ui/card.tsx",
+    "CardFooter": "src/components/ui/card.tsx",
+    "CardHeader": "src/components/ui/card.tsx",
+    "CardTitle": "src/components/ui/card.tsx",
+    "CopyButton": "src/components/ui/copy-button.tsx",
+    "DateTimePicker": "src/components/ui/date-time-picker.tsx",
+    "Dialog": "src/components/ui/dialog.tsx",
+    "DialogClose": "src/components/ui/dialog.tsx",
+    "DialogContent": "src/components/ui/dialog.tsx",
+    "DialogDescription": "src/components/ui/dialog.tsx",
+    "DialogFooter": "src/components/ui/dialog.tsx",
+    "DialogHeader": "src/components/ui/dialog.tsx",
+    "DialogOverlay": "src/components/ui/dialog.tsx",
+    "DialogPortal": "src/components/ui/dialog.tsx",
+    "DialogTitle": "src/components/ui/dialog.tsx",
+    "DialogTrigger": "src/components/ui/dialog.tsx",
+    "DropdownMenu": "src/components/ui/dropdown-menu.tsx",
+    "DropdownMenuCheckboxItem": "src/components/ui/dropdown-menu.tsx",
+    "DropdownMenuContent": "src/components/ui/dropdown-menu.tsx",
+    "DropdownMenuGroup": "src/components/ui/dropdown-menu.tsx",
+    "DropdownMenuItem": "src/components/ui/dropdown-menu.tsx",
+    "DropdownMenuLabel": "src/components/ui/dropdown-menu.tsx",
+    "DropdownMenuPortal": "src/components/ui/dropdown-menu.tsx",
+    "DropdownMenuRadioGroup": "src/components/ui/dropdown-menu.tsx",
+    "DropdownMenuRadioItem": "src/components/ui/dropdown-menu.tsx",
+    "DropdownMenuSeparator": "src/components/ui/dropdown-menu.tsx",
+    "DropdownMenuShortcut": "src/components/ui/dropdown-menu.tsx",
+    "DropdownMenuSub": "src/components/ui/dropdown-menu.tsx",
+    "DropdownMenuSubContent": "src/components/ui/dropdown-menu.tsx",
+    "DropdownMenuSubTrigger": "src/components/ui/dropdown-menu.tsx",
+    "DropdownMenuTrigger": "src/components/ui/dropdown-menu.tsx",
+    "EventStatusBadge": "src/components/StatusBadge.tsx",
+    "Input": "src/components/ui/input.tsx",
+    "Label": "src/components/ui/label.tsx",
+    "Popover": "src/components/ui/popover.tsx",
+    "PopoverAnchor": "src/components/ui/popover.tsx",
+    "PopoverContent": "src/components/ui/popover.tsx",
+    "PopoverDescription": "src/components/ui/popover.tsx",
+    "PopoverHeader": "src/components/ui/popover.tsx",
+    "PopoverTitle": "src/components/ui/popover.tsx",
+    "PopoverTrigger": "src/components/ui/popover.tsx",
+    "RichTextView": "src/components/RichTextView.tsx",
+    "Select": "src/components/ui/select.tsx",
+    "SelectContent": "src/components/ui/select.tsx",
+    "SelectGroup": "src/components/ui/select.tsx",
+    "SelectItem": "src/components/ui/select.tsx",
+    "SelectLabel": "src/components/ui/select.tsx",
+    "SelectScrollDownButton": "src/components/ui/select.tsx",
+    "SelectScrollUpButton": "src/components/ui/select.tsx",
+    "SelectSeparator": "src/components/ui/select.tsx",
+    "SelectTrigger": "src/components/ui/select.tsx",
+    "SelectValue": "src/components/ui/select.tsx",
+    "Separator": "src/components/ui/separator.tsx",
+    "Tabs": "src/components/ui/tabs.tsx",
+    "TabsContent": "src/components/ui/tabs.tsx",
+    "TabsList": "src/components/ui/tabs.tsx",
+    "TabsTrigger": "src/components/ui/tabs.tsx",
+    "Textarea": "src/components/ui/textarea.tsx",
+    "Toaster": "src/components/ui/sonner.tsx",
+    "Wordmark": "src/components/Wordmark.tsx"
+  },
+  "overrides": {
+    "Dialog": {
+      "cardMode": "single",
+      "viewport": "640x420",
+      "primaryStory": "ConfirmDialog"
+    },
+    "DialogContent": {
+      "cardMode": "single",
+      "viewport": "640x420",
+      "primaryStory": "Default"
+    },
+    "DialogHeader": {
+      "cardMode": "single",
+      "viewport": "640x420",
+      "primaryStory": "TitleAndDescription"
+    },
+    "DialogFooter": {
+      "cardMode": "single",
+      "viewport": "640x420",
+      "primaryStory": "CancelAndConfirm"
+    },
+    "DialogTitle": {
+      "cardMode": "single",
+      "viewport": "640x420",
+      "primaryStory": "Default"
+    },
+    "DialogDescription": {
+      "cardMode": "single",
+      "viewport": "640x420",
+      "primaryStory": "Default"
+    },
+    "DialogClose": {
+      "cardMode": "single",
+      "viewport": "640x420",
+      "primaryStory": "InFooter"
+    },
+    "DialogOverlay": {
+      "cardMode": "single",
+      "viewport": "640x420",
+      "primaryStory": "BehindContent"
+    },
+    "DialogPortal": {
+      "cardMode": "single",
+      "viewport": "640x420",
+      "primaryStory": "EscapesClippedParent"
+    },
+    "DropdownMenu": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "OpenMenu"
+    },
+    "DropdownMenuCheckboxItem": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "ColumnFilters"
+    },
+    "DropdownMenuContent": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "AccountMenu"
+    },
+    "DropdownMenuGroup": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "TwoGroups"
+    },
+    "DropdownMenuItem": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "AllVariants"
+    },
+    "DropdownMenuLabel": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "SectionCaptions"
+    },
+    "DropdownMenuPortal": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "EscapesClippedParent"
+    },
+    "DropdownMenuRadioGroup": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "SortOrder"
+    },
+    "DropdownMenuRadioItem": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "States"
+    },
+    "DropdownMenuSeparator": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "BetweenSections"
+    },
+    "DropdownMenuShortcut": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "KeyHints"
+    },
+    "DropdownMenuSub": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "NestedMenu"
+    },
+    "DropdownMenuSubContent": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "OpenSubmenu"
+    },
+    "DropdownMenuSubTrigger": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "OpenState"
+    },
+    "Popover": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "OpenPopover"
+    },
+    "PopoverAnchor": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "AnchoredToRow"
+    },
+    "PopoverContent": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "TextContent"
+    },
+    "PopoverDescription": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "Default"
+    },
+    "PopoverHeader": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "TitleAndDescription"
+    },
+    "PopoverTitle": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "Default"
+    },
+    "Select": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "OpenMenu"
+    },
+    "SelectContent": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "Grouped"
+    },
+    "SelectGroup": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "TwoGroups"
+    },
+    "SelectItem": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "SelectedAndDisabled"
+    },
+    "SelectLabel": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "GroupHeadings"
+    },
+    "SelectScrollDownButton": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "LongList"
+    },
+    "SelectScrollUpButton": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "LongList"
+    },
+    "SelectSeparator": {
+      "cardMode": "single",
+      "viewport": "560x420",
+      "primaryStory": "BetweenGroups"
+    }
+  },
+  "readmeHeader": ".design-sync/conventions.md"
+}

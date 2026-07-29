@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "./pretendard.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -49,6 +50,12 @@
 }
 
 :root {
+  /* 본문 서체 — 한글은 Pretendard, 라틴도 같은 폰트(Inter 기반 설계)로 통일한다.
+     next/font 대신 자체 호스팅 CSS를 쓰므로 여기서 스택을 정의한다. */
+  --font-sans:
+    "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+    system-ui, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+
   --background: oklch(0.985 0.005 185);
   --foreground: oklch(0.17 0.02 185);
   --card: oklch(0.995 0.003 185);

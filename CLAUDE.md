@@ -30,6 +30,7 @@
 | 리치텍스트 에디터| CKEditor 5              |
 | 이미지 저장     | Supabase Storage        |
 | 날짜            | date-fns                |
+| 서체            | Pretendard Variable (자체 호스팅) |
 
 ---
 
@@ -565,7 +566,6 @@ ended  (행사 종료) → event_date 경과
 - 주최자 메모(상세 패널 Textarea): 컬럼이 없어 미구현.
 - 앱 진입부(하단 탭 4개 IA, 매직 링크 로그인, 홈 요약 화면): 현재 상단 헤더 +
   이메일·카카오 로그인 구조를 유지한다. IA 개편은 별도 결정 사항.
-- 본문 서체 Pretendard 교체: CDN 의존이 생겨 보류(토큰은 Inter 유지).
 
 ### 커스텀 폼 필드
 
@@ -611,6 +611,20 @@ ended  (행사 종료) → event_date 경과
 - 개발용 상세 에러는 `console.error`로만 처리
 
 ---
+
+## 서체 (Pretendard)
+
+- 본문·제목 모두 **Pretendard Variable** 하나로 쓴다. 라틴 글자도 Pretendard가
+  Inter 기반이라 따로 섞지 않는다(과거 Inter + 시스템 한글 폴백 조합을 대체).
+- **CDN에 의존하지 않는다.** `public/fonts/pretendard/`에 woff2 92개(동적 서브셋,
+  합계 3MB)를 담고 `src/app/pretendard.css`가 `unicode-range`로 나눠 선언한다.
+  브라우저는 화면에 실제로 쓰인 범위만 내려받아 한 페이지당 보통 200KB 안쪽이다.
+  → 파일을 갱신할 때는 `pretendard@<버전>`의
+  `dist/web/variable/{woff2-dynamic-subset,pretendardvariable-dynamic-subset.css}`를
+  받아 `url(./woff2-dynamic-subset/` → `url(/fonts/pretendard/`로만 바꿔 넣는다.
+- 스택은 `globals.css`의 `:root { --font-sans }` 한 곳에서 정한다.
+  `layout.tsx`의 next/font는 `--font-mono`(Geist Mono)만 남았다.
+- 라이선스는 SIL OFL 1.1 — `src/app/pretendard.css` 상단 주석에 원본 고지를 유지한다.
 
 ## 클로드 디자인(Design System) 동기화
 

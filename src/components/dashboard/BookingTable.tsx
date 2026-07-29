@@ -479,9 +479,10 @@ export function BookingTable({
           })}
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* 모바일에서는 검색 한 줄, 버튼 두 개가 다음 줄로 내려간다 */}
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <Input
-            className="w-60"
+            className="w-full sm:w-60"
             placeholder="이름 · 예매번호 · 입금자명 검색"
             value={query}
             onChange={(e) => {
@@ -489,17 +490,23 @@ export function BookingTable({
               resetSelection();
             }}
           />
-          <OnsiteBookingDialog eventId={eventId} isFree={isFree} price={price} />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-8 gap-1.5 text-xs"
-            onClick={exportCsv}
-          >
-            <Download className="size-3.5" />
-            명단 내보내기
-          </Button>
+          <div className="flex w-full items-center gap-2 sm:w-auto">
+            <OnsiteBookingDialog
+              eventId={eventId}
+              isFree={isFree}
+              price={price}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={exportCsv}
+            >
+              <Download className="size-3.5" />
+              명단 내보내기
+            </Button>
+          </div>
         </div>
       </div>
 

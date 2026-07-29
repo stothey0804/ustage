@@ -12,6 +12,7 @@ import {
   Shuffle,
   Ticket,
   UserPlus,
+  Users,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,7 @@ import { Wordmark } from "@/components/Wordmark";
 export const metadata: Metadata = {
   title: "어스테이지 사용 방법",
   description:
-    "공연 명단 관리와 당일 입장 처리를 위한 어스테이지 — 비공개 예매 링크, 이메일 자동 발송, QR 입장, 현장 추첨까지 화면과 함께 안내합니다.",
+    "공연 명단 관리와 당일 입장 처리를 위한 어스테이지 — 비공개 예매 링크, 이메일 자동 발송, QR 입장, 현장 추첨, 스태프 공동 운영까지 화면과 함께 안내합니다.",
   alternates: { canonical: "/guide" },
 };
 
@@ -81,6 +82,7 @@ const SECTIONS: Section[] = [
       "포스터·안내·일시·장소·가격·좌석 수를 채우면 링크가 만들어집니다.",
       "링크를 받은 사람만 예매할 수 있습니다 — 메인에서 검색·발견되지 않습니다.",
       "링크 복사와 QR 공유를 지원해 포스터·SNS에 바로 붙일 수 있습니다.",
+      "취소·환불 규정을 적어두면 예매 화면과 취소 시점에 함께 보여줍니다.",
     ],
     shots: [
       mobile("/guide/03-booking-page.png", "예매 페이지 — 공연 정보와 매수 선택"),
@@ -94,7 +96,8 @@ const SECTIONS: Section[] = [
     points: [
       "신청 직후: 유료는 계좌·금액이 담긴 입금 안내, 무료는 즉시 확정 안내.",
       "주최자가 입금을 확인하면: 입장 QR이 담긴 확정 메일.",
-      "취소 시에도 안내 메일이 발송됩니다. 모든 안내는 이메일로만 보냅니다.",
+      "참석자가 직접 취소하면 참석자에게 취소 완료 메일, 주최자에게 취소 알림이 갑니다.",
+      "모든 안내는 이메일로만 보냅니다 — 문자는 보내지 않습니다.",
     ],
     shots: [],
   },
@@ -119,7 +122,8 @@ const SECTIONS: Section[] = [
     points: [
       "회원은 내 티켓에서, 비회원은 예매 링크의 ‘비회원 예약 조회’에서 이메일+비밀번호로 확인합니다.",
       "QR은 매수만큼 발급됩니다 — 2매면 2장, 한 장씩 따로 입장할 수 있습니다.",
-      "예매번호는 스테이지별 신청 순번(#1, #2 …)이라 현장에서 부르기 쉽고 추첨에도 그대로 쓰입니다.",
+      "예매번호는 사람 1명당 하나입니다 — 2매를 예매하면 #2, #3처럼 번호를 두 개 받습니다.",
+      "현장에서 부르기 쉽고 추첨도 이 번호(사람 단위)로 진행됩니다.",
     ],
     shots: [mobile("/guide/06-my-tickets.png", "내 티켓 — 상태와 예매번호")],
   },
@@ -162,6 +166,19 @@ const EXTRA: Section = {
   shots: [desktop("/guide/09-onsite.png", "현장 예매 추가 화면")],
 };
 
+const STAFF: Section = {
+  icon: Users,
+  title: "스테이지를 함께 운영할 스태프 지정",
+  lead: "현장을 도와줄 사람을 이메일로 초대하면 같은 명단에서 함께 처리합니다. 스테이지당 최대 10명입니다.",
+  points: [
+    "스태프가 할 수 있는 일: 명단 확인 · 입금 확인 · QR 입장 처리 · 현장 예매 · 추첨 · 명단 내보내기.",
+    "주최자만 할 수 있는 일: 스테이지 수정·삭제와 상태 전환, 예매 삭제, 추첨 기록 초기화, 스태프 관리.",
+    "초대 메일의 링크를 열고 로그인하면 바로 참여됩니다 — 어스테이지 계정이 없어도 그 자리에서 가입하면 됩니다. 링크는 7일 후 만료됩니다.",
+    "참석자의 이름·이메일을 보게 되므로 믿을 수 있는 사람만 초대해 주세요. 제외는 주최자가 즉시 할 수 있고, 스태프도 스스로 나올 수 있습니다.",
+  ],
+  shots: [],
+};
+
 export default function GuidePage() {
   return (
     <main className="mx-auto w-full max-w-3xl px-5 py-10 space-y-12">
@@ -194,7 +211,7 @@ export default function GuidePage() {
       </header>
 
       <div className="space-y-12">
-        {[...SECTIONS, EXTRA].map((section, index) => (
+        {[...SECTIONS, EXTRA, STAFF].map((section, index) => (
           <SectionBlock key={section.title} section={section} index={index + 1} />
         ))}
       </div>

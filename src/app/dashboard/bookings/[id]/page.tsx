@@ -16,7 +16,7 @@ import { sanitizeEventHtml } from "@/lib/sanitize";
 import { VenueMapLinks } from "@/components/booking/VenueMapLinks";
 import { CopyButton } from "@/components/ui/copy-button";
 import { BookingStatusBadge } from "@/components/StatusBadge";
-import { formatBookingNo } from "@/lib/booking-code";
+import { formatBookingNoRange } from "@/lib/booking-code";
 
 export default async function BookingDetailPage({
   params,
@@ -114,7 +114,7 @@ export default async function BookingDetailPage({
               )}
             </div>
             <span className="font-mono text-[13px] font-medium text-primary">
-              {formatBookingNo(booking.booking_no, booking.id)}
+              {formatBookingNoRange(booking.booking_no, quantity, booking.id)}
             </span>
           </div>
         </div>
@@ -289,6 +289,7 @@ export default async function BookingDetailPage({
                 qr_token: t.qr_token,
                 ticket_number: t.ticket_number,
                 checked_in: t.checked_in,
+                attendee_no: t.attendee_no,
               }))}
             />
           </div>

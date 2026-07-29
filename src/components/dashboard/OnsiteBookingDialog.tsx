@@ -8,6 +8,7 @@ import { Loader2, Minus, Plus, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { createOnsiteBooking } from "@/app/actions/booking";
+import { formatBookingNoRange } from "@/lib/booking-code";
 import {
   onsiteBookingSchema,
   type OnsiteBookingValues,
@@ -32,6 +33,7 @@ interface Props {
 }
 
 type Created = {
+  bookingId: string;
   bookingNo: number | null;
   generatedPassword: string | null;
   confirmed: boolean;
@@ -114,6 +116,7 @@ export function OnsiteBookingDialog({ eventId, isFree, price }: Props) {
 
       setDuplicateValues(null);
       setCreated({
+        bookingId: result.bookingId,
         bookingNo: result.bookingNo,
         generatedPassword: result.generatedPassword,
         confirmed: isFree || values.confirmNow,
@@ -151,7 +154,13 @@ export function OnsiteBookingDialog({ eventId, isFree, price }: Props) {
               <div className="flex flex-col items-center gap-2 rounded-4xl bg-input/50 px-5 py-6 text-center">
                 <span className="text-xs text-muted-foreground">예매번호</span>
                 <span className="font-mono text-2xl font-bold text-primary">
-                  {created.bookingNo != null ? `#${created.bookingNo}` : "발급됨"}
+                  {created.bookingNo != null
+                    ? formatBookingNoRange(
+                        created.bookingNo,
+                        created.quantity,
+                        created.bookingId
+                      )
+                    : "발급됨"}
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {created.quantity}매 ·{" "}

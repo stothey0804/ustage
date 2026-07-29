@@ -17,6 +17,7 @@ export type Database = {
       booking_tickets: {
         Row: {
           id: string
+          attendee_no: number
           booking_id: string
           ticket_number: number
           qr_token: string
@@ -25,6 +26,8 @@ export type Database = {
         }
         Insert: {
           id?: string
+          /** booking_tickets_assign_attendee_no 트리거가 채운다 — 코드에서 지정하지 않는다 */
+          attendee_no?: number
           booking_id: string
           ticket_number: number
           qr_token?: string
@@ -33,6 +36,7 @@ export type Database = {
         }
         Update: {
           id?: string
+          attendee_no?: number
           booking_id?: string
           ticket_number?: number
           qr_token?: string
@@ -123,30 +127,44 @@ export type Database = {
       }
       event_draws: {
         Row: {
+          attendee_no: number
           booking_id: string | null
-          booking_no: number
+          /** @deprecated 예매 단위 추첨 시절 컬럼 — attendee_no를 쓴다 */
+          booking_no: number | null
           created_at: string
           event_id: string
           id: string
           round: number
+          ticket_id: string | null
         }
         Insert: {
+          attendee_no: number
           booking_id?: string | null
-          booking_no: number
+          booking_no?: number | null
           created_at?: string
           event_id: string
           id?: string
           round: number
+          ticket_id?: string | null
         }
         Update: {
+          attendee_no?: number
           booking_id?: string | null
-          booking_no?: number
+          booking_no?: number | null
           created_at?: string
           event_id?: string
           id?: string
           round?: number
+          ticket_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "event_draws_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "booking_tickets"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "event_draws_booking_id_fkey"
             columns: ["booking_id"]

@@ -83,21 +83,21 @@ export default async function EventDetailPage({
     ? sanitizeEventHtml(event.cancel_policy)
     : undefined;
 
-  // 추첨 대상 = 취소되지 않고 티켓 1장 이상 입장 완료된 예매 (lib/lottery와 같은 기준)
-  const drawCandidates = (bookings ?? []).filter(
-    (b) =>
-      b.status !== "cancelled" &&
-      (b.booking_tickets ?? []).some((t) => t.checked_in)
-  );
-  const drawCandidateNos = drawCandidates
-    .map((b) => b.booking_no)
-    .filter((no): no is number => typeof no === "number")
+  // 추첨 대상 = 취소되지 않은 예매의 **입장 완료 티켓** 1장 = 사람 1명
+  // (lib/lottery의 selectDrawCandidates와 같은 기준)
+  const drawCandidateNos = (bookings ?? [])
+    .filter((b) => b.status !== "cancelled")
+    .flatMap((b) =>
+      (b.booking_tickets ?? [])
+        .filter((t) => t.checked_in)
+        .map((t) => t.attendee_no ?? b.booking_no + t.ticket_number - 1)
+    )
     .sort((a, b) => a - b);
 
-  // 지난 추첨 기록 — 예매가 삭제돼도 booking_no 스냅샷으로 회차를 보여준다
+  // 지난 추첨 기록 — 티켓·예매가 삭제돼도 attendee_no 스냅샷으로 회차를 보여준다
   const { data: drawRows } = await supabase
     .from("event_draws")
-    .select("round, booking_no, booking_id")
+    .select("round, attendee_no, booking_id")
     .eq("event_id", id)
     .order("round", { ascending: false });
 
@@ -107,7 +107,7 @@ export default async function EventDetailPage({
     const booking = row.booking_id ? bookingById.get(row.booking_id) : undefined;
     const winners = roundMap.get(row.round) ?? [];
     winners.push({
-      bookingNo: row.booking_no,
+      attendeeNo: row.attendee_no,
       maskedName: booking ? maskName(booking.name) : "?",
       maskedEmail: booking?.email ? maskEmail(booking.email) : "?",
     });
@@ -293,7 +293,7 @@ export default async function EventDetailPage({
         <TabsContent value="draw" className="mt-4">
           <DrawPanel
             eventId={id}
-            candidateCount={drawCandidates.length}
+            candidateCount={drawCandidateNos.length}
             candidateNos={drawCandidateNos}
             pastRounds={pastRounds}
           />

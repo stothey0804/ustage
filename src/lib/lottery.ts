@@ -1,12 +1,13 @@
 /**
  * 현장 추첨 로직 (순수 함수 — 난수원은 주입한다).
  *
- * 추첨 단위는 **예매(booking) 1건**이다:
- *  - 당첨자 식별에 쓰는 값(예매번호·이름·이메일)이 모두 예매 단위 속성이다.
- *    티켓 단위로 뽑으면 같은 사람의 티켓 2장이 각각 당첨될 수 있고, 결과 화면에서
- *    둘을 구분할 방법이 없다(티켓에는 개인 식별자가 없다).
- *  - 다매수 구매자에게 가중치를 주자는 요구는 없다.
- *  - 2매 중 1매만 입장한 예매는 **후보에 포함**한다 — 그 사람은 현장에 와 있다.
+ * 추첨 단위는 **입장 티켓 1장 = 사람 1명**이다.
+ *  - 예매번호가 인원 단위(`booking_tickets.attendee_no`)로 부여되므로 같은 예매의
+ *    동반자도 자기 번호로 뽑힐 수 있다. 2매 예매면 두 사람 몫의 응모가 있는 셈이다.
+ *  - 입장은 티켓 단위로 기록되므로 **체크인된 티켓 = 실제로 현장에 있는 사람**이다.
+ *    2매 중 1매만 입장했다면 입장한 그 1장만 후보가 된다.
+ *  - 같은 예매의 티켓 두 장이 각각 당첨될 수 있다. 이름·이메일은 예매자 것뿐이라
+ *    화면에서는 **번호로 구분**한다(동반자 이름을 받지 않는다).
  */
 
 export type DrawCandidateRow = {
@@ -15,37 +16,52 @@ export type DrawCandidateRow = {
   name: string;
   email: string | null;
   status: string;
-  booking_tickets?: { checked_in: boolean }[] | null;
+  booking_tickets?:
+    | {
+        id: string;
+        ticket_number: number;
+        attendee_no: number | null;
+        checked_in: boolean;
+      }[]
+    | null;
 };
 
 export type DrawCandidate = {
+  ticketId: string;
+  attendeeNo: number;
   bookingId: string;
-  bookingNo: number;
   name: string;
   email: string;
 };
 
 /**
- * 추첨 후보 산출 — 취소 제외 + 티켓 1장 이상 입장 완료 + (옵션) 이전 당첨자 제외.
- * 예매번호 오름차순으로 정렬해 결과가 재현 가능한 순서를 갖게 한다.
+ * 추첨 후보 산출 — 취소되지 않은 예매의 **입장 완료 티켓** + (옵션) 이전 당첨 티켓 제외.
+ * 인원 번호 오름차순으로 정렬해 결과 순서가 재현 가능하게 한다.
+ * `attendee_no`가 없으면(마이그레이션 미적용) 첫 번호 + ticket_number - 1로 폴백한다.
  */
 export function selectDrawCandidates(
   rows: readonly DrawCandidateRow[],
-  excludeBookingIds: ReadonlySet<string> = new Set()
+  excludeTicketIds: ReadonlySet<string> = new Set()
 ): DrawCandidate[] {
-  return rows
-    .filter((row) => {
-      if (row.status === "cancelled") return false;
-      if (excludeBookingIds.has(row.id)) return false;
-      return (row.booking_tickets ?? []).some((t) => t.checked_in);
-    })
-    .sort((a, b) => a.booking_no - b.booking_no)
-    .map((row) => ({
-      bookingId: row.id,
-      bookingNo: row.booking_no,
-      name: row.name,
-      email: row.email ?? "",
-    }));
+  const candidates: DrawCandidate[] = [];
+
+  for (const row of rows) {
+    if (row.status === "cancelled") continue;
+    for (const ticket of row.booking_tickets ?? []) {
+      if (!ticket.checked_in) continue;
+      if (excludeTicketIds.has(ticket.id)) continue;
+      candidates.push({
+        ticketId: ticket.id,
+        attendeeNo:
+          ticket.attendee_no ?? row.booking_no + ticket.ticket_number - 1,
+        bookingId: row.id,
+        name: row.name,
+        email: row.email ?? "",
+      });
+    }
+  }
+
+  return candidates.sort((a, b) => a.attendeeNo - b.attendeeNo);
 }
 
 /**

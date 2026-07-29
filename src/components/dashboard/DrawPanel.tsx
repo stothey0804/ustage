@@ -20,14 +20,14 @@ import {
 
 export type PastDrawRound = {
   round: number;
-  winners: { bookingNo: number; maskedName: string; maskedEmail: string }[];
+  winners: { attendeeNo: number; maskedName: string; maskedEmail: string }[];
 };
 
 interface Props {
   eventId: string;
-  /** 입장 완료(티켓 1장 이상 체크인)된 예매 수 — 추첨 대상 */
+  /** 입장 완료된 티켓 수 = 현장에 있는 사람 수 — 추첨 대상 */
   candidateCount: number;
-  /** 후보들의 예매번호 — 추첨 연출에서 굴릴 숫자로 쓴다 */
+  /** 후보(입장 완료 티켓)들의 인원 번호 — 추첨 연출에서 굴릴 숫자로 쓴다 */
   candidateNos: number[];
   /** 지난 회차 기록 (최신 회차 먼저) */
   pastRounds: PastDrawRound[];
@@ -233,11 +233,11 @@ export function DrawPanel({
                 <ul className="flex flex-wrap gap-2">
                   {round.winners.map((winner) => (
                     <li
-                      key={`${round.round}-${winner.bookingNo}`}
+                      key={`${round.round}-${winner.attendeeNo}`}
                       className="flex items-center gap-2 rounded-full bg-input/50 px-3 py-1.5 text-[13px]"
                     >
                       <span className="font-mono font-medium text-primary">
-                        #{winner.bookingNo}
+                        #{winner.attendeeNo}
                       </span>
                       <span>{winner.maskedName}</span>
                       <span className="font-mono text-xs text-muted-foreground">
@@ -290,7 +290,7 @@ export function DrawPanel({
               >
                 {winners.map((winner) => (
                   <div
-                    key={winner.bookingNo}
+                    key={winner.attendeeNo}
                     className={
                       single
                         ? "flex flex-col items-center gap-2"
@@ -304,7 +304,7 @@ export function DrawPanel({
                           : "font-mono text-5xl font-bold tabular-nums text-primary"
                       }
                     >
-                      #{winner.bookingNo}
+                      #{winner.attendeeNo}
                     </span>
                     <span
                       className={

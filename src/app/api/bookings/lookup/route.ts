@@ -112,7 +112,7 @@ export async function POST(req: Request) {
     matched.map(async (booking) => {
       const { data: tickets } = await adminSupabase
         .from("booking_tickets")
-        .select("qr_token, ticket_number, checked_in")
+        .select("qr_token, ticket_number, checked_in, attendee_no")
         .eq("booking_id", booking.id)
         .order("ticket_number", { ascending: true });
 

@@ -15,6 +15,7 @@ import {
 import { onsiteBookingSchema } from "@/lib/validations/booking";
 import { sanitizeEventHtml } from "@/lib/sanitize";
 import { formatKST } from "@/lib/date";
+import { formatBookingNoRange } from "@/lib/booking-code";
 
 type ActionResult = { error?: string; success?: boolean };
 
@@ -92,13 +93,17 @@ type ConfirmEmailTarget = {
   email: string;
   name: string;
   quantity: number;
-  bookingNo: number | null;
+  bookingNoLabel: string;
   userId: string | null;
   eventTitle: string;
   eventDate: string;
   eventVenue: string;
   slug: string;
-  tickets: { ticket_number: number; qr_token: string }[];
+  tickets: {
+    ticket_number: number;
+    qr_token: string;
+    attendee_no: number | null;
+  }[];
 };
 
 type CancelEmailTarget = {
@@ -162,7 +167,7 @@ export async function updateBookingStatus(
     const { data: full } = await ctx.supabase
       .from("bookings")
       .select(
-        "booking_no, name, email, quantity, status, user_id, booking_tickets(ticket_number, qr_token), events!inner(title, event_date, venue, venue_address, slug)"
+        "booking_no, name, email, quantity, status, user_id, booking_tickets(ticket_number, qr_token, attendee_no), events!inner(title, event_date, venue, venue_address, slug)"
       )
       .eq("id", bookingId)
       .single();
@@ -179,7 +184,11 @@ export async function updateBookingStatus(
         email: full.email,
         name: full.name,
         quantity: full.quantity ?? 1,
-        bookingNo: full.booking_no ?? null,
+        bookingNoLabel: formatBookingNoRange(
+          full.booking_no,
+          full.quantity ?? 1,
+          bookingId
+        ),
         userId: full.user_id,
         eventTitle: ev.title,
         eventDate: formatKST(ev.event_date),
@@ -188,7 +197,11 @@ export async function updateBookingStatus(
         tickets: (full.booking_tickets ?? [])
           .slice()
           .sort((a, b) => a.ticket_number - b.ticket_number)
-          .map((t) => ({ ticket_number: t.ticket_number, qr_token: t.qr_token })),
+          .map((t) => ({
+            ticket_number: t.ticket_number,
+            qr_token: t.qr_token,
+            attendee_no: t.attendee_no,
+          })),
       };
     }
   }
@@ -221,7 +234,7 @@ export async function updateBookingStatus(
         eventVenue: target.eventVenue,
         confirmUrl,
         tickets: target.tickets,
-        bookingNo: target.bookingNo,
+        bookingNoLabel: target.bookingNoLabel,
       }).catch((err) => console.error("[email]", err))
     );
   }
@@ -268,7 +281,7 @@ export async function updateBookingStatusBulk(
   const { data: rows, error: readError } = await supabase
     .from("bookings")
     .select(
-      "id, booking_no, name, email, quantity, status, user_id, event_id, booking_tickets(ticket_number, qr_token), events!inner(performer_id, title, event_date, venue, venue_address, slug, contact, cancel_policy)"
+      "id, booking_no, name, email, quantity, status, user_id, event_id, booking_tickets(ticket_number, qr_token, attendee_no), events!inner(performer_id, title, event_date, venue, venue_address, slug, contact, cancel_policy)"
     )
     .in("id", bookingIds);
 
@@ -326,6 +339,7 @@ export async function updateBookingStatusBulk(
           .map((t) => ({
             ticket_number: t.ticket_number,
             qr_token: t.qr_token,
+            attendee_no: t.attendee_no,
           }));
         if (tickets.length === 0) continue;
         await sendBookingConfirmed({
@@ -339,7 +353,7 @@ export async function updateBookingStatusBulk(
             ? `${baseUrl}/dashboard/bookings/${row.id}`
             : `${baseUrl}/e/${ev.slug}/me`,
           tickets,
-          bookingNo: row.booking_no ?? null,
+          bookingNoLabel: formatBookingNoRange(row.booking_no, quantity, row.id),
         }).catch((err) => console.error("[email]", err));
       }
 
@@ -375,7 +389,7 @@ export async function resendBookingConfirmation(
   const { data: booking } = await ctx.supabase
     .from("bookings")
     .select(
-      "id, booking_no, name, email, quantity, status, user_id, booking_tickets(ticket_number, qr_token), events!inner(title, event_date, venue, venue_address, slug)"
+      "id, booking_no, name, email, quantity, status, user_id, booking_tickets(ticket_number, qr_token, attendee_no), events!inner(title, event_date, venue, venue_address, slug)"
     )
     .eq("id", bookingId)
     .single();
@@ -389,7 +403,11 @@ export async function resendBookingConfirmation(
   const tickets = (booking.booking_tickets ?? [])
     .slice()
     .sort((a, b) => a.ticket_number - b.ticket_number)
-    .map((t) => ({ ticket_number: t.ticket_number, qr_token: t.qr_token }));
+    .map((t) => ({
+      ticket_number: t.ticket_number,
+      qr_token: t.qr_token,
+      attendee_no: t.attendee_no,
+    }));
 
   if (tickets.length === 0) return { error: "발급된 티켓이 없습니다." };
 
@@ -415,7 +433,11 @@ export async function resendBookingConfirmation(
         ? `${baseUrl}/dashboard/bookings/${booking.id}`
         : `${baseUrl}/e/${ev.slug}/me`,
       tickets,
-      bookingNo: booking.booking_no ?? null,
+      bookingNoLabel: formatBookingNoRange(
+        booking.booking_no,
+        booking.quantity ?? 1,
+        booking.id
+      ),
     }).catch((err) => console.error("[email]", err))
   );
 
@@ -544,7 +566,7 @@ export async function createOnsiteBooking(input: {
 
   const { data: created } = await admin
     .from("bookings")
-    .select("booking_no, booking_tickets(ticket_number, qr_token)")
+    .select("booking_no, booking_tickets(ticket_number, qr_token, attendee_no)")
     .eq("id", bookingId)
     .single();
 
@@ -552,7 +574,17 @@ export async function createOnsiteBooking(input: {
   const tickets = (created?.booking_tickets ?? [])
     .slice()
     .sort((a, b) => a.ticket_number - b.ticket_number)
-    .map((t) => ({ ticket_number: t.ticket_number, qr_token: t.qr_token }));
+    .map((t) => ({
+      ticket_number: t.ticket_number,
+      qr_token: t.qr_token,
+      attendee_no: t.attendee_no,
+    }));
+
+  const bookingNoLabel = formatBookingNoRange(
+    bookingNo,
+    values.quantity,
+    bookingId
+  );
 
   // 비회원이므로 확인 링크는 비회원 조회 페이지
   const confirmUrl = `${getBaseUrl()}/e/${event.slug}/me`;
@@ -570,7 +602,7 @@ export async function createOnsiteBooking(input: {
         eventVenue,
         confirmUrl,
         tickets,
-        bookingNo,
+        bookingNoLabel,
       }).catch((err) => console.error("[email]", err));
     }
     return sendBookingConfirmation({
@@ -584,7 +616,7 @@ export async function createOnsiteBooking(input: {
       bankInfo: event.bank_info,
       totalAmount: event.price * values.quantity,
       confirmUrl,
-      bookingNo,
+      bookingNoLabel,
     }).catch((err) => console.error("[email]", err));
   });
 

@@ -29,6 +29,8 @@ function escapeHtml(value: string): string {
 interface EmailTicket {
   ticket_number: number;
   qr_token: string;
+  /** 인원 번호 — 현장 호명·추첨 기준. 없으면 ticket_number로 표시 */
+  attendee_no?: number | null;
 }
 
 interface QrEmailParts {
@@ -55,9 +57,10 @@ async function buildQrParts(tickets: EmailTicket[]): Promise<QrEmailParts> {
       content: png.toString("base64"),
       contentId: cid,
     });
+    const label = ticket.attendee_no ?? ticket.ticket_number;
     blocks.push(`
     <div style="display:inline-block;margin:8px;padding:12px;border:1px solid #e5e5e5;border-radius:8px;text-align:center;">
-      ${tickets.length > 1 ? `<p style="margin:0 0 6px;font-size:12px;color:#666;">티켓 #${ticket.ticket_number}</p>` : ""}
+      <p style="margin:0 0 6px;font-size:12px;color:#2b8a8a;font-weight:600;">#${label}</p>
       <img src="cid:${cid}" width="180" height="180" alt="입장 QR${tickets.length > 1 ? ` #${ticket.ticket_number}` : ""}" style="display:block;" />
     </div>`);
   }
@@ -88,8 +91,8 @@ function infoTableHtml(params: {
   eventVenue: string;
   name: string;
   quantity: number;
-  /** 스테이지별 예매 순번 — 현장 추첨에서 본인 번호로 쓰이므로 메일에 남긴다 */
-  bookingNo?: number | null;
+  /** 인원 번호 표기 (`#2` 또는 `#2–3`) — 현장 추첨·호명 기준이라 메일에 남긴다 */
+  bookingNoLabel?: string | null;
 }): string {
   return `
     <table style="width:100%;border-collapse:collapse;font-size:14px;">
@@ -110,10 +113,10 @@ function infoTableHtml(params: {
         <td style="padding:8px 0;">${escapeHtml(params.name)} (${params.quantity}매)</td>
       </tr>
       ${
-        params.bookingNo != null
+        params.bookingNoLabel
           ? `<tr>
         <td style="padding:8px 0;color:#666;">예매번호</td>
-        <td style="padding:8px 0;font-weight:600;color:#2b8a8a;">#${params.bookingNo}</td>
+        <td style="padding:8px 0;font-weight:600;color:#2b8a8a;">${params.bookingNoLabel}</td>
       </tr>`
           : ""
       }
@@ -171,8 +174,8 @@ interface BookingConfirmationParams {
   confirmUrl: string;
   /** 전달 시 QR을 본문에 인라인 포함 (무료 스테이지 — 신청 즉시 확정) */
   tickets?: EmailTicket[];
-  /** 스테이지별 예매 순번 */
-  bookingNo?: number | null;
+  /** 인원 번호 표기 (`#2` 또는 `#2–3`) */
+  bookingNoLabel?: string | null;
 }
 
 /** 예매 접수(유료: 입금 안내) / 확정(무료: QR 포함) 메일 */
@@ -188,7 +191,7 @@ export async function sendBookingConfirmation({
   totalAmount,
   confirmUrl,
   tickets,
-  bookingNo,
+  bookingNoLabel,
 }: BookingConfirmationParams): Promise<void> {
   const qrParts =
     tickets && tickets.length > 0 ? await buildQrParts(tickets) : null;
@@ -198,7 +201,7 @@ export async function sendBookingConfirmation({
   <div style="padding:32px 24px;border:1px solid #e5e5e5;border-radius:12px;">
     <h1 style="font-size:20px;margin:0 0 24px;color:#2b8a8a;">예매가 ${isFree ? "확정" : "접수"}되었습니다</h1>
 
-    ${infoTableHtml({ eventTitle, eventDate, eventVenue, name, quantity, bookingNo })}
+    ${infoTableHtml({ eventTitle, eventDate, eventVenue, name, quantity, bookingNoLabel })}
 
     ${
       !isFree
@@ -384,8 +387,8 @@ interface BookingConfirmedParams {
   eventVenue: string;
   confirmUrl: string;
   tickets: EmailTicket[];
-  /** 스테이지별 예매 순번 */
-  bookingNo?: number | null;
+  /** 인원 번호 표기 (`#2` 또는 `#2–3`) */
+  bookingNoLabel?: string | null;
 }
 
 /** 입금 확인(pending → confirmed) 시 발송하는 확정 메일 — 입장 QR 포함 */
@@ -398,7 +401,7 @@ export async function sendBookingConfirmed({
   eventVenue,
   confirmUrl,
   tickets,
-  bookingNo,
+  bookingNoLabel,
 }: BookingConfirmedParams): Promise<void> {
   const qrParts = await buildQrParts(tickets);
 
@@ -407,7 +410,7 @@ export async function sendBookingConfirmed({
   <div style="padding:32px 24px;border:1px solid #e5e5e5;border-radius:12px;">
     <h1 style="font-size:20px;margin:0 0 24px;color:#2b8a8a;">입금이 확인되어 예매가 확정되었습니다</h1>
 
-    ${infoTableHtml({ eventTitle, eventDate, eventVenue, name, quantity, bookingNo })}
+    ${infoTableHtml({ eventTitle, eventDate, eventVenue, name, quantity, bookingNoLabel })}
 
     ${qrParts.html}
 

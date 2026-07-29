@@ -9,6 +9,7 @@ import { formatKST } from "@/lib/date";
 import { autoTransitionStatus } from "@/lib/auto-status";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { getAccountEmail } from "@/lib/account-email";
+import { formatBookingNoRange } from "@/lib/booking-code";
 import type { CustomField } from "@/lib/validations/event";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
@@ -481,7 +482,7 @@ export async function POST(req: Request) {
   if (event.price === 0) {
     const { data: tickets } = await admin
       .from("booking_tickets")
-      .select("ticket_number, qr_token")
+      .select("ticket_number, qr_token, attendee_no")
       .eq("booking_id", bookingId)
       .order("ticket_number", { ascending: true });
     emailTickets = tickets ?? undefined;
@@ -506,7 +507,7 @@ export async function POST(req: Request) {
       totalAmount: event.price * data.quantity,
       confirmUrl,
       tickets: emailTickets,
-      bookingNo,
+      bookingNoLabel: formatBookingNoRange(bookingNo, data.quantity, bookingId),
     }).catch((err) => console.error("[email]", err))
   );
 

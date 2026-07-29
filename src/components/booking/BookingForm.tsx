@@ -13,7 +13,7 @@ import {
 } from "@/lib/validations/booking";
 import { CustomFieldRenderer } from "./CustomFieldRenderer";
 import { formatDepositTime } from "@/lib/date";
-import { bookingCode } from "@/lib/booking-code";
+import { bookingCode, formatBookingNoRange } from "@/lib/booking-code";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -197,7 +197,10 @@ export function BookingForm({
 
       setDuplicateOpen(false);
       if (typeof json?.bookingNo === "number") {
-        setCreatedCode(`#${json.bookingNo}`);
+        // 인원 단위 번호 — 2매면 "#2–3"
+        setCreatedCode(
+          formatBookingNoRange(json.bookingNo, values.quantity, json.bookingId)
+        );
       } else if (typeof json?.bookingId === "string") {
         // 예매번호 마이그레이션 미적용 환경 폴백
         setCreatedCode(bookingCode(json.bookingId));

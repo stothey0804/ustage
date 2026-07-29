@@ -2,7 +2,7 @@ import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 
 import type { CustomField } from "@/lib/validations/event";
-import { formatBookingNo } from "@/lib/booking-code";
+import { formatBookingNoRange } from "@/lib/booking-code";
 
 export type CsvBooking = {
   id: string;
@@ -36,7 +36,7 @@ export function buildBookingsCsv(
   opts: { isFree: boolean; price: number }
 ): string {
   const headers = [
-    "예약번호",
+    "예매번호",
     "이름",
     "이메일",
     "매수",
@@ -55,7 +55,7 @@ export function buildBookingsCsv(
     const quantity = b.quantity ?? 1;
     const answers = (b.custom_answers ?? {}) as Record<string, unknown>;
     return [
-      formatBookingNo(b.booking_no, b.id),
+      formatBookingNoRange(b.booking_no, quantity, b.id),
       b.name,
       b.email ?? "",
       quantity,

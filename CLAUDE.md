@@ -119,7 +119,7 @@ bank_info       text             # "카카오뱅크 3333-123-456789 홍길동"
 contact         text             # 오픈카톡 URL 또는 전화번호
 custom_fields   jsonb            # [{id, label, type, required}]
 slug            text UNIQUE      # 참석자 접근용 URL 식별자
-booking_seq     integer          # 예매번호 발급 카운터 (트리거가 증분, 재사용 없음)
+booking_seq     integer          # 인원 번호 발급 카운터 (예매당 quantity만큼 증분, 재사용 없음)
 status          text             # 'draft' | 'open' | 'closed' | 'ended'
 capacity        integer nullable
 booking_start   timestamptz      # 예매 시작일시
@@ -132,7 +132,7 @@ created_at      timestamptz
 ```
 id              uuid PK
 event_id        uuid → events
-booking_no      integer          # 스테이지별 예매 순번 (트리거 자동 부여, (event_id, booking_no) UNIQUE)
+booking_no      integer          # 이 예매의 **첫 인원 번호** (트리거가 quantity만큼 범위 예약, (event_id, booking_no) UNIQUE)
 user_id         uuid nullable → auth.users  # 로그인 참석자 연결 (비회원은 NULL)
 name            text
 email           text             # 예매자 이메일 (확인 메일 발송, 비회원 조회 키, 중복 예매 방지)
@@ -154,7 +154,9 @@ created_at      timestamptz
 id              uuid PK
 event_id        uuid → events (cascade)
 booking_id      uuid nullable → bookings (on delete set null)
-booking_no      integer          # 삭제 대비 스냅샷
+ticket_id       uuid nullable → booking_tickets (on delete set null)
+attendee_no     integer          # 삭제 대비 스냅샷
+booking_no      integer nullable # 레거시(예매 단위 추첨 시절) — 쓰지 않음
 round           integer          # 이벤트 내 회차 (1부터)
 created_at      timestamptz
 ```
@@ -164,7 +166,8 @@ created_at      timestamptz
 ```
 id              uuid PK
 booking_id      uuid → bookings
-ticket_number   integer          # 1부터 quantity까지
+ticket_number   integer          # 예매 안에서 1부터 quantity까지
+attendee_no     integer          # 인원 번호 = booking_no + ticket_number - 1 (트리거 자동)
 qr_token        uuid UNIQUE default gen_random_uuid()
 checked_in      boolean
 checked_in_at   timestamptz nullable
@@ -372,32 +375,45 @@ ended  (행사 종료) → event_date 경과
 - QR은 CID 인라인 첨부 (Gmail이 data: URI 이미지를 차단하므로)
 - 발신자: `RESEND_FROM_EMAIL` 환경변수 (검증된 도메인 주소여야 함)
 
-### 예매번호 (bookings.booking_no)
+### 예매번호 = 인원(티켓) 번호
 
-- **스테이지별 예매 순번**이다. `events.booking_seq` 카운터를 `bookings_assign_no`
-  BEFORE INSERT 트리거가 증분해 붙인다 — 예매 생성 경로가 셋(공개 RPC / 비원자 폴백 /
-  현장 예매)이라 코드가 아니라 DB가 채운다. 삭제해도 번호를 **재사용하지 않는다**
-  (추첨 기록이 번호를 근거로 남기 때문). 취소된 예매도 번호를 유지한다.
-- 기존 데이터는 마이그레이션에서 `created_at` 오름차순으로 backfill했다.
-- 표시는 `lib/booking-code.ts`의 `formatBookingNo(no, id)` → `#7`.
-  마이그레이션 미적용 환경에서는 기존 uuid 파생 코드(`BK-XXXXXX`)로 폴백한다.
-  검색은 `matchesBookingNo`가 `#12`·`12`·구형 `BK-` 모두 매칭한다.
-- 노출: 명단 테이블·상세 패널, CSV, 예매 완료(입금 안내) 화면, 접수·확정 메일,
-  **내 티켓/예약 상세는 상태 배지 하단에 primary 컬러**로.
+- 번호는 **사람 1명(티켓 1장)당 하나**다. 1번째 예매자 1매 → `#1`,
+  2번째 예매자 2매 → `#2`, `#3`, 3번째 예매자 1매 → `#4`.
+- **범위 예약 방식**: `bookings_assign_no` 트리거가 `events.booking_seq`를 quantity만큼
+  증분해 예매에 연속 번호 범위를 예약하고 `bookings.booking_no`에 **첫 번호**를 넣는다.
+  각 티켓은 `booking_tickets_assign_attendee_no` 트리거가
+  `attendee_no = booking_no + ticket_number - 1`로 채운다.
+  → 번호가 행 순서가 아니라 계산으로 정해지므로 예매 생성 3경로
+  (`create_booking` / `create_onsite_booking` / API 비원자 폴백)가 **코드 수정 없이** 정확하다.
+- 스테이지별 유일성은 (a) `events` 행 잠금으로 범위가 겹치지 않고
+  (b) `(booking_id, ticket_number)` UNIQUE + 트리거의 범위 검증으로 범위 안이 겹치지 않아
+  `booking_tickets`에 `event_id`를 비정규화하지 않고 보장된다.
+- 삭제해도 번호를 재사용하지 않고, 취소된 예매도 번호를 유지한다.
+- 표시(`lib/booking-code.ts`):
+  - `formatBookingNoRange(no, quantity, id)` → `#2` / `#2–3` (예매 단위 화면)
+  - `formatBookingNo(no, id)` → `#2` (단일 번호), 둘 다 번호가 없으면 `BK-XXXXXX` 폴백
+  - `matchesBookingNoRange`는 범위 안 **어느 번호로도** 검색되게 한다.
+    숫자 질의는 번호만 대조한다(uuid 코드에 숫자가 섞여 오탐이 나므로).
+- 노출: 명단 목록·상세·CSV는 범위(`#2–3`), 티켓별 입장 목록·QR 티켓·QR 스캔 결과·
+  확정 메일 QR 라벨은 **인원 번호 하나**(`#3`). 내 티켓/예약 상세는 상태 배지 하단 primary.
 
 ### 현장 추첨 (`/dashboard/events/[id]` 추첨 탭)
 
-- 대상은 **입장 완료된 예매**뿐이다(티켓 1장 이상 `checked_in`, 취소 제외).
-  2매 중 1매만 입장했어도 후보에 포함한다 — 그 사람은 현장에 와 있다.
-- 추첨 단위는 **예매(booking) 1건**. 당첨자 식별값(예매번호·이름·이메일)이 예매 단위
-  속성이라, 티켓 단위로 뽑으면 같은 사람의 티켓 2장을 구분할 수 없다.
+- 대상은 **입장 완료된 티켓**이다(취소 예매 제외). 티켓 1장 = 사람 1명 = 응모 1건이라
+  2매 중 1매만 입장했으면 입장한 그 1장만 후보가 된다.
+- 추첨 단위는 **티켓(사람)**. 같은 예매의 티켓 두 장이 각각 당첨될 수 있고, 이름·이메일은
+  예매자 것뿐이라 화면에서는 **번호로 구분**한다(동반자 이름을 받지 않는다).
+- '이전 당첨자 제외'도 **티켓 단위** — 같은 예매의 아직 안 뽑힌 동반자는 후보로 남는다.
 - 여러 번 추첨하며 회차(`round`)가 쌓인다. **이전 당첨자 제외** 체크박스가 기본 on.
   기록은 `event_draws`에 저장해 새로고침·재접속에도 유지되고, 현장 분쟁의 근거가 된다.
-  `booking_no`를 스냅샷으로 남겨 예매가 삭제돼도 회차 기록은 보존된다.
+  `attendee_no`를 스냅샷으로 남겨 티켓·예매가 삭제돼도 회차 기록은 보존된다.
+  `(event_id, round, ticket_id)` 부분 UNIQUE로 같은 회차 중복 저장을 막는다.
 - 추첨은 서버에서 `node:crypto`의 `randomInt`로 수행한다(클라이언트 난수 금지).
   순수 로직은 `lib/lottery.ts`, 마스킹은 `lib/mask.ts` — 둘 다 vitest로 검증한다.
-- 결과 표기: 예매번호 + 이름 마스킹(`김*영`) + 이메일 앞 4자만(`seyo***@ustage.im`).
+- 결과 표기: 인원 번호 + 이름 마스킹(`김*영`) + 이메일 앞 4자만(`seyo***@ustage.im`).
   로컬파트가 4자 이하면 첫 글자만 남긴다(전체 노출 방지).
+- 추첨하면 **모달**이 열려 실제 후보 번호가 굴러가고(최소 1.6초), 당첨 번호를 크게 띄운다.
+  모달에서 '한 번 더 추첨'으로 회차를 이어갈 수 있다.
 
 ### 현장 예매 (`createOnsiteBooking`)
 

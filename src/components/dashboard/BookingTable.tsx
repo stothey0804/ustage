@@ -24,7 +24,10 @@ import {
   updateBookingStatus,
   updateBookingStatusBulk,
 } from "@/app/actions/booking";
-import { formatBookingNo, matchesBookingNo } from "@/lib/booking-code";
+import {
+  formatBookingNoRange,
+  matchesBookingNoRange,
+} from "@/lib/booking-code";
 import {
   buildBookingsCsv,
   bookingStatusLabel,
@@ -221,7 +224,7 @@ export function BookingTable({
         b.name.toLowerCase().includes(q) ||
         (b.email ?? "").toLowerCase().includes(q) ||
         b.depositor_name.toLowerCase().includes(q) ||
-        matchesBookingNo(b.booking_no, b.id, query)
+        matchesBookingNoRange(b.booking_no, b.quantity ?? 1, b.id, query)
       );
     });
 
@@ -622,7 +625,11 @@ export function BookingTable({
                       </div>
 
                       <span className="font-mono text-xs text-muted-foreground">
-                        {formatBookingNo(booking.booking_no, booking.id)}
+                        {formatBookingNoRange(
+                          booking.booking_no,
+                          quantity,
+                          booking.id
+                        )}
                       </span>
                       <span className="text-[13px]">{quantity}매</span>
                       <span className="text-[13px]">
@@ -1013,7 +1020,7 @@ function DetailPanel({
         <DetailRow
           label="예매번호"
           mono
-          value={formatBookingNo(booking.booking_no, booking.id)}
+          value={formatBookingNoRange(booking.booking_no, quantity, booking.id)}
         />
         <DetailRow label="매수" value={`${quantity}매`} />
         {!isFree && (
@@ -1069,11 +1076,9 @@ function DetailPanel({
                 className="flex items-center justify-between rounded-3xl border px-3 py-2 text-[13px]"
               >
                 <span className="flex items-center gap-2">
-                  {quantity > 1 && (
-                    <span className="text-muted-foreground">
-                      #{ticket.ticket_number}
-                    </span>
-                  )}
+                  <span className="font-mono text-primary">
+                    #{ticket.attendee_no ?? ticket.ticket_number}
+                  </span>
                   {ticket.checked_in ? (
                     <span className="flex items-center gap-1 text-primary">
                       <Check className="size-3.5" /> 입장완료

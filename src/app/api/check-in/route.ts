@@ -56,7 +56,7 @@ export async function POST(req: Request) {
   const admin = createAdminClient();
   const { data: ticket } = await admin
     .from("booking_tickets")
-    .select("id, ticket_number, checked_in, checked_in_at, booking_id")
+    .select("id, ticket_number, checked_in, checked_in_at, booking_id, attendee_no")
     .eq("qr_token", qr_token)
     .single();
 
@@ -81,10 +81,12 @@ export async function POST(req: Request) {
     );
   }
 
+  // 현장에서 부르는 번호(인원 번호)를 앞에 붙인다 — 추첨·호명 기준과 같은 번호
+  const attendeeNo = ticket.attendee_no ?? ticket.ticket_number;
   const ticketLabel =
     booking.quantity > 1
-      ? `${booking.name} (${ticket.ticket_number}/${booking.quantity})`
-      : booking.name;
+      ? `#${attendeeNo} ${booking.name} (${ticket.ticket_number}/${booking.quantity})`
+      : `#${attendeeNo} ${booking.name}`;
 
   // 취소된 예매
   if (booking.status === "cancelled") {

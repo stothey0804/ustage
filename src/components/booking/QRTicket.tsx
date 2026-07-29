@@ -6,6 +6,8 @@ interface Ticket {
   qr_token: string;
   ticket_number: number;
   checked_in: boolean;
+  /** 인원 번호 — 현장 호명·추첨 기준 */
+  attendee_no?: number | null;
 }
 
 interface QRTicketProps {
@@ -23,6 +25,9 @@ export function QRTicket({ name, tickets }: QRTicketProps) {
           key={ticket.qr_token}
           className="flex flex-col items-center gap-3 rounded-2xl border bg-white p-6 text-center"
         >
+          <p className="font-mono text-lg font-bold text-primary">
+            #{ticket.attendee_no ?? ticket.ticket_number}
+          </p>
           <p className="text-sm font-semibold text-gray-800">
             {name}
             {total > 1 && (

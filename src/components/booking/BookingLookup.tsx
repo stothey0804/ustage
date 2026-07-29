@@ -26,6 +26,7 @@ type LookupTicket = {
   qr_token: string;
   ticket_number: number;
   checked_in: boolean;
+  attendee_no: number | null;
 };
 
 type LookupResult = {

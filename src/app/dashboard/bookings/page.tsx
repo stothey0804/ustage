@@ -4,7 +4,7 @@ import { Ticket } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { formatKST } from "@/lib/date";
-import { formatBookingNo } from "@/lib/booking-code";
+import { formatBookingNoRange } from "@/lib/booking-code";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { BookingStatusBadge } from "@/components/StatusBadge";
@@ -100,7 +100,11 @@ export default async function BookingsPage() {
                 isFree={upcoming.events.price === 0}
               />
               <span className="font-mono text-[13px] font-medium text-primary">
-                {formatBookingNo(upcoming.booking_no, upcoming.id)}
+                {formatBookingNoRange(
+                  upcoming.booking_no,
+                  upcoming.quantity ?? 1,
+                  upcoming.id
+                )}
               </span>
             </div>
             <span className="text-xs text-muted-foreground">
@@ -185,7 +189,7 @@ function TicketSection({
                 isFree={row.events?.price === 0}
               />
               <span className="font-mono text-xs font-medium text-primary">
-                {formatBookingNo(row.booking_no, row.id)}
+                {formatBookingNoRange(row.booking_no, row.quantity ?? 1, row.id)}
               </span>
             </div>
           </Link>

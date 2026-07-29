@@ -12,7 +12,8 @@ import {
 } from "@/lib/lottery";
 
 export type DrawWinner = {
-  bookingNo: number;
+  /** 인원 번호 (booking_tickets.attendee_no) */
+  attendeeNo: number;
   maskedName: string;
   maskedEmail: string;
 };
@@ -52,7 +53,9 @@ export async function runDraw(
 
   const { data: bookings, error: bookingsError } = await supabase
     .from("bookings")
-    .select("id, booking_no, name, email, status, booking_tickets(checked_in)")
+    .select(
+      "id, booking_no, name, email, status, booking_tickets(id, ticket_number, attendee_no, checked_in)"
+    )
     .eq("event_id", eventId);
 
   if (bookingsError) {
@@ -62,7 +65,7 @@ export async function runDraw(
 
   const { data: draws, error: drawsError } = await supabase
     .from("event_draws")
-    .select("booking_id, round")
+    .select("ticket_id, round")
     .eq("event_id", eventId);
 
   if (drawsError) {
@@ -74,10 +77,11 @@ export async function runDraw(
   const nextRound =
     previousRounds.reduce((max, d) => Math.max(max, d.round), 0) + 1;
 
+  // 제외는 **티켓 단위** — 같은 예매의 아직 안 뽑힌 동반자는 후보로 남는다
   const excluded = opts.excludePrevious
     ? new Set(
         previousRounds
-          .map((d) => d.booking_id)
+          .map((d) => d.ticket_id)
           .filter((id): id is string => id !== null)
       )
     : new Set<string>();
@@ -91,7 +95,7 @@ export async function runDraw(
     return {
       error: opts.excludePrevious
         ? "남은 추첨 대상이 없습니다. 이전 당첨자를 포함하거나 기록을 초기화해 주세요."
-        : "추첨 대상이 없습니다. QR 스캔으로 입장 처리된 참석자만 추첨에 들어갑니다.",
+        : "추첨 대상이 없습니다. QR 스캔으로 입장 처리된 티켓(참석자)만 추첨에 들어갑니다.",
     };
   }
 
@@ -101,7 +105,8 @@ export async function runDraw(
     winners.map((w) => ({
       event_id: eventId,
       booking_id: w.bookingId,
-      booking_no: w.bookingNo,
+      ticket_id: w.ticketId,
+      attendee_no: w.attendeeNo,
       round: nextRound,
     }))
   );
@@ -117,7 +122,7 @@ export async function runDraw(
     round: nextRound,
     candidateCount: candidates.length,
     winners: winners.map((w) => ({
-      bookingNo: w.bookingNo,
+      attendeeNo: w.attendeeNo,
       maskedName: maskName(w.name),
       maskedEmail: maskEmail(w.email),
     })),

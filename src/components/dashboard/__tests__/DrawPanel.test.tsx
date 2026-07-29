@@ -57,7 +57,7 @@ describe("DrawPanel", () => {
       round: 2,
       candidateCount: 12,
       winners: [
-        { bookingNo: 7, maskedName: "김*영", maskedEmail: "seyo***@ustage.im" },
+        { attendeeNo: 7, maskedName: "김*영", maskedEmail: "seyo***@ustage.im" },
       ],
     });
 
@@ -93,8 +93,8 @@ describe("DrawPanel", () => {
       round: 1,
       candidateCount: 12,
       winners: [
-        { bookingNo: 3, maskedName: "박*현", maskedEmail: "doh***@a.com" },
-        { bookingNo: 9, maskedName: "이*민", maskedEmail: "sumi***@b.com" },
+        { attendeeNo: 3, maskedName: "박*현", maskedEmail: "doh***@a.com" },
+        { attendeeNo: 9, maskedName: "이*민", maskedEmail: "sumi***@b.com" },
       ],
     });
 
@@ -119,6 +119,31 @@ describe("DrawPanel", () => {
     });
   });
 
+  it("같은 예매의 티켓 2장이 당첨되면 번호로 구분해 두 장 다 보여준다", async () => {
+    runDrawMock.mockResolvedValue({
+      round: 3,
+      candidateCount: 6,
+      winners: [
+        { attendeeNo: 2, maskedName: "김*연", maskedEmail: "seoy***@a.com" },
+        { attendeeNo: 3, maskedName: "김*연", maskedEmail: "seoy***@a.com" },
+      ],
+    });
+
+    const u = user();
+    renderPanel();
+    await u.click(screen.getByRole("button", { name: /추첨하기/ }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      await within(dialog).findByText("3회차 당첨자 2명", undefined, {
+        timeout: 5000,
+      }),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText("#2")).toBeInTheDocument();
+    expect(within(dialog).getByText("#3")).toBeInTheDocument();
+    expect(within(dialog).getAllByText("김*연")).toHaveLength(2);
+  });
+
   it("체크박스를 해제하면 제외 없이 추첨을 요청한다", async () => {
     runDrawMock.mockResolvedValue({ round: 1, candidateCount: 3, winners: [] });
 
@@ -139,13 +164,13 @@ describe("DrawPanel", () => {
         {
           round: 2,
           winners: [
-            { bookingNo: 9, maskedName: "박*현", maskedEmail: "doh***@a.com" },
+            { attendeeNo: 9, maskedName: "박*현", maskedEmail: "doh***@a.com" },
           ],
         },
         {
           round: 1,
           winners: [
-            { bookingNo: 3, maskedName: "이*민", maskedEmail: "sumi***@b.com" },
+            { attendeeNo: 3, maskedName: "이*민", maskedEmail: "sumi***@b.com" },
           ],
         },
       ],

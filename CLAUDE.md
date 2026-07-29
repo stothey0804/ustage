@@ -442,6 +442,21 @@ ended  (행사 종료) → event_date 경과
 
 ---
 
+## 클로드 디자인(Design System) 동기화
+
+- 대상 프로젝트: **ustage Design System** (`ee7714ae-032d-448f-b6e4-e3d2ab1f93e5`).
+  `design_handoff_ustage_booking/*.dc.html`이 이 프로젝트의 토큰·번들 경로
+  (`_ds/ustage-design-system-ee7714ae…/`)를 참조하므로 **경로 구조를 바꾸지 않는다.**
+- 동기화 surface는 `.design-sync/entry.tsx` — `src/components/ui/*` + BrandMark ·
+  Wordmark · StatusBadge · RichTextView. `auth/ booking/ dashboard/`의 앱 기능
+  컴포넌트는 서버 액션·Supabase 클라이언트를 임포트해 브라우저 번들에 들어갈 수 없으므로
+  **의도적으로 제외**한다. 즉 화면 조립을 고쳐도 DS 쪽에 올릴 것은 없다.
+- 원격은 손으로 정리된 레이아웃(`components/{brand,core,display,forms,icons}/<Name>.jsx`)이고
+  로컬 `ds-bundle/`(`.ds-sync/package-build.mjs` 산출물)은 자동 레이아웃이다.
+  **통째로 덮어쓰지 말고** 실제로 바뀐 컴포넌트 파일만 증분 업로드한다.
+- 컬러·반경·타이포 토큰의 원본은 `src/app/globals.css`이며 원격 `tokens/colors.css`와
+  값이 일치한다(2026-07-29 확인). 토큰을 고치면 그때 원격 tokens만 갱신한다.
+
 ## 환경변수
 
 ```bash

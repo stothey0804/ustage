@@ -90,7 +90,7 @@ export default async function BookingDetailPage({
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
           <ChevronLeft className="size-4" />
-          내 예약
+          내 티켓
         </Link>
         <div className="mt-2 flex items-start justify-between gap-3">
           <h1 className="text-xl font-semibold leading-snug">

@@ -1,4 +1,5 @@
 import { Header } from "@/components/dashboard/Header";
+import { BottomTabBar } from "@/components/dashboard/BottomTabBar";
 import { EmailVerifyBanner } from "@/components/dashboard/EmailVerifyBanner";
 import { createClient } from "@/lib/supabase/server";
 import { getAccountEmail, isEmailPendingVerification } from "@/lib/account-email";
@@ -22,10 +23,12 @@ export default async function DashboardLayout({
       <Header userEmail={accountEmail ?? undefined} />
       {pendingEmail ? <EmailVerifyBanner email={pendingEmail} /> : null}
       {/* 명단 관리(데스크톱)가 넓은 폭을 쓰므로 컨테이너는 여기서 제한하지 않고
-          각 페이지가 자신의 max-width를 정한다. */}
-      <main className="mx-auto w-full max-w-[1520px] flex-1 px-4 py-8 md:px-10">
+          각 페이지가 자신의 max-width를 정한다.
+          모바일은 하단 탭바에 가리지 않도록 아래 여백을 준다. */}
+      <main className="mx-auto w-full max-w-[1520px] flex-1 px-4 pt-6 pb-28 sm:pt-8 sm:pb-8 md:px-10">
         {children}
       </main>
+      <BottomTabBar />
     </>
   );
 }

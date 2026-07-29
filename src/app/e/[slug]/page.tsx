@@ -271,7 +271,7 @@ export default async function EventPublicPage({
             href="/dashboard/bookings"
             className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
           >
-            내 예약 확인하기
+            내 티켓 확인하기
           </Link>
         ) : (
           <Link

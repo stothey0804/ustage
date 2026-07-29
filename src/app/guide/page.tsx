@@ -114,7 +114,7 @@ const ATTENDEE: { icon: IconType; title: string; items: string[] }[] = [
     icon: QrCode,
     title: "확인 & 입장",
     items: [
-      "로그인: ‘내 예약’에서 확인",
+      "로그인: ‘내 티켓’에서 확인",
       "비회원: 예매 페이지의 ‘예약 조회’ → 이메일+비밀번호",
       "확정되면 QR 코드 발급 → 현장에서 제시",
       "비회원은 이메일·비밀번호를 꼭 기억하세요",

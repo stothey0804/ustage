@@ -71,6 +71,42 @@ interface Props {
   role?: EventRole;
 }
 
+/**
+ * 상태 필터 칩의 색 — 글자와 테두리를 같은 색으로 두고 배경은 비운다.
+ * 선택되면 그 색으로 채우는 반전 형태. teal(primary)은 '확정'에만 써서
+ * 메인 컬러의 의미가 흐려지지 않게 한다.
+ */
+const FILTER_TONES: Record<FilterKey, { idle: string; active: string }> = {
+  all: {
+    idle: "border-foreground/20 text-foreground hover:bg-foreground/5",
+    active: "border-transparent bg-foreground text-background",
+  },
+  pending: {
+    idle: "border-amber-600/35 text-amber-700 hover:bg-amber-600/10 dark:border-amber-400/35 dark:text-amber-400 dark:hover:bg-amber-400/10",
+    active:
+      "border-transparent bg-amber-600 text-white dark:bg-amber-500 dark:text-amber-950",
+  },
+  confirmed: {
+    idle: "border-primary/35 text-primary hover:bg-primary/10",
+    active: "border-transparent bg-primary text-primary-foreground",
+  },
+  checked_in: {
+    idle: "border-sky-600/35 text-sky-700 hover:bg-sky-600/10 dark:border-sky-400/35 dark:text-sky-400 dark:hover:bg-sky-400/10",
+    active:
+      "border-transparent bg-sky-600 text-white dark:bg-sky-500 dark:text-sky-950",
+  },
+  // 미입장은 '아직 오지 않음' — 점선 테두리로 대기 상태를 보여준다
+  not_checked_in: {
+    idle: "border-dashed border-muted-foreground/40 text-muted-foreground hover:bg-muted-foreground/10",
+    active: "border-transparent bg-muted-foreground text-background",
+  },
+  cancelled: {
+    idle: "border-rose-600/35 text-rose-700 hover:bg-rose-600/10 dark:border-rose-400/35 dark:text-rose-400 dark:hover:bg-rose-400/10",
+    active:
+      "border-transparent bg-rose-600 text-white dark:bg-rose-500 dark:text-rose-950",
+  },
+};
+
 type FilterKey =
   | "all"
   | "pending"
@@ -371,8 +407,8 @@ export function BookingTable({
 
   return (
     <div className="space-y-6">
-      {/* 요약 지표 */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* 요약 지표 — 모바일 2×2, 넓은 화면 4열 */}
+      <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-4">
         <StatCard
           label="총 예매"
           value={`${stats.total}건`}
@@ -431,10 +467,10 @@ export function BookingTable({
                   resetSelection();
                 }}
                 className={cn(
-                  "h-8 rounded-full px-3.5 text-[13px] font-medium transition-colors",
+                  "h-8 rounded-full border px-3.5 text-[13px] font-medium transition-colors",
                   active
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-muted-foreground hover:text-foreground"
+                    ? FILTER_TONES[f.key].active
+                    : FILTER_TONES[f.key].idle
                 )}
               >
                 {f.label} {counts[f.key]}
@@ -899,18 +935,22 @@ function StatCard({
   progress?: number | null;
 }) {
   return (
-    <div className="flex flex-col gap-1.5 rounded-4xl bg-card px-6 py-5 shadow-md ring-1 ring-foreground/5">
+    <div className="flex flex-col gap-1 rounded-4xl bg-card px-4 py-3.5 shadow-md ring-1 ring-foreground/5">
       <span className="text-xs text-muted-foreground">{label}</span>
-      <span className={cn("text-2xl font-bold", valueClassName)}>{value}</span>
+      <span className={cn("text-lg font-bold sm:text-xl", valueClassName)}>
+        {value}
+      </span>
       {progress != null ? (
-        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-secondary">
+        <div className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-secondary">
           <div
             className="h-full rounded-full bg-primary transition-[width]"
             style={{ width: `${progress}%` }}
           />
         </div>
       ) : sub ? (
-        <span className="text-xs text-muted-foreground">{sub}</span>
+        <span className="text-[11px] leading-snug text-muted-foreground">
+          {sub}
+        </span>
       ) : null}
     </div>
   );

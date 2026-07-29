@@ -209,7 +209,7 @@ export default async function EventDetailPage({
 
       {/* 탭: 예매 명단(주 작업) / 스테이지 정보 */}
       <Tabs defaultValue={bookingCount > 0 ? "bookings" : "info"}>
-        <TabsList className="w-full max-w-2xl">
+        <TabsList className="w-full max-w-3xl">
           <TabsTrigger value="bookings" className="flex-1">
             예매 명단 ({bookingCount})
           </TabsTrigger>

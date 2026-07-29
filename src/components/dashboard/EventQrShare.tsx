@@ -107,7 +107,7 @@ export function EventQrShare({ slug, title }: Props) {
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="flex aspect-square w-full items-center justify-center rounded-2xl border bg-white p-4">
+            <div className="mx-auto flex aspect-square w-full max-w-64 items-center justify-center rounded-2xl border bg-white p-4">
               {dataUrl ? (
                 <Image
                   src={dataUrl}
@@ -115,7 +115,7 @@ export function EventQrShare({ slug, title }: Props) {
                   width={720}
                   height={720}
                   unoptimized
-                  className="h-auto w-full"
+                  className="h-auto w-full max-w-full"
                 />
               ) : (
                 <Loader2 className="size-6 animate-spin text-muted-foreground" />

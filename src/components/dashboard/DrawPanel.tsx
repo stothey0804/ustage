@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Shuffle, Trophy } from "lucide-react";
 import { toast } from "sonner";
@@ -27,20 +27,39 @@ interface Props {
   eventId: string;
   /** 입장 완료(티켓 1장 이상 체크인)된 예매 수 — 추첨 대상 */
   candidateCount: number;
+  /** 후보들의 예매번호 — 추첨 연출에서 굴릴 숫자로 쓴다 */
+  candidateNos: number[];
   /** 지난 회차 기록 (최신 회차 먼저) */
   pastRounds: PastDrawRound[];
 }
 
+/** 숫자가 굴러가는 연출 최소 시간 — 결과가 즉시 와도 이만큼은 보여준다 */
+const ROLL_MIN_MS = 1600;
+const ROLL_TICK_MS = 70;
+
 /**
  * 현장 추첨 — 입장 완료된 참석자만 대상으로 여러 번 뽑는다.
- * 결과는 서버에 회차별로 저장되므로 새로고침해도 이력과 '이전 당첨자 제외'가 유지된다.
+ * 추첨을 누르면 모달이 열려 번호가 굴러가고, 결과는 큰 번호로 보여준다
+ * (현장에서 화면을 함께 보는 상황을 전제한다).
+ * 기록은 서버에 회차별로 저장되므로 새로고침해도 이력과 '이전 당첨자 제외'가 유지된다.
  */
-export function DrawPanel({ eventId, candidateCount, pastRounds }: Props) {
+export function DrawPanel({
+  eventId,
+  candidateCount,
+  candidateNos,
+  pastRounds,
+}: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [count, setCount] = useState("1");
   const [excludePrevious, setExcludePrevious] = useState(true);
+
+  const [open, setOpen] = useState(false);
+  const [rolling, setRolling] = useState(false);
+  const [rollNo, setRollNo] = useState<number | null>(null);
   const [result, setResult] = useState<DrawResult | null>(null);
+  const rollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const [resetOpen, setResetOpen] = useState(false);
 
   const alreadyWon = pastRounds.reduce(
@@ -48,23 +67,59 @@ export function DrawPanel({ eventId, candidateCount, pastRounds }: Props) {
     0
   );
 
+  function stopRoll() {
+    if (rollTimer.current) {
+      clearInterval(rollTimer.current);
+      rollTimer.current = null;
+    }
+  }
+
   function draw() {
+    // 연출: 모달을 먼저 열고 후보 번호를 굴린다 (effect 없이 클릭 시점에 시작)
     setResult(null);
+    setRolling(true);
+    setOpen(true);
+    const pool = candidateNos.length > 0 ? candidateNos : [0];
+    setRollNo(pool[Math.floor(Math.random() * pool.length)]);
+    stopRoll();
+    rollTimer.current = setInterval(() => {
+      setRollNo(pool[Math.floor(Math.random() * pool.length)]);
+    }, ROLL_TICK_MS);
+
+    const startedAt = Date.now();
+
     startTransition(async () => {
       const res = await runDraw(eventId, {
         count: Number(count),
         excludePrevious,
       });
 
+      // 결과가 즉시 와도 최소 시간은 굴린다
+      const remaining = ROLL_MIN_MS - (Date.now() - startedAt);
+      if (remaining > 0) {
+        await new Promise((resolve) => setTimeout(resolve, remaining));
+      }
+      stopRoll();
+      setRolling(false);
+
       if ("error" in res) {
+        setOpen(false);
         toast.error(res.error);
         return;
       }
 
       setResult(res);
-      toast.success(`${res.round}회차 추첨 완료 — ${res.winners.length}명`);
       router.refresh();
     });
+  }
+
+  function closeModal(next: boolean) {
+    if (rolling) return;
+    setOpen(next);
+    if (!next) {
+      stopRoll();
+      setResult(null);
+    }
   }
 
   function reset() {
@@ -80,6 +135,9 @@ export function DrawPanel({ eventId, candidateCount, pastRounds }: Props) {
       router.refresh();
     });
   }
+
+  const winners = result?.winners ?? [];
+  const single = winners.length === 1;
 
   return (
     <div className="max-w-2xl space-y-5">
@@ -147,43 +205,6 @@ export function DrawPanel({ eventId, candidateCount, pastRounds }: Props) {
         )}
       </div>
 
-      {/* 이번 추첨 결과 */}
-      {result && (
-        <div className="space-y-3 rounded-4xl bg-primary/8 p-5">
-          <div className="flex items-center gap-2">
-            <Trophy className="size-4 text-primary" />
-            <p className="text-[15px] font-semibold">
-              {result.round}회차 당첨자 {result.winners.length}명
-            </p>
-            <span className="ml-auto text-xs text-muted-foreground">
-              후보 {result.candidateCount}명 중
-            </span>
-          </div>
-
-          <ul className="space-y-2">
-            {result.winners.map((winner) => (
-              <li
-                key={winner.bookingNo}
-                className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-3xl bg-card px-4 py-3 shadow-sm"
-              >
-                <span className="font-mono text-lg font-bold text-primary">
-                  #{winner.bookingNo}
-                </span>
-                <span className="text-sm font-medium">{winner.maskedName}</span>
-                <span className="font-mono text-xs text-muted-foreground">
-                  {winner.maskedEmail}
-                </span>
-              </li>
-            ))}
-          </ul>
-
-          <p className="text-xs text-muted-foreground">
-            본인 확인은 예매번호와 이메일 앞자리로 해주세요. 전체 이름·이메일은 명단
-            탭에서 확인할 수 있습니다.
-          </p>
-        </div>
-      )}
-
       {/* 지난 회차 */}
       {pastRounds.length > 0 && (
         <div className="space-y-3 rounded-4xl bg-card p-5 shadow-md ring-1 ring-foreground/5">
@@ -230,6 +251,100 @@ export function DrawPanel({ eventId, candidateCount, pastRounds }: Props) {
           </div>
         </div>
       )}
+
+      {/* 추첨 연출 + 결과 모달 */}
+      <Dialog open={open} onOpenChange={closeModal}>
+        <DialogContent
+          className="max-h-[90vh] overflow-y-auto sm:max-w-xl"
+          showCloseButton={!rolling}
+        >
+          <DialogHeader>
+            <DialogTitle className="text-center">
+              {rolling
+                ? "추첨 중"
+                : `${result?.round ?? ""}회차 당첨자 ${winners.length}명`}
+            </DialogTitle>
+          </DialogHeader>
+
+          {rolling ? (
+            <div className="flex flex-col items-center gap-4 py-10">
+              <p
+                className="font-mono text-6xl font-bold tabular-nums text-primary sm:text-7xl"
+                aria-live="off"
+              >
+                #{rollNo ?? "-"}
+              </p>
+              <p className="text-[13px] text-muted-foreground">
+                입장 완료 {candidateCount}명 중에서 뽑고 있어요…
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-5 py-2">
+              <div
+                className={
+                  single
+                    ? "flex flex-col items-center gap-3 py-6"
+                    : "grid gap-3 sm:grid-cols-2"
+                }
+                aria-live="polite"
+              >
+                {winners.map((winner) => (
+                  <div
+                    key={winner.bookingNo}
+                    className={
+                      single
+                        ? "flex flex-col items-center gap-2"
+                        : "flex flex-col items-center gap-1 rounded-4xl bg-primary/8 px-4 py-5"
+                    }
+                  >
+                    <span
+                      className={
+                        single
+                          ? "font-mono text-7xl font-bold tabular-nums text-primary sm:text-8xl"
+                          : "font-mono text-5xl font-bold tabular-nums text-primary"
+                      }
+                    >
+                      #{winner.bookingNo}
+                    </span>
+                    <span
+                      className={
+                        single ? "text-xl font-semibold" : "text-base font-semibold"
+                      }
+                    >
+                      {winner.maskedName}
+                    </span>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {winner.maskedEmail}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                <Trophy className="size-3.5 text-primary" />
+                후보 {result?.candidateCount ?? 0}명 중 · 본인 확인은 예매번호와
+                이메일 앞자리로
+              </div>
+            </div>
+          )}
+
+          {!rolling && (
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => closeModal(false)}
+                disabled={isPending}
+              >
+                닫기
+              </Button>
+              <Button onClick={draw} disabled={isPending} className="gap-1.5">
+                <Shuffle className="size-4" />
+                한 번 더 추첨
+              </Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={resetOpen} onOpenChange={setResetOpen}>
         <DialogContent className="sm:max-w-sm">

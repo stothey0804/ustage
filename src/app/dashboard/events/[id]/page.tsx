@@ -84,11 +84,15 @@ export default async function EventDetailPage({
     : undefined;
 
   // 추첨 대상 = 취소되지 않고 티켓 1장 이상 입장 완료된 예매 (lib/lottery와 같은 기준)
-  const drawCandidateCount = (bookings ?? []).filter(
+  const drawCandidates = (bookings ?? []).filter(
     (b) =>
       b.status !== "cancelled" &&
       (b.booking_tickets ?? []).some((t) => t.checked_in)
-  ).length;
+  );
+  const drawCandidateNos = drawCandidates
+    .map((b) => b.booking_no)
+    .filter((no): no is number => typeof no === "number")
+    .sort((a, b) => a - b);
 
   // 지난 추첨 기록 — 예매가 삭제돼도 booking_no 스냅샷으로 회차를 보여준다
   const { data: drawRows } = await supabase
@@ -289,7 +293,8 @@ export default async function EventDetailPage({
         <TabsContent value="draw" className="mt-4">
           <DrawPanel
             eventId={id}
-            candidateCount={drawCandidateCount}
+            candidateCount={drawCandidates.length}
+            candidateNos={drawCandidateNos}
             pastRounds={pastRounds}
           />
         </TabsContent>

@@ -14,9 +14,11 @@ const RESEND_COOLDOWN_SEC = 30;
 interface Props {
   /** 가입 확인 메일 링크에서 돌아올 내부 경로 */
   next?: string;
+  /** 카카오에서 받은 주소 등 미리 채워둘 이메일 */
+  defaultEmail?: string;
 }
 
-export function SignupForm({ next = "/dashboard" }: Props) {
+export function SignupForm({ next = "/dashboard", defaultEmail = "" }: Props) {
   const callbackUrl = (origin: string) =>
     `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
 
@@ -31,6 +33,7 @@ export function SignupForm({ next = "/dashboard" }: Props) {
     formState: { errors, isSubmitting },
   } = useForm<SignupValues>({
     resolver: zodResolver(signupSchema),
+    defaultValues: { email: defaultEmail },
   });
 
   function startCooldown() {

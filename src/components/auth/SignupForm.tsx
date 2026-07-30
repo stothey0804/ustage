@@ -11,7 +11,15 @@ import { Label } from "@/components/ui/label";
 
 const RESEND_COOLDOWN_SEC = 30;
 
-export function SignupForm() {
+interface Props {
+  /** 가입 확인 메일 링크에서 돌아올 내부 경로 */
+  next?: string;
+}
+
+export function SignupForm({ next = "/dashboard" }: Props) {
+  const callbackUrl = (origin: string) =>
+    `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
+
   const [serverError, setServerError] = useState<string | null>(null);
   const [sentEmail, setSentEmail] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -46,7 +54,7 @@ export function SignupForm() {
       password: values.password,
       options: {
         // 확인 메일 링크 클릭 시 앱의 콜백으로 복귀 → 세션 교환 후 대시보드 이동
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: callbackUrl(window.location.origin),
       },
     });
 
@@ -86,7 +94,7 @@ export function SignupForm() {
       type: "signup",
       email: sentEmail,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: callbackUrl(window.location.origin),
       },
     });
     if (error) {

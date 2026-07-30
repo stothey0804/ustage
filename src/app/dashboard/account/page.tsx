@@ -80,29 +80,33 @@ export default async function AccountPage({ searchParams }: Props) {
           </p>
         )}
         <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link
-              href={
-                accountEmail
-                  ? "/onboarding/email?mode=change&next=/dashboard/account"
-                  : "/onboarding/email?next=/dashboard/account"
-              }
-            >
-              {accountEmail ? "이메일 변경" : "이메일 등록"}
-            </Link>
-          </Button>
+          {/* 등록만 가능하다 — 가입에 쓴 주소는 바꿀 수 없다(정책) */}
+          {!accountEmail && (
+            <Button asChild variant="outline" size="sm">
+              <Link href="/onboarding/email?next=/dashboard/account">
+                이메일 등록
+              </Link>
+            </Button>
+          )}
           {!pending && accountEmail && (
             <Button asChild variant="ghost" size="sm">
               <Link href="/forgot-password">비밀번호 재설정</Link>
             </Button>
           )}
         </div>
+        {accountEmail && !pendingChange && (
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            가입에 사용한 주소는 변경할 수 없습니다. 예매 확인 메일·입장 QR·비밀번호
+            재설정이 모두 이 주소를 기준으로 발송돼요.
+          </p>
+        )}
         {pendingChange && (
           <div className="space-y-1.5 rounded-md border border-amber-300/60 bg-amber-50 p-3 dark:border-amber-700/50 dark:bg-amber-950/30">
             <p className="text-xs font-medium text-amber-900 dark:text-amber-200">
               {pendingChange}로 변경 대기 중
             </p>
             <p className="text-xs leading-relaxed text-amber-900/90 dark:text-amber-200/90">
+              이전에 요청한 변경이 남아 있어요.{" "}
               <span className="font-medium">{pendingChange}</span>로 보낸 인증 메일의
               링크를 눌러야 변경이 완료됩니다. 보안 설정에 따라{" "}
               {accountEmail ? (
@@ -119,8 +123,8 @@ export default async function AccountPage({ searchParams }: Props) {
         )}
         {pending && (
           <p className="text-xs text-muted-foreground leading-relaxed">
-            인증을 마치면 이메일+비밀번호 로그인과 비밀번호 재설정도 사용할 수
-            있어요. 인증 전에도 예매 메일은 이 주소로 발송됩니다.
+            인증을 마치면 이 주소로 비밀번호 재설정 메일도 받을 수 있어요. 인증
+            전에도 예매 메일은 이 주소로 발송됩니다.
           </p>
         )}
       </section>

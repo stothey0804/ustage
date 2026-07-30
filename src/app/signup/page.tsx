@@ -4,20 +4,30 @@ import { redirect } from "next/navigation";
 import { SignupForm } from "@/components/auth/SignupForm";
 import { KakaoLoginButton } from "@/components/auth/KakaoLoginButton";
 import { createClient } from "@/lib/supabase/server";
+import { safeInternalPath } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "회원가입",
   robots: { index: false, follow: true },
 };
 
-export default async function SignupPage() {
+interface Props {
+  searchParams: Promise<{ next?: string }>;
+}
+
+export default async function SignupPage({ searchParams }: Props) {
+  const { next } = await searchParams;
+  // 예매 링크에서 온 사람이 가입 후 원래 가려던 곳으로 돌아가게 한다
+  // (로그인 화면과 같은 동작 — 예전에는 회원가입에서만 next가 버려졌다)
+  const safeNext = safeInternalPath(next);
+
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (user) {
-    redirect("/dashboard");
+    redirect(safeNext);
   }
 
   return (
@@ -30,7 +40,7 @@ export default async function SignupPage() {
           </p>
         </header>
 
-        <KakaoLoginButton label="카카오로 시작하기" />
+        <KakaoLoginButton next={safeNext} label="카카오로 시작하기" />
 
         <div className="flex items-center gap-3">
           <span className="h-px flex-1 bg-border" />
@@ -38,11 +48,18 @@ export default async function SignupPage() {
           <span className="h-px flex-1 bg-border" />
         </div>
 
-        <SignupForm />
+        <SignupForm next={safeNext} />
 
         <p className="text-center text-sm text-muted-foreground">
           이미 계정이 있으신가요?{" "}
-          <Link href="/login" className="font-medium underline underline-offset-4">
+          <Link
+            href={
+              safeNext === "/dashboard"
+                ? "/login"
+                : `/login?next=${encodeURIComponent(safeNext)}`
+            }
+            className="font-medium underline underline-offset-4"
+          >
             로그인
           </Link>
         </p>

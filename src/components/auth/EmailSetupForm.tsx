@@ -17,10 +17,6 @@ interface Props {
   next: string;
   /** 이미 주소를 등록했고 인증 링크 클릭만 남은 경우의 주소 */
   pendingEmail: string | null;
-  /** change = 이미 계정 이메일이 있는 사용자가 주소를 바꾸는 경우 */
-  mode?: "setup" | "change";
-  /** 변경 모드에서 현재 쓰고 있는 주소 */
-  currentEmail?: string | null;
 }
 
 /**
@@ -30,13 +26,7 @@ interface Props {
  * 계정 이메일(auth.users.email)은 비어 있다. 그래서 같은 주소를
  * user_metadata.contact_email에도 복사해 인증 전에도 앱이 동작하게 한다.
  */
-export function EmailSetupForm({
-  next,
-  pendingEmail,
-  mode = "setup",
-  currentEmail = null,
-}: Props) {
-  const isChange = mode === "change";
+export function EmailSetupForm({ next, pendingEmail }: Props) {
   const router = useRouter();
   const [sentTo, setSentTo] = useState<string | null>(pendingEmail);
   const [editing, setEditing] = useState(!pendingEmail);
@@ -144,25 +134,8 @@ export function EmailSetupForm({
             으로 인증 메일을 보냈습니다.
           </p>
           <p className="text-xs text-muted-foreground">
-            {isChange ? (
-              <>
-                메일함(스팸함 포함)에서 링크를 눌러야 변경이 완료됩니다.
-                {currentEmail ? (
-                  <>
-                    {" "}
-                    보안 설정에 따라 <strong>기존 주소({currentEmail})로도</strong>{" "}
-                    확인 메일이 가는데, 그 경우 <strong>양쪽 링크를 모두</strong>{" "}
-                    눌러야 변경이 끝납니다 — 기존 주소 메일함도 확인해 주세요.
-                  </>
-                ) : null}{" "}
-                완료 전까지는 기존 주소로 메일이 발송돼요.
-              </>
-            ) : (
-              <>
-                메일함(스팸함 포함)에서 링크를 눌러 인증을 완료해 주세요. 인증
-                전에도 이 주소로 예매 메일이 발송됩니다.
-              </>
-            )}
+            메일함(스팸함 포함)에서 링크를 눌러 인증을 완료해 주세요. 인증 전에도
+            이 주소로 예매 메일이 발송됩니다.
           </p>
         </div>
 
@@ -210,12 +183,7 @@ export function EmailSetupForm({
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <Label htmlFor="email">{isChange ? "새 이메일" : "이메일"}</Label>
-        {isChange && currentEmail ? (
-          <p className="text-xs text-muted-foreground">
-            현재 주소: <span className="font-medium">{currentEmail}</span>
-          </p>
-        ) : null}
+        <Label htmlFor="email">이메일</Label>
         <Input
           id="email"
           type="email"
@@ -258,13 +226,7 @@ export function EmailSetupForm({
       ) : null}
 
       <Button type="submit" size="lg" disabled={isSubmitting}>
-        {isSubmitting
-          ? isChange
-            ? "변경 중…"
-            : "등록 중…"
-          : isChange
-            ? "인증 메일 보내기"
-            : "이메일 등록하고 계속하기"}
+        {isSubmitting ? "등록 중…" : "이메일 등록하고 계속하기"}
       </Button>
 
       {sentTo ? (

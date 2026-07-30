@@ -335,8 +335,14 @@ ended  (행사 종료) → event_date 경과
   - 계정을 남겨두면 그 이메일로 가입이 막혀(이미 사용 중) 가입 자체가 불가능해진다.
   - **스테이지·예매·스태프 데이터가 있는 계정은 삭제하지 않고 통과시킨다**(기존 사용자
     보호). 데이터 조회가 실패하면 "있다"로 간주한다.
-  - 가입 화면은 카카오 주소를 자동완성하고, 가입 후 계정 설정에서 카카오를 연결하라고
-    안내한다. 그러면 identity가 `[email, kakao]`가 되어 **연결 해제도 가능**해진다.
+  - 가입 화면은 카카오 주소를 **자동완성**한다.
+  - **인증이 끝나면 처음 시도했던 카카오를 자동으로 연결한다.** 가입 확인 메일의
+    `emailRedirectTo`가 `/onboarding/link-kakao?next=…`를 가리키고, 그 화면이
+    `linkIdentity({provider:'kakao'})`를 바로 시작한다(카카오 동의 화면을 한 번
+    거쳐야 하므로 서버에서 대신할 수 없다). 실패하면 수동 버튼과 '나중에 하기'를
+    제공하고, 이미 연결된 상태로 들어오면 목적지로 통과시킨다.
+    → 이 단계를 거치면 identity가 `[email, kakao]`가 되어 **연결 해제도 가능**해진다.
+    이 화면을 빼면 "가입은 됐는데 카카오 버튼으로는 못 들어오는" 상태로 끝난다.
   - 카카오가 이메일을 주지 않은 경우도 같은 경로로 보내되 자동완성은 비운다.
   - 같은 이메일로 이미 가입돼 있어 카카오 연결이 거절되면(gotrue 오류) "이메일로
     로그인한 뒤 계정 설정에서 연결하라"는 문구로 바꿔 보여준다.
@@ -450,6 +456,17 @@ ended  (행사 종료) → event_date 경과
   보관하고 Supabase 대시보드 Email Templates에 붙여 쓴다. 파일 첫 줄 주석에 대응 슬롯이 적혀 있다.
 - QR은 CID 인라인 첨부 (Gmail이 data: URI 이미지를 차단하므로)
 - 발신자: `RESEND_FROM_EMAIL` 환경변수 (검증된 도메인 주소여야 함)
+- **kakao.com(=Daum 인프라) 수신 실패 대응.** 지메일·네이버는 받는데 kakao.com만
+  안 오는 증상은 대개 인증 정렬(SPF/DKIM/DMARC)과 발신 도메인 평판 문제다.
+  2026-07-30 확인: `privateustage.com`에 **DMARC 레코드가 없고**, 루트 도메인 SPF도
+  없다(`send.privateustage.com`에만 `include:amazonses.com`, DKIM은 `resend._domainkey` 존재).
+  1) `_dmarc.privateustage.com` TXT에 `v=DMARC1; p=none; rua=mailto:…` 추가
+  2) 루트 도메인에 SPF(`v=spf1 include:amazonses.com ~all`) 추가 — From 도메인 정렬
+  3) **Supabase Auth 메일은 Resend가 아니라 Supabase 기본 SMTP로 나간다.**
+     가입 인증·비밀번호 재설정이 kakao.com에 안 닿으면 Auth → SMTP Settings에
+     Resend를 커스텀 SMTP로 연결해 우리 도메인·평판으로 보내야 한다.
+  4) Daum/카카오 발신 도메인 등록(화이트리스트) 신청 + Resend 로그에서 kakao.com
+     반송(bounce/blocked) 사유 확인.
 
 ### 예매번호 = 인원(티켓) 번호
 

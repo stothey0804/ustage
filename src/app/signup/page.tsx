@@ -78,7 +78,15 @@ export default async function SignupPage({ searchParams }: Props) {
           </>
         )}
 
-        <SignupForm next={safeNext} defaultEmail={prefillEmail} />
+        {/* 카카오에서 왔다면 인증 후 카카오 연결 단계를 거쳐 목적지로 보낸다 */}
+        <SignupForm
+          next={
+            fromKakao
+              ? `/onboarding/link-kakao?next=${encodeURIComponent(safeNext)}`
+              : safeNext
+          }
+          defaultEmail={prefillEmail}
+        />
 
         <p className="text-center text-sm text-muted-foreground">
           이미 계정이 있으신가요?{" "}

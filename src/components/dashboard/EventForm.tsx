@@ -27,6 +27,22 @@ const RichTextEditor = dynamic(
   { ssr: false, loading: () => <div className="h-48 rounded-md border bg-muted animate-pulse" /> }
 );
 
+/**
+ * RHF 에러 트리에서 첫 메시지를 찾는다. custom_fields처럼 중첩된 에러는
+ * 최상위에 message가 없어서 얕게 훑으면 "입력값을 확인해 주세요."로 뭉개진다.
+ */
+function firstErrorMessage(node: unknown): string | undefined {
+  if (!node || typeof node !== "object") return undefined;
+  const message = (node as { message?: unknown }).message;
+  if (typeof message === "string" && message) return message;
+  for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+    if (key === "ref") continue; // DOM 노드로 내려가지 않는다
+    const found = firstErrorMessage(value);
+    if (found) return found;
+  }
+  return undefined;
+}
+
 interface EventFormProps {
   mode: "create" | "edit";
   eventId?: string;
@@ -89,52 +105,63 @@ export function EventForm({
   const customFields = watch("custom_fields") ?? [];
 
   async function handlePosterChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
+    // await 이후에는 e.currentTarget이 비므로 미리 잡아둔다.
+    // 성공/실패 모두 value를 비워야 같은 파일을 다시 골랐을 때 change가 다시 발생한다.
+    const input = e.target;
+    const file = input.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
       toast.error("이미지 파일만 업로드할 수 있습니다.");
+      input.value = "";
       return;
     }
     // 원본 20MB 초과는 차단 (리사이징 전 안전망)
     if (file.size > 20 * 1024 * 1024) {
       toast.error("파일 크기는 20MB 이하여야 합니다.");
+      input.value = "";
       return;
     }
 
     setUploading(true);
-
-    let uploadBlob: Blob;
     try {
       // 최대 1200×1800px, JPEG 85% 품질로 리사이징
-      uploadBlob = await resizeImage(file);
-    } catch {
-      toast.error("이미지 처리에 실패했습니다.");
+      let uploadBlob: Blob;
+      try {
+        uploadBlob = await resizeImage(file);
+      } catch (err) {
+        console.error("[poster resize]", err);
+        toast.error("이미지 처리에 실패했습니다. 다른 이미지를 사용해 주세요.");
+        return;
+      }
+
+      const supabase = createClient();
+      const path = `${userId}/${Date.now()}.jpg`;
+
+      const { data, error } = await supabase.storage
+        .from("posters")
+        .upload(path, uploadBlob, { contentType: "image/jpeg", cacheControl: "3600", upsert: false });
+
+      if (error) {
+        console.error("[poster upload]", error);
+        toast.error("포스터 업로드에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+        return;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from("posters")
+        .getPublicUrl(data.path);
+
+      setValue("poster_url", urlData.publicUrl);
+      setPosterPreview(urlData.publicUrl);
+    } catch (err) {
+      // 네트워크 단절 등 위 분기에서 잡지 못한 예외 — 업로드 UI가 영구히 로딩에 머물지 않게 한다
+      console.error("[poster upload]", err);
+      toast.error("포스터 업로드에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
       setUploading(false);
-      return;
+      input.value = "";
     }
-
-    const supabase = createClient();
-    const path = `${userId}/${Date.now()}.jpg`;
-
-    const { data, error } = await supabase.storage
-      .from("posters")
-      .upload(path, uploadBlob, { contentType: "image/jpeg", cacheControl: "3600", upsert: false });
-
-    if (error) {
-      console.error("[poster upload]", error);
-      toast.error("포스터 업로드에 실패했습니다. Storage 버킷을 확인해 주세요.");
-      setUploading(false);
-      return;
-    }
-
-    const { data: urlData } = supabase.storage
-      .from("posters")
-      .getPublicUrl(data.path);
-
-    setValue("poster_url", urlData.publicUrl);
-    setPosterPreview(urlData.publicUrl);
-    setUploading(false);
   }
 
   function removePoster() {
@@ -145,34 +172,39 @@ export function EventForm({
 
   // 에러 표시가 없는 필드에서 validation이 걸려도 제출이 조용히 무시되지 않도록
   const onInvalid = (errs: FieldErrors<EventFormValues>) => {
-    const first = Object.values(errs).find(
-      (e): e is { message: string } =>
-        typeof (e as { message?: unknown })?.message === "string",
-    );
-    toast.error(first?.message ?? "입력값을 확인해 주세요.");
+    toast.error(firstErrorMessage(errs) ?? "입력값을 확인해 주세요.");
   };
 
   const onSubmit = (values: EventFormValues) => {
     startTransition(async () => {
-      const result =
-        mode === "create"
-          ? await createEvent(values)
-          : await updateEvent(eventId!, values);
+      try {
+        const result =
+          mode === "create"
+            ? await createEvent(values)
+            : await updateEvent(eventId!, values);
 
-      if (result.error) {
-        toast.error(result.error);
-        return;
-      }
+        if (result.error) {
+          toast.error(result.error);
+          return;
+        }
 
-      toast.success(
-        mode === "create" ? "스테이지가 생성되었습니다." : "스테이지가 수정되었습니다."
-      );
+        toast.success(
+          mode === "create" ? "스테이지가 생성되었습니다." : "스테이지가 수정되었습니다."
+        );
 
-      if (mode === "create") {
-        router.push(`/dashboard/events/${result.id}`);
-      } else {
-        router.push(`/dashboard/events/${eventId}`);
-        router.refresh();
+        if (mode === "create") {
+          router.push(`/dashboard/events/${result.id}`);
+        } else {
+          router.push(`/dashboard/events/${eventId}`);
+          router.refresh();
+        }
+      } catch (err) {
+        // 서버 액션 자체가 실패하는 경우(네트워크 단절, 배포 직후 액션 불일치 등).
+        // 잡지 않으면 예외가 에러 경계까지 올라가 입력한 내용이 전부 사라진다.
+        console.error("[EventForm submit]", err);
+        toast.error(
+          "저장에 실패했습니다. 입력한 내용은 그대로 있으니 잠시 후 다시 시도해 주세요."
+        );
       }
     });
   };
@@ -261,7 +293,10 @@ export function EventForm({
               id="price"
               type="number"
               min={0}
-              {...register("price", { valueAsNumber: true })}
+              {...register("price", {
+                // valueAsNumber는 빈 입력을 NaN으로 넘겨 영문 zod 메시지를 띄운다
+                setValueAs: (v: string) => (v === "" ? undefined : Number(v)),
+              })}
               placeholder="0"
             />
             {errors.price && (
@@ -279,8 +314,11 @@ export function EventForm({
               type="number"
               min={1}
               {...register("capacity", {
-                setValueAs: (v: string) =>
-                  v === "" ? undefined : parseInt(v, 10),
+                setValueAs: (v: string) => {
+                  if (v === "") return undefined; // 미입력 = 무제한
+                  const n = Number.parseInt(v, 10);
+                  return Number.isNaN(n) ? undefined : n;
+                },
               })}
               placeholder="예: 100"
             />

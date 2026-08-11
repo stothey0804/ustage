@@ -32,6 +32,57 @@ describe("eventSchema", () => {
     expect(eventSchema.safeParse({ ...VALID, capacity: 0 }).success).toBe(false);
   });
 
+  it("가격·좌석 상한을 넘기면 DB 오버플로 대신 폼 에러로 막는다", () => {
+    // integer 컬럼이므로 상한이 없으면 저장 시점에 정체불명 실패가 된다
+    expect(
+      eventSchema.safeParse({ ...VALID, price: 2_147_483_648 }).success,
+    ).toBe(false);
+    expect(eventSchema.safeParse({ ...VALID, price: 10_000_000 }).success).toBe(
+      true,
+    );
+    expect(eventSchema.safeParse({ ...VALID, price: 1000.5 }).success).toBe(
+      false,
+    );
+    expect(
+      eventSchema.safeParse({ ...VALID, capacity: 3_000_000_000 }).success,
+    ).toBe(false);
+  });
+
+  it("유료 스테이지는 입금 계좌가 필수다 (필드에 에러가 붙는다)", () => {
+    const r = eventSchema.safeParse({ ...VALID, price: 20000, bank_info: "" });
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0]?.path).toEqual(["bank_info"]);
+    expect(r.error?.issues[0]?.message).toBe(
+      "유료 스테이지는 입금 계좌를 입력해 주세요.",
+    );
+
+    // 공백만 넣은 것도 미입력으로 본다
+    expect(
+      eventSchema.safeParse({ ...VALID, price: 20000, bank_info: "   " })
+        .success,
+    ).toBe(false);
+
+    // 무료 스테이지는 계좌 없이 통과
+    expect(
+      eventSchema.safeParse({ ...VALID, price: 0, bank_info: "" }).success,
+    ).toBe(true);
+  });
+
+  it("숫자가 아닌 가격·좌석은 한국어 메시지를 낸다", () => {
+    // 빈 입력이 NaN/undefined로 들어오면 zod 기본 영문 메시지가 노출되던 자리
+    for (const bad of [NaN, undefined]) {
+      const r = eventSchema.safeParse({ ...VALID, price: bad });
+      expect(r.success).toBe(false);
+      expect(r.error?.issues[0]?.message).toBe(
+        "티켓 가격을 숫자로 입력해 주세요. (무료는 0)",
+      );
+    }
+
+    const c = eventSchema.safeParse({ ...VALID, capacity: NaN });
+    expect(c.success).toBe(false);
+    expect(c.error?.issues[0]?.message).toBe("좌석 한도를 숫자로 입력해 주세요.");
+  });
+
   it("종료 일시는 시작 일시보다 뒤여야 한다", () => {
     const r = eventSchema.safeParse({
       ...VALID,
@@ -140,5 +191,26 @@ describe("eventSchema", () => {
         custom_fields: [{ id: "f1", label: "x", type: "date", required: false }],
       }).success,
     ).toBe(false);
+  });
+
+  it("select 필드는 보기가 모두 채워져야 한다", () => {
+    const withOptions = (options: string[]) =>
+      eventSchema.safeParse({
+        ...VALID,
+        custom_fields: [
+          { id: "f1", label: "연령대", type: "select", required: true, options },
+        ],
+      });
+
+    expect(withOptions(["10대", "20대"]).success).toBe(true);
+    // 편집기가 빈 보기 한 칸으로 시작하므로 그대로 저장되는 것을 막는다
+    expect(withOptions([""]).success).toBe(false);
+    expect(withOptions(["10대", "  "]).success).toBe(false);
+    expect(withOptions([]).success).toBe(false);
+
+    const r = withOptions([""]);
+    expect(r.error?.issues[0]?.message).toBe(
+      "선택 필드의 보기를 모두 입력해 주세요.",
+    );
   });
 });

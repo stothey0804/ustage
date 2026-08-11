@@ -2,6 +2,7 @@
 
 import { useCallback, useRef } from "react";
 import { MapPin } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import "@/types/kakao.d.ts";
 
@@ -54,7 +55,9 @@ export function KakaoAddressSearch({ onSelect }: KakaoAddressSearchProps) {
         },
       }).open();
     } catch (err) {
+      // 스크립트 로드 실패 시 침묵하면 버튼이 고장난 것처럼 보인다 — 직접 입력을 안내한다
       console.error("[KakaoAddressSearch]", err);
+      toast.error("주소 검색을 열지 못했습니다. 장소를 직접 입력해 주세요.");
     } finally {
       loadingRef.current = false;
     }

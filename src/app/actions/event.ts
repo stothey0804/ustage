@@ -37,12 +37,8 @@ export async function createEvent(
     return { error: parsed.error.issues[0]?.message ?? "입력값을 확인해 주세요." };
   }
 
+  // 유료 스테이지의 계좌 필수 검사는 eventSchema가 담당한다(위 safeParse에서 걸린다).
   const v = parsed.data;
-
-  // 유료 스테이지는 계좌 필수
-  if (v.price > 0 && !v.bank_info) {
-    return { error: "계좌 정보를 입력해 주세요." };
-  }
 
   const eventDate = toKST(v.event_date)!;
   const eventEndDate = toKST(v.event_end_date);
@@ -111,10 +107,6 @@ export async function updateEvent(
   }
 
   const v = parsed.data;
-
-  if (v.price > 0 && !v.bank_info) {
-    return { error: "계좌 정보를 입력해 주세요." };
-  }
 
   const { data: current } = await supabase
     .from("events")

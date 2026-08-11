@@ -1,9 +1,8 @@
 "use client";
 
-import { useTransition, useState, useRef } from "react";
+import { useTransition, useState, useRef, useEffect } from "react";
 import { useForm, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -13,19 +12,17 @@ import { eventSchema, type EventFormValues } from "@/lib/validations/event";
 import { createEvent, updateEvent } from "@/app/actions/event";
 import { createClient } from "@/lib/supabase/client";
 import { resizeImage } from "@/lib/image";
+import { posterStoragePath } from "@/lib/poster";
+import { useUnsavedWarning } from "@/hooks/useUnsavedWarning";
 import { CustomFieldEditor } from "./CustomFieldEditor";
 import { KakaoAddressSearch } from "./KakaoAddressSearch";
+import { RichTextField } from "./RichTextField";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
-
-const RichTextEditor = dynamic(
-  () => import("./RichTextEditor").then((m) => m.RichTextEditor),
-  { ssr: false, loading: () => <div className="h-48 rounded-md border bg-muted animate-pulse" /> }
-);
 
 /**
  * RHF 에러 트리에서 첫 메시지를 찾는다. custom_fields처럼 중첩된 에러는
@@ -41,6 +38,15 @@ function firstErrorMessage(node: unknown): string | undefined {
     if (found) return found;
   }
   return undefined;
+}
+
+/** 포스터 파일 삭제 (best-effort — 실패하면 고아 파일만 남는다) */
+async function removeStoredPoster(path: string) {
+  try {
+    await createClient().storage.from("posters").remove([path]);
+  } catch (err) {
+    console.error("[poster cleanup]", err);
+  }
 }
 
 interface EventFormProps {
@@ -67,12 +73,19 @@ export function EventForm({
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  /** DB에 저장돼 있는 포스터 URL — 이 파일은 저장이 끝난 뒤 서버가 정리한다 */
+  const savedPosterUrl = useRef<string | null>(defaultValues?.poster_url || null);
+  /** 이번 화면에서 올렸지만 아직 저장되지 않은 파일 경로 — 저장 없이 떠나면 지운다 */
+  const pendingPathsRef = useRef<string[]>([]);
+  const submittedRef = useRef(false);
+
   const {
     register,
     handleSubmit,
     setValue,
+    getValues,
     watch,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<EventFormValues>({
     resolver: zodResolver(eventSchema),
     defaultValues: {
@@ -103,6 +116,20 @@ export function EventForm({
   const cancelPolicy = watch("cancel_policy");
   const watchPrice = watch("price") ?? 0;
   const customFields = watch("custom_fields") ?? [];
+
+  // 새로고침·탭 닫기로 작성 내용이 사라지는 것을 막는다(앱 내부 이동은 '취소' 버튼에서 확인).
+  useUnsavedWarning(isDirty && !isPending);
+
+  // 저장하지 않고 화면을 떠나면 이번에 올린 포스터는 아무도 참조하지 않는다 — 정리한다.
+  useEffect(() => {
+    const pending = pendingPathsRef;
+    const submitted = submittedRef;
+    return () => {
+      if (submitted.current) return; // 저장됐으면 서버가 관리한다
+      for (const path of pending.current) void removeStoredPoster(path);
+      pending.current = [];
+    };
+  }, []);
 
   async function handlePosterChange(e: React.ChangeEvent<HTMLInputElement>) {
     // await 이후에는 e.currentTarget이 비므로 미리 잡아둔다.
@@ -152,8 +179,23 @@ export function EventForm({
         .from("posters")
         .getPublicUrl(data.path);
 
-      setValue("poster_url", urlData.publicUrl);
+      // 방금 올린 파일로 교체하기 전 값이 '저장 전 업로드'였다면 참조가 사라지므로 지운다
+      const replaced = getValues("poster_url");
+      const replacedPath =
+        replaced && replaced !== savedPosterUrl.current
+          ? posterStoragePath(replaced)
+          : null;
+
+      pendingPathsRef.current.push(data.path);
+      setValue("poster_url", urlData.publicUrl, { shouldDirty: true });
       setPosterPreview(urlData.publicUrl);
+
+      if (replacedPath) {
+        pendingPathsRef.current = pendingPathsRef.current.filter(
+          (p) => p !== replacedPath
+        );
+        void removeStoredPoster(replacedPath);
+      }
     } catch (err) {
       // 네트워크 단절 등 위 분기에서 잡지 못한 예외 — 업로드 UI가 영구히 로딩에 머물지 않게 한다
       console.error("[poster upload]", err);
@@ -165,9 +207,22 @@ export function EventForm({
   }
 
   function removePoster() {
-    setValue("poster_url", "");
+    const current = getValues("poster_url");
+    setValue("poster_url", "", { shouldDirty: true });
     setPosterPreview(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+
+    // 저장 전에 올린 파일만 즉시 지운다. 이미 저장된 포스터는 저장이 끝난 뒤 서버가
+    // 지운다 — 여기서 지우면 수정을 취소했을 때 남아 있는 스테이지의 포스터가 사라진다.
+    if (current && current !== savedPosterUrl.current) {
+      const path = posterStoragePath(current);
+      if (path) {
+        pendingPathsRef.current = pendingPathsRef.current.filter(
+          (p) => p !== path
+        );
+        void removeStoredPoster(path);
+      }
+    }
   }
 
   // 에러 표시가 없는 필드에서 validation이 걸려도 제출이 조용히 무시되지 않도록
@@ -187,6 +242,9 @@ export function EventForm({
           toast.error(result.error);
           return;
         }
+
+        // 저장됐으므로 이번에 올린 파일은 스테이지가 참조한다 — 이탈 정리 대상에서 뺀다
+        submittedRef.current = true;
 
         toast.success(
           mode === "create" ? "스테이지가 생성되었습니다." : "스테이지가 수정되었습니다."
@@ -238,7 +296,7 @@ export function EventForm({
             <Label>스테이지 시작 *</Label>
             <DateTimePicker
               value={watch("event_date") || undefined}
-              onChange={(v) => setValue("event_date", v, { shouldValidate: true })}
+              onChange={(v) => setValue("event_date", v, { shouldValidate: true, shouldDirty: true })}
               placeholder="시작 날짜·시간"
             />
             {errors.event_date && (
@@ -250,7 +308,7 @@ export function EventForm({
             <Label>스테이지 종료</Label>
             <DateTimePicker
               value={watch("event_end_date") || undefined}
-              onChange={(v) => setValue("event_end_date", v, { shouldValidate: true })}
+              onChange={(v) => setValue("event_end_date", v, { shouldValidate: true, shouldDirty: true })}
               placeholder="종료 날짜·시간"
               clearable
             />
@@ -275,8 +333,8 @@ export function EventForm({
               />
               <KakaoAddressSearch
                 onSelect={(data) => {
-                  setValue("venue", data.venue, { shouldValidate: true });
-                  setValue("venue_address", data.venue_address);
+                  setValue("venue", data.venue, { shouldValidate: true, shouldDirty: true });
+                  setValue("venue_address", data.venue_address, { shouldDirty: true });
                 }}
               />
             </div>
@@ -339,9 +397,10 @@ export function EventForm({
 
         <div className="space-y-1.5">
           <Label>스테이지 안내</Label>
-          <RichTextEditor
+          <RichTextField
             value={description ?? ""}
-            onChange={(v) => setValue("description", v)}
+            placeholder="스테이지 소개, 프로그램, 준비물 등을 적어 주세요."
+            onChange={(v) => setValue("description", v, { shouldDirty: true })}
           />
         </div>
 
@@ -352,9 +411,10 @@ export function EventForm({
               (신청 폼 상단에 노출)
             </span>
           </Label>
-          <RichTextEditor
+          <RichTextField
             value={bookingNotice ?? ""}
-            onChange={(v) => setValue("booking_notice", v)}
+            placeholder="예매 전에 꼭 알아야 할 내용을 적어 주세요."
+            onChange={(v) => setValue("booking_notice", v, { shouldDirty: true })}
           />
         </div>
 
@@ -365,9 +425,10 @@ export function EventForm({
               (신청 시 안내 + 참석자가 취소할 때 다시 표시)
             </span>
           </Label>
-          <RichTextEditor
+          <RichTextField
             value={cancelPolicy ?? ""}
-            onChange={(v) => setValue("cancel_policy", v)}
+            placeholder="예: 공연 3일 전까지 전액 환불, 이후 환불 불가"
+            onChange={(v) => setValue("cancel_policy", v, { shouldDirty: true })}
           />
           <p className="text-xs text-muted-foreground">
             미입력 시 참석자 취소 화면에는 규정 없이 연락처 안내만 표시됩니다.
@@ -473,7 +534,7 @@ export function EventForm({
             <Label>예매 시작</Label>
             <DateTimePicker
               value={watch("booking_start") || undefined}
-              onChange={(v) => setValue("booking_start", v, { shouldValidate: true })}
+              onChange={(v) => setValue("booking_start", v, { shouldValidate: true, shouldDirty: true })}
               placeholder="시작 날짜·시간 선택"
               clearable
             />
@@ -488,7 +549,7 @@ export function EventForm({
             <Label>예매 종료</Label>
             <DateTimePicker
               value={watch("booking_end") || undefined}
-              onChange={(v) => setValue("booking_end", v, { shouldValidate: true })}
+              onChange={(v) => setValue("booking_end", v, { shouldValidate: true, shouldDirty: true })}
               placeholder="종료 날짜·시간 선택"
               clearable
             />
@@ -528,7 +589,7 @@ export function EventForm({
         </p>
         <CustomFieldEditor
           value={customFields}
-          onChange={(fields) => setValue("custom_fields", fields)}
+          onChange={(fields) => setValue("custom_fields", fields, { shouldDirty: true })}
         />
       </section>
 
@@ -536,7 +597,18 @@ export function EventForm({
         <Button
           type="button"
           variant="outline"
-          onClick={() => router.back()}
+          onClick={() => {
+            // 앱 내부 이동은 beforeunload가 잡지 못하므로 여기서 직접 확인한다
+            if (
+              isDirty &&
+              !window.confirm(
+                "작성 중인 내용이 저장되지 않습니다. 이 화면을 나가시겠어요?"
+              )
+            ) {
+              return;
+            }
+            router.back();
+          }}
           disabled={isPending}
         >
           취소

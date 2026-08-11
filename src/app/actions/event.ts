@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { computeInitialStatus } from "@/lib/auto-status";
+import { posterStoragePath } from "@/lib/poster";
 import { eventSchema, type EventFormValues } from "@/lib/validations/event";
 
 type ActionResult = { error?: string; success?: boolean; id?: string };
@@ -110,7 +111,7 @@ export async function updateEvent(
 
   const { data: current } = await supabase
     .from("events")
-    .select("id, price")
+    .select("id, price, poster_url")
     .eq("id", id)
     .eq("performer_id", user.id)
     .single();
@@ -174,9 +175,30 @@ export async function updateEvent(
     return { error: "스테이지 수정에 실패했습니다." };
   }
 
+  // 포스터를 바꾸거나 지웠으면 예전 파일은 아무도 참조하지 않는다 — 저장이 끝난 뒤 정리한다.
+  // (클라이언트에서 미리 지우면 수정을 취소했을 때 살아 있는 스테이지의 포스터가 사라진다)
+  if (current.poster_url && current.poster_url !== (v.poster_url || null)) {
+    await removePosterFile(supabase, current.poster_url);
+  }
+
   revalidatePath("/dashboard/events");
   revalidatePath(`/dashboard/events/${id}`);
   return { success: true, id };
+}
+
+/** 포스터 파일 삭제 (실패해도 무시 — 고아 파일만 남는다) */
+async function removePosterFile(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  posterUrl: string
+) {
+  const path = posterStoragePath(posterUrl);
+  if (!path) return;
+  try {
+    const { error } = await supabase.storage.from("posters").remove([path]);
+    if (error) console.error("[poster cleanup]", error);
+  } catch (err) {
+    console.error("[poster cleanup]", err);
+  }
 }
 
 export async function deleteEvent(id: string): Promise<ActionResult> {
@@ -222,18 +244,7 @@ export async function deleteEvent(id: string): Promise<ActionResult> {
 
   // 포스터 파일 정리 (실패해도 무시 — 고아 파일만 남음)
   if (event.poster_url) {
-    const marker = "/object/public/posters/";
-    const idx = event.poster_url.indexOf(marker);
-    if (idx !== -1) {
-      try {
-        const path = decodeURIComponent(
-          event.poster_url.slice(idx + marker.length)
-        );
-        await supabase.storage.from("posters").remove([path]);
-      } catch (err) {
-        console.error("[deleteEvent] poster cleanup", err);
-      }
-    }
+    await removePosterFile(supabase, event.poster_url);
   }
 
   revalidatePath("/dashboard/events");

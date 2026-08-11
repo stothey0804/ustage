@@ -468,6 +468,20 @@ ended  (행사 종료) → event_date 경과
   이미 cancelled였던 예약은 재발송하지 않는다.
 - Supabase Auth 메일(가입 인증·비밀번호 재설정·이메일 변경 확인) 템플릿은 `supabase/templates/`에
   보관하고 Supabase 대시보드 Email Templates에 붙여 쓴다. 파일 첫 줄 주석에 대응 슬롯이 적혀 있다.
+- **메일 링크는 `{{ .ConfirmationURL }}`을 쓰지 않는다.** 그 링크는 PKCE `?code=`로 돌아오고,
+  교환에는 링크를 요청한 브라우저에 저장된 code verifier 쿠키가 필요하다. 그래서 PC에서
+  가입하고 **네이버·카카오 메일 앱의 인앱 브라우저**로 링크를 열면 쿠키가 없어 "만료"로
+  실패한다(2026-08-11 실제 신고). 템플릿은
+  `{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=<signup|recovery|email_change>`
+  형태로 보내고, `/auth/callback`이 `verifyOtp`로 서버에서 검증한다 — 어느 기기·브라우저에서
+  열어도 된다. `{{ .RedirectTo }}`는 앱이 넘긴 `emailRedirectTo`라 개발·운영 도메인이 그대로
+  반영된다. 뒤에 `&`로 붙이므로 **모든 호출부의 `emailRedirectTo`는 쿼리스트링(`?next=…`)을
+  포함해야 한다** — LoginForm/SignupForm 테스트가 이 불변식을 지킨다.
+  목적지 판정은 `lib/auth-link.ts`의 `resolveSafeNext`(순수 함수, vitest로 검증)가 한다.
+  → 템플릿 파일을 고쳤으면 **Supabase 대시보드 Email Templates에 다시 붙여야** 적용된다.
+  실패 문구는 `describeAuthLinkError`가 한국어로 바꿔 `/`(로그인)의 `?error=`로 보여준다.
+  남은 한계: 메일 보안 스캐너가 링크를 먼저 열면 토큰이 소비돼 사람이 누를 때 만료로 보인다
+  (해결하려면 클릭이 필요한 중간 확인 페이지가 필요 — 아직 도입 안 함).
 - QR은 CID 인라인 첨부 (Gmail이 data: URI 이미지를 차단하므로)
 - 발신자: `RESEND_FROM_EMAIL` 환경변수 (검증된 도메인 주소여야 함)
 - **kakao.com(=Daum 인프라) 수신 실패 대응.** 지메일·네이버는 받는데 kakao.com만

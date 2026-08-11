@@ -72,7 +72,8 @@ export function LoginForm({ next = "/dashboard" }: Props) {
       type: "signup",
       email: unconfirmedEmail,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        // 메일 템플릿이 이 주소 뒤에 &token_hash=…를 붙이므로 쿼리스트링이 반드시 있어야 한다
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
       },
     });
     if (error) {

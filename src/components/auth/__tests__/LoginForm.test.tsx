@@ -77,7 +77,8 @@ describe("LoginForm", () => {
         type: "signup",
         email: "user@example.com",
         options: expect.objectContaining({
-          emailRedirectTo: expect.stringContaining("/auth/callback"),
+          // 메일 템플릿이 뒤에 &token_hash=…를 붙이므로 쿼리스트링까지 있어야 한다
+          emailRedirectTo: expect.stringContaining("/auth/callback?next="),
         }),
       }),
     );

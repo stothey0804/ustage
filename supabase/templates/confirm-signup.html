@@ -1,5 +1,14 @@
 <!-- Supabase Auth > Email Templates > Confirm signup -->
 <!-- 제목 권장: [어스테이지] 이메일 인증을 완료해 주세요 -->
+<!--
+  링크는 {{ .ConfirmationURL }}(PKCE ?code=)이 아니라 token_hash를 쓴다.
+  ConfirmationURL로 돌아온 code는 링크를 요청한 브라우저에 저장된 code verifier
+  쿠키가 있어야 교환되므로, 메일을 다른 기기나 네이버·카카오 인앱 브라우저에서
+  열면 "만료"로 실패한다. token_hash는 서버(/auth/callback)에서 verifyOtp로
+  검증하므로 어느 브라우저에서 열어도 된다. 되돌리지 말 것.
+  {{ .RedirectTo }}는 앱이 넘긴 emailRedirectTo(개발/운영 도메인이 그대로 반영된다)이며,
+  뒤에 &로 붙이므로 **항상 쿼리스트링(?next=…)을 포함해야 한다** — 호출부에서 이를 지킨다.
+-->
 <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">어스테이지 가입을 완료하려면 이메일 인증이 필요합니다.</div>
 <div style="max-width:480px;margin:0 auto;padding:24px 12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#1a1a1a;">
   <p style="margin:0 0 16px;text-align:center;font-size:15px;font-weight:700;letter-spacing:-0.02em;color:#2b8a8a;">us.tage</p>
@@ -12,7 +21,7 @@
       아래 버튼을 누르면 <strong>{{ .Email }}</strong> 주소가 인증되고 가입이 완료됩니다.
     </p>
 
-    <a href="{{ .ConfirmationURL }}" style="display:block;margin:24px 0 0;padding:14px;background:#2b8a8a;color:#ffffff;text-align:center;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">
+    <a href="{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=signup" style="display:block;margin:24px 0 0;padding:14px;background:#2b8a8a;color:#ffffff;text-align:center;text-decoration:none;border-radius:8px;font-size:14px;font-weight:600;">
       이메일 인증하고 가입 완료하기
     </a>
 
@@ -20,7 +29,7 @@
       버튼이 눌리지 않으면 아래 링크를 복사해 브라우저 주소창에 붙여넣어 주세요.
     </p>
     <p style="margin:4px 0 0;font-size:12px;line-height:1.6;word-break:break-all;">
-      <a href="{{ .ConfirmationURL }}" style="color:#2b8a8a;">{{ .ConfirmationURL }}</a>
+      <a href="{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=signup" style="color:#2b8a8a;">{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=signup</a>
     </p>
 
     <hr style="margin:24px 0;border:none;border-top:1px solid #eeeeee;" />

@@ -9,6 +9,7 @@ import { sanitizeEventHtml } from "@/lib/sanitize";
 import { getAccountEmail } from "@/lib/account-email";
 import { sendBookingCancelled, sendOwnerCancelNotice, getBaseUrl } from "@/lib/email";
 import { formatKST } from "@/lib/date";
+import { selfCancelBlockReason } from "@/lib/booking-cancel";
 
 const cancelSchema = z.object({
   booking_id: z.string().uuid(),
@@ -111,41 +112,26 @@ export async function POST(req: Request) {
     return NextResponse.json(FORBIDDEN, { status: 403 });
   }
 
-  if (booking.status === "cancelled") {
-    return NextResponse.json(
-      { error: "이미 취소된 예약입니다." },
-      { status: 409 }
-    );
-  }
-
+  // 취소 가능 여부는 화면과 같은 함수로 판정한다 (lib/booking-cancel.ts)
   const tickets = (booking.booking_tickets ?? []) as { checked_in: boolean }[];
-  if (tickets.some((t) => t.checked_in)) {
-    return NextResponse.json(
-      {
-        error:
-          "이미 입장 처리된 예약은 직접 취소할 수 없습니다. 주최자에게 문의해 주세요.",
-      },
-      { status: 409 }
-    );
+  const blockReason = selfCancelBlockReason({
+    status: booking.status,
+    price: event.price ?? 0,
+    checkedIn: tickets.some((t) => t.checked_in),
+    eventEnd: new Date(event.event_end_date ?? event.event_date),
+  });
+
+  if (blockReason) {
+    return NextResponse.json({ error: blockReason }, { status: 409 });
   }
 
-  const eventEnd = new Date(event.event_end_date ?? event.event_date);
-  if (!isNaN(eventEnd.getTime()) && eventEnd < new Date()) {
-    return NextResponse.json(
-      {
-        error:
-          "이미 종료된 스테이지의 예약은 직접 취소할 수 없습니다. 주최자에게 문의해 주세요.",
-      },
-      { status: 409 }
-    );
-  }
-
-  // 동시 요청으로 두 번 취소되는 것을 막기 위해 미취소 상태만 조건부 갱신
+  // 검사한 상태가 그대로일 때만 갱신한다 — 중복 취소는 물론, 검사와 갱신 사이에
+  // 주최자가 입금확인(pending→confirmed)을 마친 경우도 여기서 걸러진다.
   const { data: updated, error: updateError } = await admin
     .from("bookings")
     .update({ status: "cancelled" })
     .eq("id", booking_id)
-    .neq("status", "cancelled")
+    .eq("status", booking.status)
     .select("id");
 
   if (updateError) {
@@ -158,7 +144,10 @@ export async function POST(req: Request) {
 
   if (!updated || updated.length === 0) {
     return NextResponse.json(
-      { error: "이미 취소된 예약입니다." },
+      {
+        error:
+          "예약 상태가 방금 변경되어 취소하지 못했습니다. 화면을 새로고침해 확인해 주세요.",
+      },
       { status: 409 }
     );
   }
@@ -205,6 +194,7 @@ export async function POST(req: Request) {
       eventDate,
       manageUrl: `${baseUrl}/dashboard/events/${event.id}`,
       wasConfirmed,
+      isFree: (event.price ?? 0) === 0,
     }).catch((err) => console.error("[email]", err));
   });
 

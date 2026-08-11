@@ -289,9 +289,16 @@ ended  (행사 종료) → event_date 경과
   API 응답 단계에서 정화한다(`/api/bookings/lookup`의 `cancel_policy_html`).
 - 참석자 셀프 취소: `POST /api/bookings/cancel` (service_role)
   - 본인 확인 — 회원은 세션 `user_id` 일치, 비회원은 이메일 + 비밀번호 bcrypt 대조
-  - 차단 조건 — 이미 취소됨 / 티켓 1장이라도 `checked_in` / 스테이지 종료(`event_end_date ?? event_date` 경과)
-    → 이 경우는 주최자 문의로 안내
-  - `status != 'cancelled'` 조건부 갱신으로 동시 요청 중복 취소 방지
+  - **차단 조건은 `lib/booking-cancel.ts`의 `selfCancelBlockReason` 한 곳에서만 정한다**
+    (API·비회원 조회 화면·회원 예약 상세가 같은 함수를 쓴다. 순수 함수, vitest로 검증):
+    - **입금이 확인된 유료 예약(`confirmed` + `price > 0`)** — 환불은 주최자가 계좌로
+      직접 처리해야 하는데 참석자가 스스로 취소하면 명단에서 사라져 환불 대상을 놓친다.
+      **취소는 주최자(스태프 포함)만 할 수 있다.**
+      무료 스테이지는 제출 즉시 `confirmed`이고 환불할 것이 없으므로 셀프 취소를 허용한다.
+    - 이미 취소됨 / 티켓 1장이라도 `checked_in` / 스테이지 종료(`event_end_date ?? event_date` 경과)
+    - 막힌 경우 버튼만 감추지 않고 이유와 주최자 연락처를 화면에 안내한다
+  - `status = <검사한 상태>` 조건부 갱신 — 중복 취소뿐 아니라 검사와 갱신 사이에
+    주최자가 입금확인을 마친 경우도 걸러낸다
   - rate limit: IP 분당 10회 + 예약당 15분 5회
   - 취소 후 참석자에게 취소 완료 메일, 주최자에게 취소 알림 메일 발송
   - 좌석은 별도 처리 없이 반환됨 (잔여석 계산이 `status != 'cancelled'` 합산이므로)

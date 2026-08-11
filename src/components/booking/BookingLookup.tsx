@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { QRTicket } from "@/components/booking/QRTicket";
 import { AdditionalPurchase } from "@/components/booking/AdditionalPurchase";
 import { CancelBooking } from "@/components/booking/CancelBooking";
+import { selfCancelBlockReason } from "@/lib/booking-cancel";
 import { RichTextView } from "@/components/RichTextView";
 import { CopyButton } from "@/components/ui/copy-button";
 
@@ -52,14 +53,14 @@ type LookupResult = {
   };
 };
 
-/** 참석자가 직접 취소할 수 있는 예약인지 — 서버(API)에서도 동일하게 검증한다. */
-function canSelfCancel(result: LookupResult): boolean {
-  if (result.status !== "pending" && result.status !== "confirmed") return false;
-  if (result.tickets.some((t) => t.checked_in)) return false;
-  const end = new Date(
-    result.events.event_end_date ?? result.events.event_date
-  );
-  return isNaN(end.getTime()) || end >= new Date();
+/** 직접 취소를 막는 이유 — 서버(API)와 같은 함수로 판정한다. 가능하면 null. */
+function cancelBlockReason(result: LookupResult): string | null {
+  return selfCancelBlockReason({
+    status: result.status,
+    price: result.events.price,
+    checkedIn: result.tickets.some((t) => t.checked_in),
+    eventEnd: new Date(result.events.event_end_date ?? result.events.event_date),
+  });
 }
 
 function getStatusLabel(status: string, isFree: boolean) {
@@ -246,6 +247,7 @@ function BookingResultCard({
 }) {
   const status = result.status;
   const policyHtml = result.events.cancel_policy_html ?? undefined;
+  const blockReason = cancelBlockReason(result);
 
   return (
     <div className="rounded-lg border p-4 space-y-4">
@@ -345,8 +347,8 @@ function BookingResultCard({
         </details>
       )}
 
-      {/* 본인 취소 */}
-      {canSelfCancel(result) && (
+      {/* 본인 취소 — 막힌 경우에는 버튼만 감추지 않고 이유와 다음 행동을 알려준다 */}
+      {blockReason === null ? (
         <div className="flex justify-end">
           <CancelBooking
             bookingId={result.id}
@@ -356,6 +358,13 @@ function BookingResultCard({
             onCancelled={onCancelled}
           />
         </div>
+      ) : (
+        status !== "cancelled" && (
+          <p className="rounded-md border bg-muted/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+            {blockReason}
+            {result.events.contact ? ` (연락처: ${result.events.contact})` : ""}
+          </p>
+        )
       )}
     </div>
   );

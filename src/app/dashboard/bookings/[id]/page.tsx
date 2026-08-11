@@ -17,6 +17,7 @@ import { VenueMapLinks } from "@/components/booking/VenueMapLinks";
 import { CopyButton } from "@/components/ui/copy-button";
 import { BookingStatusBadge } from "@/components/StatusBadge";
 import { formatBookingNoRange } from "@/lib/booking-code";
+import { selfCancelBlockReason } from "@/lib/booking-cancel";
 
 export default async function BookingDetailPage({
   params,
@@ -72,15 +73,13 @@ export default async function BookingDetailPage({
     ? sanitizeEventHtml(event.cancel_policy)
     : undefined;
 
-  // 참석자 직접 취소 가능 여부 — 서버(API)에서도 동일하게 검증한다.
-  const eventEnd = event
-    ? new Date(event.event_end_date ?? event.event_date)
-    : null;
-  const eventOver = !!eventEnd && !isNaN(eventEnd.getTime()) && eventEnd < new Date();
-  const canSelfCancel =
-    (status === "pending" || status === "confirmed") &&
-    !(tickets ?? []).some((t) => t.checked_in) &&
-    !eventOver;
+  // 참석자 직접 취소 가능 여부 — 서버(API)와 같은 함수로 판정한다.
+  const cancelBlockReason = selfCancelBlockReason({
+    status,
+    price: event?.price ?? 0,
+    checkedIn: (tickets ?? []).some((t) => t.checked_in),
+    eventEnd: event ? new Date(event.event_end_date ?? event.event_date) : null,
+  });
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
@@ -266,8 +265,8 @@ export default async function BookingDetailPage({
         </>
       )}
 
-      {/* 본인 취소 */}
-      {canSelfCancel && (
+      {/* 본인 취소 — 막힌 경우에는 버튼만 감추지 않고 이유와 다음 행동을 알려준다 */}
+      {cancelBlockReason === null ? (
         <div className="flex justify-end">
           <CancelBooking
             bookingId={booking.id}
@@ -275,6 +274,13 @@ export default async function BookingDetailPage({
             contact={event?.contact}
           />
         </div>
+      ) : (
+        status !== "cancelled" && (
+          <p className="rounded-lg border bg-muted/30 px-3.5 py-3 text-xs leading-relaxed text-muted-foreground">
+            {cancelBlockReason}
+            {event?.contact ? ` (연락처: ${event.contact})` : ""}
+          </p>
+        )
       )}
 
       {/* QR 코드 (confirmed 상태 + 티켓 존재) */}

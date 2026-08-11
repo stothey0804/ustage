@@ -382,6 +382,8 @@ interface OwnerCancelNoticeParams {
   manageUrl: string;
   /** 취소 시점의 예약 상태 — 유료 스테이지에서 환불 필요 여부 판단용 */
   wasConfirmed: boolean;
+  /** 무료 스테이지인지 — 무료는 입금·환불 개념이 없어 문구가 달라진다 */
+  isFree?: boolean;
 }
 
 /** 참석자가 스스로 취소했을 때 주최자에게 보내는 알림 */
@@ -394,6 +396,7 @@ export async function sendOwnerCancelNotice({
   eventDate,
   manageUrl,
   wasConfirmed,
+  isFree = false,
 }: OwnerCancelNoticeParams): Promise<void> {
   const html = `
 <div style="max-width:480px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a1a;">
@@ -421,9 +424,11 @@ export async function sendOwnerCancelNotice({
 
     <p style="margin:20px 0 0;font-size:13px;color:#666;">
       ${
-        wasConfirmed
-          ? "입금이 확인된 예약이었습니다. 환불 처리가 필요한지 확인해 주세요."
-          : "입금 대기 상태였던 예약입니다. 좌석은 자동으로 반환되었습니다."
+        isFree
+          ? "무료 스테이지 예약이라 환불 처리는 없습니다. 좌석은 자동으로 반환되었습니다."
+          : wasConfirmed
+            ? "입금이 확인된 예약이었습니다. 환불 처리가 필요한지 확인해 주세요."
+            : "입금 대기 상태였던 예약입니다. 좌석은 자동으로 반환되었습니다."
       }
     </p>
 

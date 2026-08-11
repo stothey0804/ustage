@@ -1,7 +1,8 @@
 import { format, parse, isValid } from "date-fns";
 import { ko } from "date-fns/locale";
+import { TZDate } from "@date-fns/tz";
 
-const KST_OFFSET = 9 * 60 * 60 * 1000;
+const KST = "Asia/Seoul";
 
 /**
  * DateTimePicker가 만든 "YYYY-MM-DDTHH:mm"(로컬 벽시계 시각)을
@@ -16,7 +17,10 @@ export function formatDepositTime(v: string): string {
 
 /**
  * ISO 문자열을 KST 기준으로 포맷.
- * Vercel 서버(UTC)에서도 한국 시간으로 올바르게 표시됨.
+ * 실행 환경 타임존과 무관하게 같은 결과를 낸다 — Vercel 서버(UTC)든 개발자 로컬(KST)이든
+ * 동일하다. 오프셋(+9h)을 손으로 더하지 않고 `TZDate`가 벽시계 계산을 맡는다.
+ * (예전 구현은 +9h를 더한 뒤 로컬 메서드로 출력해서 UTC 머신에서만 맞았고,
+ * KST 머신에서는 9시간 뒤로 보였다.)
  */
 export function formatKST(
   dateStr: string,
@@ -25,10 +29,7 @@ export function formatKST(
   try {
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return dateStr;
-    // UTC → KST 보정 후 format()(로컬 메서드 기반)으로 출력
-    const kst = new Date(d.getTime() + KST_OFFSET);
-    // format()은 Date의 로컬 메서드를 사용하므로 UTC 서버에서는 kst가 곧 KST 시간
-    return format(kst, fmt, { locale: ko });
+    return format(new TZDate(d, KST), fmt, { locale: ko });
   } catch {
     return dateStr;
   }

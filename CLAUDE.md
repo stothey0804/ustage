@@ -677,6 +677,15 @@ ended  (행사 종료) → event_date 경과
 - zod 스키마는 `lib/validations/`에 분리 보관
 - 에러 메시지는 한국어로 작성
 
+### 날짜·시간
+
+- 표시는 항상 `lib/date.ts`의 `formatKST` — `@date-fns/tz`의 `TZDate`로 `Asia/Seoul`
+  벽시계를 계산하므로 **실행 환경 타임존과 무관**하다. `+9시간`을 손으로 더하는 코드를
+  다시 쓰지 말 것(UTC 머신에서만 맞고 KST 로컬에서는 9시간 밀렸던 원인).
+- 저장은 반대 방향: `datetime-local` 입력값에 `+09:00`을 붙여 timestamptz로 넣는다
+  (`app/actions/event.ts`의 `toKST`).
+- 테스트는 `TZ`를 고정하지 않는다 — `date.test.ts`가 여러 타임존에서 같은 결과를 검증한다.
+
 ### 에러 처리
 
 - Supabase 쿼리는 항상 `{ data, error }` 구조분해 후 error 체크

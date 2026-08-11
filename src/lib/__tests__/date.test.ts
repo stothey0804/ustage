@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { formatDepositTime, formatKST } from "@/lib/date";
 
-// package.json의 test 스크립트가 TZ=UTC로 고정 — formatKST는 UTC 서버 가정이다.
+// formatKST는 실행 환경 타임존과 무관해야 한다 — 아래 테스트는 TZ를 바꿔가며 그것을 확인한다.
 
 describe("formatDepositTime", () => {
   it('datetime-local 값("YYYY-MM-DDTHH:mm")을 한국어로 포맷한다', () => {
@@ -35,5 +35,24 @@ describe("formatKST", () => {
 
   it("파싱 불가한 문자열은 그대로 반환한다", () => {
     expect(formatKST("not-a-date")).toBe("not-a-date");
+  });
+
+  describe("실행 환경 타임존과 무관하다", () => {
+    const ORIGINAL_TZ = process.env.TZ;
+    afterEach(() => {
+      process.env.TZ = ORIGINAL_TZ;
+    });
+
+    // UTC 서버(Vercel) · KST 로컬 · 서머타임이 있는 지역 모두 같은 결과여야 한다
+    it.each(["UTC", "Asia/Seoul", "America/New_York", "Australia/Sydney"])(
+      "TZ=%s",
+      (tz) => {
+        process.env.TZ = tz;
+        expect(formatKST("2026-07-15T01:00:00Z")).toBe(
+          "2026년 7월 15일 (수) 10:00",
+        );
+        expect(formatKST("2026-07-14T15:00:00Z", "M.d HH:mm")).toBe("7.15 00:00");
+      },
+    );
   });
 });

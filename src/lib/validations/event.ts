@@ -50,6 +50,18 @@ export const eventSchema = z
   .refine((v) => !bothSet(v.booking_end, v.event_date) || v.booking_end! <= v.event_date, {
     message: "예매 종료 일시는 스테이지 시작 일시보다 앞이어야 합니다.",
     path: ["booking_end"],
-  });
+  })
+  // 예매 종료를 비워둘 수 있으므로(= 자동 마감 없음) 시작만으로도 죽은 설정이 나올 수 있다.
+  // 예매 시작이 스테이지 종료보다 뒤면 시작 시각이 오기 전에 ended가 되어 영원히 열리지 않는다.
+  .refine(
+    (v) => {
+      const eventEnd = v.event_end_date || v.event_date;
+      return !bothSet(v.booking_start, eventEnd) || v.booking_start! < eventEnd;
+    },
+    {
+      message: "예매 시작 일시는 스테이지 종료 일시보다 앞이어야 합니다.",
+      path: ["booking_start"],
+    }
+  );
 
 export type EventFormValues = z.infer<typeof eventSchema>;

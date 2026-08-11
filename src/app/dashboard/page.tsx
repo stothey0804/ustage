@@ -235,7 +235,7 @@ export default async function DashboardPage() {
                 </div>
                 <Button asChild size="sm" className="shrink-0">
                   <Link href={`/dashboard/events/${upcomingEvent.id}`}>
-                    명단 확인
+                    상세보기
                   </Link>
                 </Button>
               </div>

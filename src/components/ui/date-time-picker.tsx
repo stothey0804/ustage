@@ -18,9 +18,12 @@ import { Input } from "@/components/ui/input";
 interface DateTimePickerProps {
   /** "YYYY-MM-DDTHH:mm" 형식의 문자열 (로컬 시간 기준) */
   value?: string;
+  /** 빈 문자열("")은 '미지정'을 뜻한다 — clearable일 때 지우기가 이 값을 넘긴다. */
   onChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  /** 값을 비워 '미지정'으로 되돌릴 수 있게 한다. 필수 필드에서는 끈다. */
+  clearable?: boolean;
 }
 
 export function DateTimePicker({
@@ -28,6 +31,7 @@ export function DateTimePicker({
   onChange,
   placeholder = "날짜와 시간을 선택하세요",
   disabled,
+  clearable = false,
 }: DateTimePickerProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -103,10 +107,26 @@ export function DateTimePicker({
             className="w-full"
           />
         </div>
-        <div className="border-t p-2">
+        {/* 폼 안에서 쓰이므로 type="button"이 필수 — 기본값(submit)이면 클릭이 폼을 제출한다. */}
+        <div className="flex gap-2 border-t p-2">
+          {clearable && (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="flex-1 text-muted-foreground"
+              onClick={() => {
+                onChange("");
+                setOpen(false);
+              }}
+            >
+              지우기
+            </Button>
+          )}
           <Button
+            type="button"
             size="sm"
-            className="w-full"
+            className="flex-1"
             onClick={() => setOpen(false)}
           >
             확인

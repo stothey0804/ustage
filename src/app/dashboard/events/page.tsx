@@ -199,7 +199,7 @@ export default async function EventsPage() {
                         : `/dashboard/events/${event.id}`
                     }
                   >
-                    {isDraft && !isStaff ? "이어 쓰기" : "명단"}
+                    {isDraft && !isStaff ? "이어 쓰기" : "상세보기"}
                   </Link>
                 </Button>
               </div>

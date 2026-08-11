@@ -251,10 +251,20 @@ closed (티켓 마감) → 예매기간 종료 또는 수동 마감
 ended  (행사 종료) → event_date 경과
 ```
 
-- `draft` → `open`: 수동. booking_start/end 설정 필요 (서버 액션에서도 검증).
+- `draft` → `open`: 수동, 또는 booking_start 도래 시 자동. **예매 기간은 필수가 아니다.**
 - `open` → `closed`: 수동 마감, 또는 booking_end 도래 시 자동.
 - `open`/`closed` → `ended`: event_date 경과 시 자동.
 - `closed` → `open`: 재오픈 가능 (좌석 여유 + 예매기간 내 — 서버 액션에서 검증).
+- **예매 기간 미설정의 의미** (한쪽만 비우는 것도 허용):
+  - `booking_end = null` = **자동 마감 없음**. 좌석 소진·행사 종료·수동 마감으로만 닫힌다.
+    즉 실질 상한은 `event_date`가 아니라 `event_end_date ?? event_date`이며,
+    그때까지는 스테이지 진행 중에도 예매를 받는다(현장 판매를 막지 않는다).
+  - `booking_start = null` = **자동 오픈 없음**. 종료만 지정하면 draft에 방치될 수 있어
+    폼에서 "직접 티켓 오픈하라"고 안내한다(검증으로 막지는 않는다).
+  - 대신 `booking_start < (event_end_date ?? event_date)`는 zod로 막는다 — 시작 시각이
+    오기 전에 ended가 되어 **영원히 열리지 못하는 설정**이기 때문.
+  - 주최자 상세는 `booking_end`가 없으면 "미설정 — 직접 마감"으로 **표시**하고,
+    공개 페이지는 그대로 **생략**한다(마감일 미정을 약속처럼 보이지 않게).
 - 자동 전환은 `lib/auto-status.ts`의 lazy 방식: 이벤트 상세/공개 페이지 조회 시
   `autoTransitionStatus`(service_role로 DB 반영), 목록 등 표시 전용은 `deriveAutoStatus`.
   예매 API도 저장된 status가 아닌 파생 상태로 판정하므로 전환 누락이 있어도 예매는 차단됨.
@@ -306,6 +316,10 @@ ended  (행사 종료) → event_date 경과
 - QR 코드에는 `booking_tickets.qr_token` (UUID)만 인코딩 — 개인정보 노출 없음, 티켓 1장당 1개
 - 스캔 시 서버에서 토큰으로 티켓·예약 조회 → 이름, 입금상태, 입장여부 표시
 - 이미 입장 처리된 경우 "재입장 시도" 경고 표시 (checked_in=false 조건부 갱신으로 동시 스캔 방지)
+- **입장 처리에 시각 제약을 두지 않는다.** 행사 시작 전(사전 입장·리허설)에도, 종료 후에도
+  스캔·강제 입장이 가능하다. 게이트는 권한(`can_manage_event`/`check_in`)과
+  예매 상태(`confirmed`만 허용, pending·cancelled는 거절) 둘뿐이다 —
+  `api/check-in/route.ts`·`forceCheckIn`·스캔 페이지 어디에도 `event_date` 비교를 넣지 말 것.
 
 ### 카카오 로그인 (Supabase OAuth)
 

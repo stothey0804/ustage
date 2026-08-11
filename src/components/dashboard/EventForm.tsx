@@ -220,6 +220,7 @@ export function EventForm({
               value={watch("event_end_date") || undefined}
               onChange={(v) => setValue("event_end_date", v, { shouldValidate: true })}
               placeholder="종료 날짜·시간"
+              clearable
             />
             {errors.event_end_date && (
               <p className="text-xs text-destructive">
@@ -436,6 +437,7 @@ export function EventForm({
               value={watch("booking_start") || undefined}
               onChange={(v) => setValue("booking_start", v, { shouldValidate: true })}
               placeholder="시작 날짜·시간 선택"
+              clearable
             />
             {errors.booking_start && (
               <p className="text-xs text-destructive">
@@ -450,6 +452,7 @@ export function EventForm({
               value={watch("booking_end") || undefined}
               onChange={(v) => setValue("booking_end", v, { shouldValidate: true })}
               placeholder="종료 날짜·시간 선택"
+              clearable
             />
             {errors.booking_end && (
               <p className="text-xs text-destructive">
@@ -458,6 +461,19 @@ export function EventForm({
             )}
           </div>
         </div>
+
+        {!watch("booking_end") && (
+          <p className="text-xs text-muted-foreground">
+            예매 종료를 비워두면 마감 일시 없이 예매를 받아요. 좌석이 차거나
+            스테이지가 종료될 때까지 열려 있고, 언제든 직접 마감할 수 있어요.
+          </p>
+        )}
+        {!watch("booking_start") && !!watch("booking_end") && (
+          <p className="text-xs text-muted-foreground">
+            예매 시작이 없으면 자동으로 열리지 않아요. 스테이지 상세의 상태
+            변경에서 &lsquo;티켓 오픈&rsquo;을 직접 눌러 주세요.
+          </p>
+        )}
       </section>
 
       <Separator />

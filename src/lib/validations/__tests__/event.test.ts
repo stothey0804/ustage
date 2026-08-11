@@ -78,6 +78,39 @@ describe("eventSchema", () => {
     ).toBe(true);
   });
 
+  it("예매 종료 미지정(빈 문자열 포함)을 허용한다", () => {
+    expect(
+      eventSchema.safeParse({
+        ...VALID,
+        booking_start: "2026-07-20T10:00",
+        booking_end: "",
+      }).success,
+    ).toBe(true);
+    expect(
+      eventSchema.safeParse({ ...VALID, booking_start: "", booking_end: "" })
+        .success,
+    ).toBe(true);
+  });
+
+  it("예매 시작은 스테이지 종료보다 앞이어야 한다 (열리지 못하는 설정 차단)", () => {
+    // 예매 종료가 없으면 booking_end 검증이 걸러주지 못하므로 시작만으로 판정한다
+    const r = eventSchema.safeParse({
+      ...VALID,
+      booking_start: "2026-08-02T10:00",
+    });
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0]?.path).toEqual(["booking_start"]);
+
+    // 종료 일시가 있으면 그 시각 이전까지 허용 — 스테이지 진행 중 오픈은 막지 않는다
+    expect(
+      eventSchema.safeParse({
+        ...VALID,
+        event_end_date: "2026-08-01T22:00",
+        booking_start: "2026-08-01T20:00",
+      }).success,
+    ).toBe(true);
+  });
+
   it("booking_notice(주의사항)는 선택 필드다", () => {
     expect(
       eventSchema.safeParse({ ...VALID, booking_notice: "<p>환불 불가</p>" })

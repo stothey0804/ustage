@@ -275,13 +275,16 @@ export default async function EventDetailPage({
                 value={formatKST(event.booking_start)}
               />
             )}
-            {event.booking_end && (
-              <InfoRow
-                icon={Clock}
-                label="예매 종료"
-                value={formatKST(event.booking_end)}
-              />
-            )}
+            {/* 자동 마감이 없다는 사실은 주최자가 알아야 하므로 미설정도 표시한다. */}
+            <InfoRow
+              icon={Clock}
+              label="예매 종료"
+              value={
+                event.booking_end
+                  ? formatKST(event.booking_end)
+                  : "미설정 — 직접 마감"
+              }
+            />
             <InfoRow icon={Banknote} label="입금 계좌" value={event.bank_info} />
             <InfoRow icon={Phone} label="연락처" value={event.contact} />
           </div>

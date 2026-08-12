@@ -340,7 +340,8 @@ export async function POST(req: Request) {
       if (mine?.[0]) {
         original = {
           name: mine[0].name,
-          password_hash: mine[0].password_hash,
+          // 회원 예매는 비밀번호 해시가 빈 문자열이다(컬럼은 nullable)
+          password_hash: mine[0].password_hash ?? "",
           custom_answers:
             (mine[0].custom_answers as NewBooking["custom_answers"]) ?? null,
         };

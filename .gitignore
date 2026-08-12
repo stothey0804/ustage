@@ -46,3 +46,6 @@ ds-bundle/
 .design-sync/.cache/
 .design-sync/learnings/
 .design-sync/node_modules
+
+# supabase CLI 작업 파일
+supabase/.temp/

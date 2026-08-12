@@ -16,41 +16,42 @@ export type Database = {
     Tables: {
       booking_tickets: {
         Row: {
-          id: string
           attendee_no: number
           booking_id: string
-          ticket_number: number
-          qr_token: string
+          cancelled_at: string | null
+          cancelled_by: string | null
           checked_in: boolean
           checked_in_at: string | null
           checked_in_by: string | null
-          cancelled_at: string | null
-          cancelled_by: string | null
+          id: string
+          qr_token: string
+          ticket_number: number
         }
         Insert: {
-          id?: string
-          /** booking_tickets_assign_attendee_no 트리거가 채운다 — 코드에서 지정하지 않는다 */
+          /** booking_tickets_assign_attendee_no 트리거가 채운다 — 코드에서 지정하지 않는다.
+           *  (자동생성 시 NOT NULL·기본값 없음이라 필수로 나오므로 매번 옵셔널로 되돌린다) */
           attendee_no?: number
           booking_id: string
-          ticket_number: number
-          qr_token?: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           checked_in?: boolean
           checked_in_at?: string | null
           checked_in_by?: string | null
-          cancelled_at?: string | null
-          cancelled_by?: string | null
+          id?: string
+          qr_token?: string
+          ticket_number: number
         }
         Update: {
-          id?: string
           attendee_no?: number
           booking_id?: string
-          ticket_number?: number
-          qr_token?: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           checked_in?: boolean
           checked_in_at?: string | null
           checked_in_by?: string | null
-          cancelled_at?: string | null
-          cancelled_by?: string | null
+          id?: string
+          qr_token?: string
+          ticket_number?: number
         }
         Relationships: [
           {
@@ -65,7 +66,6 @@ export type Database = {
       bookings: {
         Row: {
           booking_no: number
-          /** 부분 취소된 매수 — booking_tickets_sync_cancelled 트리거가 채운다 */
           cancelled_quantity: number
           checked_in: boolean | null
           checked_in_at: string | null
@@ -77,17 +77,18 @@ export type Database = {
           event_id: string
           id: string
           name: string
-          password_hash: string
+          password_hash: string | null
           payment_confirmed: boolean | null
           payment_confirmed_at: string | null
-          quantity: number
           qr_token: string | null
+          quantity: number
           status: string
           status_updated_by: string | null
           user_id: string | null
         }
         Insert: {
-          /** bookings_assign_no 트리거가 채운다 — 코드에서 지정하지 않는다 */
+          /** bookings_assign_no 트리거가 채운다 — 코드에서 지정하지 않는다.
+           *  (자동생성 시 NOT NULL·기본값 없음이라 필수로 나오므로 매번 옵셔널로 되돌린다) */
           booking_no?: number
           cancelled_quantity?: number
           checked_in?: boolean | null
@@ -100,11 +101,11 @@ export type Database = {
           event_id: string
           id?: string
           name: string
-          password_hash: string
+          password_hash?: string | null
           payment_confirmed?: boolean | null
           payment_confirmed_at?: string | null
-          quantity?: number
           qr_token?: string | null
+          quantity?: number
           status?: string
           status_updated_by?: string | null
           user_id?: string | null
@@ -122,11 +123,11 @@ export type Database = {
           event_id?: string
           id?: string
           name?: string
-          password_hash?: string
+          password_hash?: string | null
           payment_confirmed?: boolean | null
           payment_confirmed_at?: string | null
-          quantity?: number
           qr_token?: string | null
+          quantity?: number
           status?: string
           status_updated_by?: string | null
           user_id?: string | null
@@ -137,6 +138,61 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_draws: {
+        Row: {
+          attendee_no: number
+          booking_id: string | null
+          booking_no: number | null
+          created_at: string
+          event_id: string
+          id: string
+          round: number
+          ticket_id: string | null
+        }
+        Insert: {
+          attendee_no: number
+          booking_id?: string | null
+          booking_no?: number | null
+          created_at?: string
+          event_id: string
+          id?: string
+          round: number
+          ticket_id?: string | null
+        }
+        Update: {
+          attendee_no?: number
+          booking_id?: string | null
+          booking_no?: number | null
+          created_at?: string
+          event_id?: string
+          id?: string
+          round?: number
+          ticket_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_draws_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_draws_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_draws_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "booking_tickets"
             referencedColumns: ["id"]
           },
         ]
@@ -178,62 +234,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "event_staff_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      event_draws: {
-        Row: {
-          attendee_no: number
-          booking_id: string | null
-          /** @deprecated 예매 단위 추첨 시절 컬럼 — attendee_no를 쓴다 */
-          booking_no: number | null
-          created_at: string
-          event_id: string
-          id: string
-          round: number
-          ticket_id: string | null
-        }
-        Insert: {
-          attendee_no: number
-          booking_id?: string | null
-          booking_no?: number | null
-          created_at?: string
-          event_id: string
-          id?: string
-          round: number
-          ticket_id?: string | null
-        }
-        Update: {
-          attendee_no?: number
-          booking_id?: string | null
-          booking_no?: number | null
-          created_at?: string
-          event_id?: string
-          id?: string
-          round?: number
-          ticket_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "event_draws_ticket_id_fkey"
-            columns: ["ticket_id"]
-            isOneToOne: false
-            referencedRelation: "booking_tickets"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "event_draws_booking_id_fkey"
-            columns: ["booking_id"]
-            isOneToOne: false
-            referencedRelation: "bookings"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "event_draws_event_id_fkey"
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
@@ -322,12 +322,67 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          count: number
+          key: string
+          window_start: string
+        }
+        Insert: {
+          count: number
+          key: string
+          window_start: string
+        }
+        Update: {
+          count?: number
+          key?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      can_manage_event: { Args: { p_event_id: string }; Returns: boolean }
+      cancel_booking_tickets: {
+        Args: { p_actor: string; p_booking_id: string; p_ticket_ids: string[] }
+        Returns: Json
+      }
+      create_booking: {
+        Args: {
+          p_allow_duplicate: boolean
+          p_custom_answers: Json
+          p_deposited_at: string
+          p_depositor_name: string
+          p_email: string
+          p_event_id: string
+          p_name: string
+          p_password_hash: string
+          p_quantity: number
+          p_status: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      create_onsite_booking: {
+        Args: {
+          p_allow_duplicate: boolean
+          p_email: string
+          p_event_id: string
+          p_name: string
+          p_password_hash: string
+          p_quantity: number
+          p_status: string
+        }
+        Returns: string
+      }
+      event_booked_seats: { Args: { p_event_id: string }; Returns: number }
+      hit_rate_limit: {
+        Args: { p_key: string; p_max: number; p_window_seconds: number }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

@@ -94,4 +94,37 @@ describe("SignupForm", () => {
       await screen.findByText("이미 가입된 이메일입니다."),
     ).toBeInTheDocument();
   });
+
+  it("이미 가입된 주소라면 로그인 링크를 함께 준다", async () => {
+    // 휴대폰(인앱브라우저)에서 인증을 마치고 이 화면으로 돌아온 경우가 대부분이라
+    // 다음 행동인 '로그인'으로 바로 갈 수 있어야 한다
+    signUpMock.mockResolvedValue({
+      data: { user: { identities: [] }, session: null },
+      error: null,
+    });
+    render(<SignupForm next="/dashboard/events" />);
+    await fillAndSubmit();
+
+    const link = await screen.findByRole("link", { name: "로그인 화면으로 이동" });
+    expect(link).toHaveAttribute(
+      "href",
+      "/login?next=%2Fdashboard%2Fevents",
+    );
+  });
+
+  it("메일 발송 대기 화면에서 '인증은 링크를 연 브라우저에서'를 안내하고 로그인 경로를 준다", async () => {
+    signUpMock.mockResolvedValue({
+      data: { user: { identities: [{ provider: "email" }] }, session: null },
+      error: null,
+    });
+    render(<SignupForm />);
+    await fillAndSubmit();
+
+    expect(
+      await screen.findByText(/인증은/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /인증을 마쳤어요/ }),
+    ).toHaveAttribute("href", "/login?next=%2Fdashboard");
+  });
 });

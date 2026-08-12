@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createClient } from "@/lib/supabase/client";
@@ -121,18 +122,32 @@ export function SignupForm({ next = "/dashboard", defaultEmail = "" }: Props) {
           <p className="mt-1 text-xs text-muted-foreground">
             메일이 보이지 않으면 스팸함을 확인해 주세요.
           </p>
+          {/* 인증은 링크를 연 브라우저에서 끝난다 — 이 화면은 그것을 알 수 없다.
+              안내가 없으면 휴대폰에서 인증한 사람이 여기서 다시 가입을 시도한다. */}
+          <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+            인증은 <span className="font-medium text-foreground">링크를 연 브라우저</span>
+            에서 완료됩니다. 휴대폰에서 인증하셨다면 이 화면에서는 로그인해 주세요.
+          </p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={resend}
-          disabled={resendCooldown > 0}
-        >
-          {resendCooldown > 0
-            ? `인증 메일 재발송 (${resendCooldown}초)`
-            : "인증 메일 재발송"}
-        </Button>
+        <div className="flex flex-col items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={resend}
+            disabled={resendCooldown > 0}
+          >
+            {resendCooldown > 0
+              ? `인증 메일 재발송 (${resendCooldown}초)`
+              : "인증 메일 재발송"}
+          </Button>
+          <Link
+            href={`/login?next=${encodeURIComponent(next)}`}
+            className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+          >
+            인증을 마쳤어요 — 로그인 화면으로
+          </Link>
+        </div>
         {resendMessage ? (
           <p className="text-xs text-muted-foreground">{resendMessage}</p>
         ) : null}
@@ -183,9 +198,19 @@ export function SignupForm({ next = "/dashboard", defaultEmail = "" }: Props) {
       </div>
 
       {serverError ? (
-        <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-          {serverError}
-        </p>
+        <div className="space-y-2 rounded-md border border-destructive/30 bg-destructive/5 p-3">
+          <p className="text-sm text-destructive">{serverError}</p>
+          {/* 이미 가입된 주소라면 다음 행동은 로그인이다 — 링크를 함께 준다
+              (휴대폰에서 인증을 마친 뒤 이 화면으로 돌아온 경우가 대부분이다) */}
+          {serverError.startsWith("이미 가입된 이메일") ? (
+            <Link
+              href={`/login?next=${encodeURIComponent(next)}`}
+              className="inline-block text-xs font-medium text-destructive underline underline-offset-4"
+            >
+              로그인 화면으로 이동
+            </Link>
+          ) : null}
+        </div>
       ) : null}
 
       <Button type="submit" size="lg" disabled={isSubmitting}>

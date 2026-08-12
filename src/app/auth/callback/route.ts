@@ -160,6 +160,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(failUrl);
     }
 
+    // 가입 인증은 안내 화면을 한 번 거친다. 링크를 메일 앱의 인앱브라우저에서 열면
+    // 세션이 그 브라우저에만 생기는데, 곧바로 대시보드로 보내면 원래 브라우저로 돌아간
+    // 사용자가 "가입이 된 건가?" 하고 다시 가입을 시도하게 된다.
+    // 비밀번호 재설정(recovery)·이메일 변경은 목적지로 바로 가야 하므로 제외한다.
+    if (otpType === "signup") {
+      // 이 경로의 계정은 정의상 이메일 가입 계정이다 — 카카오 전용 계정 정리(afterAuth의
+      // decideOAuthAccount)를 태우지 않는다. 태우면 identities가 비어 오는 경우
+      // 정상 가입 계정을 지울 수 있다.
+      const verified = new URL("/auth/verified", origin);
+      verified.searchParams.set("next", safeNext);
+      return NextResponse.redirect(verified);
+    }
+
     return afterAuth(supabase, data.user, origin, safeNext);
   }
 

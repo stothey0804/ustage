@@ -50,6 +50,8 @@ type LookupResult = {
     price: number;
     /** 서버에서 sanitize된 취소·환불 규정 HTML */
     cancel_policy_html: string | null;
+    /** 잔여석 (정원 없으면 null) — 추가 구매 매수 상한에 쓴다 */
+    remaining_seats: number | null;
   };
 };
 
@@ -203,12 +205,14 @@ export function BookingLookup({ eventId, isFree = false }: Props) {
             >
               {eventInfo.title}
             </Link>
-            {credentials && (
+            {credentials && eventInfo.remaining_seats !== 0 && (
               <AdditionalPurchase
                 eventId={eventId}
                 price={eventInfo.price}
                 email={credentials.email}
                 password={credentials.password}
+                maxQuantity={eventInfo.remaining_seats ?? 20}
+                remainingSeats={eventInfo.remaining_seats}
                 onSuccess={() => runLookup(credentials)}
               />
             )}

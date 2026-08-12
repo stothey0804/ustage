@@ -18,6 +18,7 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { BookingStatusBadge } from "@/components/StatusBadge";
 import { formatBookingNoRange } from "@/lib/booking-code";
 import { selfCancelBlockReason } from "@/lib/booking-cancel";
+import { remainingSeats } from "@/lib/seats";
 
 export default async function BookingDetailPage({
   params,
@@ -35,7 +36,7 @@ export default async function BookingDetailPage({
   const { data: booking } = await supabase
     .from("bookings")
     .select(
-      "*, events(id, title, event_date, event_end_date, venue, venue_address, price, bank_info, slug, poster_url, contact, cancel_policy)"
+      "*, events(id, title, event_date, event_end_date, venue, venue_address, price, bank_info, slug, poster_url, contact, cancel_policy, capacity)"
     )
     .eq("id", id)
     .eq("user_id", user.id)
@@ -64,6 +65,7 @@ export default async function BookingDetailPage({
     poster_url: string | null;
     contact: string;
     cancel_policy: string | null;
+    capacity: number | null;
   } | null;
 
   const status = booking.status;
@@ -72,6 +74,17 @@ export default async function BookingDetailPage({
   const cancelPolicyHtml = event?.cancel_policy
     ? sanitizeEventHtml(event.cancel_policy)
     : undefined;
+
+  // 추가 구매 매수 상한에 쓸 잔여석 — 신규 예매 폼과 같은 기준.
+  // 남의 예매는 RLS로 읽히지 않으므로 service_role로 합산만 읽는다(공개 페이지와 동일).
+  let remaining: number | null = null;
+  if (event?.capacity) {
+    const { data: seatRows } = await admin
+      .from("bookings")
+      .select("status, quantity")
+      .eq("event_id", event.id);
+    remaining = remainingSeats(seatRows ?? [], event.capacity);
+  }
 
   // 참석자 직접 취소 가능 여부 — 서버(API)와 같은 함수로 판정한다.
   const cancelBlockReason = selfCancelBlockReason({
@@ -151,13 +164,15 @@ export default async function BookingDetailPage({
         )}
       </div>
 
-      {/* 추가 구매 — 같은 스테이지에 별도 예약으로 추가 */}
-      {event && status !== "cancelled" && booking.email && (
+      {/* 추가 구매 — 같은 스테이지에 별도 예약으로 추가 (좌석이 다 차면 감춘다) */}
+      {event && status !== "cancelled" && booking.email && remaining !== 0 && (
         <div className="flex justify-end">
           <AdditionalPurchase
             eventId={event.id}
             price={event.price}
             email={booking.email}
+            maxQuantity={remaining ?? 20}
+            remainingSeats={remaining}
           />
         </div>
       )}

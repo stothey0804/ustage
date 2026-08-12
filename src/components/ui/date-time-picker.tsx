@@ -84,8 +84,10 @@ export function DateTimePicker({
           <span className="truncate">{displayValue || placeholder}</span>
         </Button>
       </PopoverTrigger>
+      {/* 모바일에서 잘리지 않게: 가로는 화면 폭, 세로는 화면 높이로 제한하고 안에서 스크롤한다
+          (예전에는 overflow-hidden + 높이 제한이 없어 작은 화면에서 달력·확인 버튼이 잘렸다) */}
       <PopoverContent
-        className="w-auto max-w-[calc(100vw-2rem)] gap-0 overflow-hidden p-0"
+        className="max-h-[min(70dvh,34rem)] w-auto max-w-[calc(100vw-2rem)] gap-0 overflow-x-hidden overflow-y-auto overscroll-contain p-0"
         align="start"
         collisionPadding={8}
       >

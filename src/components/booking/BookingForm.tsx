@@ -391,13 +391,23 @@ export function BookingForm({
 
           <StepIndicator current={2} />
 
-          {/* 요약 카드 — 무엇을 몇 매 신청하는지 계속 보이게 */}
+          {/* 요약 카드 — 무엇을 몇 매 신청하는지 이 단계에서도 분명히 보이게 */}
           <div className="flex flex-col gap-1 rounded-4xl bg-primary/8 px-4 py-3.5">
             <span className="text-sm font-semibold">{eventTitle}</span>
-            <span className="text-xs text-muted-foreground">
-              {eventDateLabel} · {quantityValue}매
-              {!isFree && ` · ${totalAmount.toLocaleString()}원`}
-            </span>
+            <span className="text-xs text-muted-foreground">{eventDateLabel}</span>
+            <div className="mt-1.5 flex items-center justify-between gap-3 border-t border-primary/15 pt-2">
+              <span className="text-[13px] text-muted-foreground">
+                예매 매수{" "}
+                <span className="font-semibold text-primary">
+                  {quantityValue}매
+                </span>
+              </span>
+              {!isFree && (
+                <span className="text-[13px] font-semibold">
+                  {totalAmount.toLocaleString()}원
+                </span>
+              )}
+            </div>
           </div>
 
           {noticeHtml && (
@@ -462,6 +472,12 @@ export function BookingForm({
                     placeholder="4자 이상"
                     autoComplete="new-password"
                   />
+                  {/* 실제로 bcrypt 해시만 저장하고 주최자 화면에도 내려보내지 않는다
+                      (api/bookings/route.ts의 해시 저장 · lookup 응답에서 제외) */}
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    비밀번호는 암호화되어 저장되며 주최자도 확인할 수 없어요. 예약
+                    조회에만 쓰이고, 잊으면 주최자에게 초기화를 요청해야 합니다.
+                  </p>
                   {errors.password && (
                     <p className="text-xs text-destructive">
                       {errors.password.message}

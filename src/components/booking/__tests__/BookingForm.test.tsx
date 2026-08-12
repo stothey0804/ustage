@@ -96,8 +96,11 @@ describe("BookingForm — 예매자 정보(2단계)", () => {
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText(BASE_PROPS.eventTitle)).toBeInTheDocument();
     expect(
-      within(dialog).getByText(/2026년 2월 14일 \(토\) 19:30 · 1매/),
+      within(dialog).getByText("2026년 2월 14일 (토) 19:30"),
     ).toBeInTheDocument();
+    // 몇 장을 신청하는지 이 단계에서도 분명히 보여야 한다
+    expect(within(dialog).getByText(/예매 매수/)).toBeInTheDocument();
+    expect(within(dialog).getByText("1매")).toBeInTheDocument();
     expect(screen.getByLabelText(/입금자명/)).toBeInTheDocument();
   });
 
@@ -112,6 +115,15 @@ describe("BookingForm — 예매자 정보(2단계)", () => {
 
     await u.click(sameName);
     expect(screen.getByLabelText(/입금자명/)).toBeEnabled();
+  });
+
+  it("비회원 비밀번호 칸에 암호화 저장 안내를 보여준다", async () => {
+    // 주최자도 볼 수 없다는 사실을 참석자가 알 수 있어야 한다
+    render(<BookingForm {...BASE_PROPS} />);
+    await user().click(screen.getByRole("button", { name: "비회원 예매" }));
+    expect(
+      screen.getByText(/암호화되어 저장되며 주최자도 확인할 수 없어요/),
+    ).toBeInTheDocument();
   });
 
   it("비회원은 4자 미만 비밀번호로 제출할 수 없다", async () => {

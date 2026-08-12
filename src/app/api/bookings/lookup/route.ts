@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { sanitizeEventHtml } from "@/lib/sanitize";
+import { remainingSeats } from "@/lib/seats";
 
 const lookupSchema = z.object({
   event_id: z.string().uuid(),
@@ -59,7 +60,7 @@ export async function POST(req: Request) {
   const { data: bookings, error } = await adminSupabase
     .from("bookings")
     .select(
-      "*, events!inner(id, title, event_date, event_end_date, venue, bank_info, slug, contact, price, cancel_policy)"
+      "*, events!inner(id, title, event_date, event_end_date, venue, bank_info, slug, contact, price, cancel_policy, capacity)"
     )
     .eq("event_id", event_id)
     .ilike("email", emailPattern)
@@ -108,6 +109,18 @@ export async function POST(req: Request) {
     );
   }
 
+  // 추가 구매 매수 상한에 쓸 잔여석 — 신규 예매 폼과 같은 기준(취소 제외 quantity 합산).
+  // 공개 스테이지 페이지에도 표시되는 정보라 내려보내도 새로 노출되는 것이 없다.
+  const eventCapacity = matched[0].events.capacity;
+  let remaining: number | null = null;
+  if (eventCapacity) {
+    const { data: seatRows } = await adminSupabase
+      .from("bookings")
+      .select("status, quantity")
+      .eq("event_id", event_id);
+    remaining = remainingSeats(seatRows ?? [], eventCapacity);
+  }
+
   const safeBookings = await Promise.all(
     matched.map(async (booking) => {
       const { data: tickets } = await adminSupabase
@@ -128,6 +141,7 @@ export async function POST(req: Request) {
           cancel_policy_html: cancel_policy
             ? sanitizeEventHtml(cancel_policy)
             : null,
+          remaining_seats: remaining,
         },
         tickets: tickets ?? [],
       };

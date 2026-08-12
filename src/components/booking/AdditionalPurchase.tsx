@@ -31,6 +31,13 @@ interface AdditionalPurchaseProps {
   email: string;
   /** 비회원 경로에서만 필요 — 조회에 사용한 비밀번호로 본인 확인 */
   password?: string;
+  /**
+   * 고를 수 있는 최대 매수. 잔여석이 있으면 그 값을 넘겨 신규 예매 폼과 같은 상한을 쓴다.
+   * 넘기지 않으면 20매(서버 RPC가 최종적으로 정원을 검사한다).
+   */
+  maxQuantity?: number;
+  /** 잔여석(정원 없으면 null) — 안내 문구용 */
+  remainingSeats?: number | null;
   onSuccess?: () => void;
 }
 
@@ -44,6 +51,8 @@ export function AdditionalPurchase({
   price,
   email,
   password,
+  maxQuantity = 20,
+  remainingSeats = null,
   onSuccess,
 }: AdditionalPurchaseProps) {
   const isFree = price === 0;
@@ -54,6 +63,8 @@ export function AdditionalPurchase({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  // 잔여석보다 많이 고를 수 없게 한다 — 예전에는 1~20 고정이라 제출 후에야 거절됐다
+  const maxSelectable = Math.max(1, Math.min(20, maxQuantity));
   const totalAmount = price * quantity;
 
   const handleSubmit = () => {
@@ -137,13 +148,18 @@ export function AdditionalPurchase({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
+                  {Array.from({ length: maxSelectable }, (_, i) => i + 1).map((n) => (
                     <SelectItem key={n} value={String(n)}>
                       {n}매
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {remainingSeats !== null && (
+                <p className="text-xs text-muted-foreground">
+                  남은 좌석 {remainingSeats}석
+                </p>
+              )}
               {!isFree && (
                 <p className="text-xs text-muted-foreground">
                   총 입금액{" "}

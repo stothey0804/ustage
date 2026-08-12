@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition, useState, useRef, useEffect } from "react";
+import { useTransition, useState, useRef, useEffect, useMemo } from "react";
 import { useForm, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Image from "next/image";
@@ -13,7 +13,10 @@ import { createEvent, updateEvent } from "@/app/actions/event";
 import { createClient } from "@/lib/supabase/client";
 import { resizeImage } from "@/lib/image";
 import { posterStoragePath } from "@/lib/poster";
+import { formatKST } from "@/lib/date";
 import { useUnsavedWarning } from "@/hooks/useUnsavedWarning";
+import { useFormDraft } from "@/hooks/useFormDraft";
+import { eventDraftKey } from "@/lib/form-draft";
 import { CustomFieldEditor } from "./CustomFieldEditor";
 import { KakaoAddressSearch } from "./KakaoAddressSearch";
 import { RichTextField } from "./RichTextField";
@@ -85,6 +88,7 @@ export function EventForm({
     setValue,
     getValues,
     watch,
+    reset,
     formState: { errors, isDirty },
   } = useForm<EventFormValues>({
     resolver: zodResolver(eventSchema),
@@ -119,6 +123,37 @@ export function EventForm({
 
   // 새로고침·탭 닫기로 작성 내용이 사라지는 것을 막는다(앱 내부 이동은 '취소' 버튼에서 확인).
   useUnsavedWarning(isDirty && !isPending);
+
+  /**
+   * 작성 중 내용 자동 저장 — **생성 모드에서만**.
+   * 수정 모드는 DB가 원본이라, 오래된 로컬 초안을 되살리면 남의 수정을 되돌린다.
+   * poster_url은 저장하지 않는다 — 저장 없이 떠나면 업로드 파일을 지우므로
+   * 복구해도 죽은 URL이 된다(위 정리 로직 참고).
+   */
+  const draftValues = watch();
+  const draftPayload = useMemo(() => {
+    const { poster_url: _poster, ...rest } = draftValues;
+    void _poster;
+    return rest;
+  }, [draftValues]);
+
+  const { restored: savedDraft, clear: clearDraft } = useFormDraft({
+    storageKey: eventDraftKey(userId),
+    values: draftPayload,
+    enabled: mode === "create" && isDirty && !isPending,
+  });
+  const [draftDismissed, setDraftDismissed] = useState(false);
+  const showDraftBanner =
+    mode === "create" && savedDraft !== null && !draftDismissed;
+
+  function restoreDraft() {
+    if (!savedDraft) return;
+    // 포스터는 초안에 없으므로 비운 상태로 되살린다
+    reset({ ...savedDraft.values, poster_url: "" } as EventFormValues);
+    setPosterPreview(null);
+    setDraftDismissed(true);
+    toast.success("작성하던 내용을 불러왔습니다.");
+  }
 
   // 저장하지 않고 화면을 떠나면 이번에 올린 포스터는 아무도 참조하지 않는다 — 정리한다.
   useEffect(() => {
@@ -245,6 +280,7 @@ export function EventForm({
 
         // 저장됐으므로 이번에 올린 파일은 스테이지가 참조한다 — 이탈 정리 대상에서 뺀다
         submittedRef.current = true;
+        clearDraft();
 
         toast.success(
           mode === "create" ? "스테이지가 생성되었습니다." : "스테이지가 수정되었습니다."
@@ -269,6 +305,33 @@ export function EventForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-8">
+      {showDraftBanner && savedDraft && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-4xl border border-primary/30 bg-primary/5 px-4 py-3.5">
+          <div className="min-w-0 space-y-0.5">
+            <p className="text-[13px] font-semibold">작성하던 스테이지가 있어요.</p>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              {formatKST(savedDraft.savedAt, "M월 d일 HH:mm")}에 이 브라우저에 저장된
+              내용입니다. 포스터 이미지는 저장되지 않아 다시 올려야 해요.
+            </p>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <Button type="button" size="sm" onClick={restoreDraft}>
+              이어서 작성
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                clearDraft();
+                setDraftDismissed(true);
+              }}
+            >
+              삭제하고 새로 쓰기
+            </Button>
+          </div>
+        </div>
+      )}
       {mode === "edit" && activeBookingCount > 0 && (
         <div className="rounded-md border border-amber-300/60 bg-amber-50 px-3 py-2.5 text-xs leading-relaxed text-amber-800 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-300">
           이미 예매 {activeBookingCount}건이 있는 스테이지예요. 일시·장소·가격을
@@ -593,6 +656,13 @@ export function EventForm({
         />
       </section>
 
+      {mode === "create" && (
+        <p className="text-xs text-muted-foreground">
+          작성 내용은 이 브라우저에 자동 저장돼요(포스터 제외). 다른 기기에서는 이어
+          쓸 수 없고, 필수 항목만 채워 저장하면 &lsquo;작성 중&rsquo; 상태로 남아 예매는
+          직접 열기 전까지 시작되지 않아요.
+        </p>
+      )}
       <div className="flex justify-end gap-3 pt-2">
         <Button
           type="button"

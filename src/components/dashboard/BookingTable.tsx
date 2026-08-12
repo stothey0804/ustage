@@ -34,6 +34,7 @@ import {
   downloadCsv,
 } from "@/lib/bookings-csv";
 import { cn } from "@/lib/utils";
+import { occupancyPercent } from "@/lib/seats";
 import { visibleBookingActions, type EventRole } from "@/lib/staff-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -419,10 +420,9 @@ export function BookingTable({
     downloadCsv(`${safeTitle}_신청자명단_${date}.csv`, csv);
   }
 
-  const seatPercent =
-    capacity && capacity > 0
-      ? Math.min(Math.round((stats.confirmedSeats / capacity) * 100), 100)
-      : null;
+  // 좌석 점유 기준은 예매 차단 기준과 같아야 한다 — 취소 제외(입금대기 포함).
+  // confirmed만 세면 공개 페이지가 매진인데 여기서는 자리가 남은 것처럼 보인다.
+  const seatPercent = occupancyPercent(initialBookings, capacity);
 
   return (
     <div className="space-y-6">
@@ -465,9 +465,17 @@ export function BookingTable({
         <StatCard
           label="좌석"
           value={
-            capacity ? `${stats.confirmedSeats} / ${capacity}석` : `${stats.confirmedSeats}석`
+            capacity
+              ? `${stats.activeTickets} / ${capacity}석`
+              : `${stats.activeTickets}석`
           }
-          sub={capacity ? undefined : "좌석 한도 없음"}
+          sub={
+            isFree
+              ? capacity
+                ? undefined
+                : "좌석 한도 없음"
+              : `확정 ${stats.confirmedSeats} · 대기 ${stats.activeTickets - stats.confirmedSeats}`
+          }
           progress={seatPercent}
         />
       </div>

@@ -5,6 +5,7 @@ import { Mic, Ticket } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { deriveAutoStatus } from "@/lib/auto-status";
 import { formatKST } from "@/lib/date";
+import { confirmedSeats, occupancyPercent, occupiedSeats } from "@/lib/seats";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { BookingStatusBadge, EventStatusBadge } from "@/components/StatusBadge";
@@ -48,7 +49,9 @@ export default async function DashboardPage() {
 
   // 요약 카드에 필요한 좌석·입금대기 집계 (해당 1건만 조회)
   let pendingCount = 0;
-  let confirmedSeats = 0;
+  let occupied = 0;
+  let confirmed = 0;
+  let seatPercent = 0;
   let oldestPendingDays: number | null = null;
   if (upcomingEvent) {
     const { data: rows } = await supabase
@@ -56,15 +59,16 @@ export default async function DashboardPage() {
       .select("status, quantity, created_at")
       .eq("event_id", upcomingEvent.id);
     for (const row of rows ?? []) {
-      if (row.status === "pending") {
-        pendingCount += 1;
-        if (row.created_at) {
-          const passed = Math.max(-daysUntil(row.created_at), 0);
-          oldestPendingDays = Math.max(oldestPendingDays ?? 0, passed);
-        }
+      if (row.status === "pending" && row.created_at) {
+        const passed = Math.max(-daysUntil(row.created_at), 0);
+        oldestPendingDays = Math.max(oldestPendingDays ?? 0, passed);
       }
-      if (row.status === "confirmed") confirmedSeats += row.quantity ?? 1;
+      if (row.status === "pending") pendingCount += 1;
     }
+    // 좌석 점유 기준은 예매 차단 기준과 같다 — 취소 제외(입금대기 포함)
+    occupied = occupiedSeats(rows ?? []);
+    confirmed = confirmedSeats(rows ?? []);
+    seatPercent = occupancyPercent(rows ?? [], upcomingEvent.capacity) ?? 0;
   }
 
   // 내가 예매한 티켓 — 가장 가까운 미종료 1건
@@ -202,17 +206,22 @@ export default async function DashboardPage() {
                   <div className="flex items-baseline justify-between">
                     <span className="text-[13px] font-medium">좌석</span>
                     <span className="font-mono text-[15px] text-primary">
-                      {confirmedSeats} / {upcomingEvent.capacity}석
+                      {occupied} / {upcomingEvent.capacity}석
                     </span>
                   </div>
                   <div className="h-1.5 overflow-hidden rounded-full bg-secondary">
                     <div
                       className="h-full rounded-full bg-primary"
                       style={{
-                        width: `${Math.min(Math.round((confirmedSeats / upcomingEvent.capacity) * 100), 100)}%`,
+                        width: `${seatPercent}%`,
                       }}
                     />
                   </div>
+                  {occupied > confirmed && (
+                    <p className="text-xs text-muted-foreground">
+                      확정 {confirmed}석 · 입금대기 {occupied - confirmed}석
+                    </p>
+                  )}
                 </div>
               )}
 

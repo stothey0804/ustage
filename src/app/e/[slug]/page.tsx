@@ -14,6 +14,7 @@ import {
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { remainingSeats as seatRemaining } from "@/lib/seats";
 import { autoTransitionStatus } from "@/lib/auto-status";
 import { getAccountEmail } from "@/lib/account-email";
 import { sanitizeEventHtml } from "@/lib/sanitize";
@@ -98,14 +99,9 @@ export default async function EventPublicPage({
     const admin = createAdminClient();
     const { data: seatRows } = await admin
       .from("bookings")
-      .select("quantity")
-      .eq("event_id", event.id)
-      .neq("status", "cancelled");
-    const booked = (seatRows ?? []).reduce(
-      (sum, b) => sum + (b.quantity ?? 1),
-      0
-    );
-    remainingSeats = Math.max(event.capacity - booked, 0);
+      .select("status, quantity")
+      .eq("event_id", event.id);
+    remainingSeats = seatRemaining(seatRows ?? [], event.capacity);
   }
 
   let { isOpen, reason } = getBookingStatus(event);
@@ -198,7 +194,7 @@ export default async function EventPublicPage({
               </div>
             )}
             <p className="text-xs text-muted-foreground">
-              입금이 확인된 순서대로 좌석이 확정됩니다.
+              신청 순서대로 좌석이 선점되며, 입금이 확인되면 확정됩니다.
             </p>
           </div>
         )}

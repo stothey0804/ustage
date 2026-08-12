@@ -269,6 +269,15 @@ ended  (행사 종료) → event_date 경과
   `autoTransitionStatus`(service_role로 DB 반영), 목록 등 표시 전용은 `deriveAutoStatus`.
   예매 API도 저장된 status가 아닌 파생 상태로 판정하므로 전환 누락이 있어도 예매는 차단됨.
 - 좌석 소진 시 status는 바뀌지 않고, 예매 API가 신청 시점에 잔여석 검사로 거절.
+- **좌석을 차지하는 기준은 "취소되지 않은 모든 예매"다(입금대기 포함).** 입금 확인은
+  확정(QR 발급)만 좌우하고 좌석 선점과는 무관하다 — 좌석은 신청 시점에 잡힌다.
+  세는 곳은 모두 `lib/seats.ts`(`occupiedSeats`/`confirmedSeats`/`remainingSeats`/
+  `occupancyPercent`, vitest로 검증)를 쓴다. RPC(`create_booking`,
+  `create_onsite_booking`)의 SQL 검사도 같은 기준이다.
+  주최자 화면의 좌석 지표·progress도 **점유 기준**으로 표시하고 "확정 n · 대기 m"을
+  병기한다 — confirmed만 세면 공개 페이지는 매진인데 주최자 화면에는 자리가 남은 것처럼
+  보인다(2026-08-12 수정). 입금 기한이 없는 서비스이므로 대기가 좌석을 무기한 물 수 있고,
+  그것을 주최자가 눈으로 보고 정리하는 것이 유일한 대비책이다.
 
 ### 예매(참석자) 상태
 
@@ -485,6 +494,17 @@ ended  (행사 종료) → event_date 경과
   반영된다. 뒤에 `&`로 붙이므로 **모든 호출부의 `emailRedirectTo`는 쿼리스트링(`?next=…`)을
   포함해야 한다** — LoginForm/SignupForm 테스트가 이 불변식을 지킨다.
   목적지 판정은 `lib/auth-link.ts`의 `resolveSafeNext`(순수 함수, vitest로 검증)가 한다.
+- **가입 인증(`type=signup`)은 `/auth/verified` 안내 화면을 한 번 거친다.** 링크를 메일 앱의
+  인앱브라우저에서 열면 세션이 그 브라우저에만 생기는데, 바로 대시보드로 보내면 원래(PC)
+  브라우저로 돌아간 사용자가 인증된 줄 모르고 다시 가입해 "이미 가입된 이메일입니다"를 본다
+  (2026-08-11 실제 신고). 안내 화면은 세션이 있으면 [계속하기](next 유지), 없으면
+  [로그인하기]를 준다. 회원가입 대기 화면에도 "인증은 링크를 연 브라우저에서 완료된다"는
+  안내와 로그인 링크를 둔다.
+  → **`recovery`·`email_change`는 이 화면을 거치지 않는다** — 비밀번호 재설정은 곧바로
+  `/reset-password`로 가야 한다. 분기 키는 반드시 `type`이다.
+  → signup 검증 경로는 정의상 이메일 가입 계정이므로 **카카오 전용 계정 정리
+  (`decideOAuthAccount`)를 태우지 않는다.** 태우면 `identities`가 비어 오는 경우
+  정상 가입 계정을 삭제할 수 있다(현재 GoTrue는 identities를 함께 주지만 의존하지 않는다).
   → 템플릿 파일을 고쳤으면 **Supabase 대시보드 Email Templates에 다시 붙여야** 적용된다.
   실패 문구는 `describeAuthLinkError`가 한국어로 바꿔 `/`(로그인)의 `?error=`로 보여준다.
   남은 한계: 메일 보안 스캐너가 링크를 먼저 열면 토큰이 소비돼 사람이 누를 때 만료로 보인다

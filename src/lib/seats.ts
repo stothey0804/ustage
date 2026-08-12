@@ -8,20 +8,32 @@
 export type SeatCountable = {
   status: string | null;
   quantity: number | null;
+  /** 부분 취소된 매수 — 조회에서 컬럼을 빼면 0으로 본다(좌석을 과소 계산하지 않도록) */
+  cancelled_quantity?: number | null;
 };
 
-/** 취소를 제외한 점유 좌석 (pending + confirmed, quantity 합산) */
+/**
+ * 이 예매가 실제로 차지하는 매수 = 구매 매수 − 부분 취소 매수.
+ * `quantity`는 구매 이력값으로 불변이므로 좌석은 항상 이 값으로 센다.
+ */
+export function effectiveQuantity(booking: SeatCountable): number {
+  const bought = booking.quantity ?? 1;
+  const cancelled = booking.cancelled_quantity ?? 0;
+  return Math.max(bought - cancelled, 0);
+}
+
+/** 취소를 제외한 점유 좌석 (pending + confirmed, 부분 취소분 제외) */
 export function occupiedSeats(bookings: readonly SeatCountable[]): number {
   return bookings
     .filter((b) => b.status !== "cancelled")
-    .reduce((sum, b) => sum + (b.quantity ?? 1), 0);
+    .reduce((sum, b) => sum + effectiveQuantity(b), 0);
 }
 
 /** 입금이 확인된(확정) 좌석 — 금액 정산·확정 표시용 */
 export function confirmedSeats(bookings: readonly SeatCountable[]): number {
   return bookings
     .filter((b) => b.status === "confirmed")
-    .reduce((sum, b) => sum + (b.quantity ?? 1), 0);
+    .reduce((sum, b) => sum + effectiveQuantity(b), 0);
 }
 
 /** 입금대기 좌석 = 점유 - 확정 */

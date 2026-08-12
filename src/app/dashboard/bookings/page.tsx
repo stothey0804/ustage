@@ -4,6 +4,7 @@ import { Ticket } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { formatKST } from "@/lib/date";
+import { effectiveQuantity } from "@/lib/seats";
 import { formatBookingNoRange } from "@/lib/booking-code";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -16,6 +17,7 @@ type TicketRow = {
   booking_no: number | null;
   status: string;
   quantity: number | null;
+  cancelled_quantity: number | null;
   created_at: string | null;
   events: {
     id: string;
@@ -46,7 +48,7 @@ export default async function BookingsPage() {
   const { data, error } = await supabase
     .from("bookings")
     .select(
-      "id, booking_no, status, quantity, created_at, events(id, title, event_date, event_end_date, venue, price, slug)"
+      "id, booking_no, status, quantity, cancelled_quantity, created_at, events(id, title, event_date, event_end_date, venue, price, slug)"
     )
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
@@ -120,7 +122,7 @@ export default async function BookingsPage() {
             </h2>
             <p className="text-xs text-muted-foreground">
               {formatKST(upcoming.events.event_date, LIST_DATE_FORMAT)} ·{" "}
-              {upcoming.events.venue} · {upcoming.quantity ?? 1}매
+              {upcoming.events.venue} · {effectiveQuantity(upcoming)}매
             </p>
           </div>
 
@@ -179,8 +181,8 @@ function TicketSection({
               </p>
               <p className="text-xs text-muted-foreground">
                 {row.events
-                  ? `${formatKST(row.events.event_date, LIST_DATE_FORMAT)} · ${row.quantity ?? 1}매`
-                  : `${row.quantity ?? 1}매`}
+                  ? `${formatKST(row.events.event_date, LIST_DATE_FORMAT)} · ${effectiveQuantity(row)}매`
+                  : `${effectiveQuantity(row)}매`}
               </p>
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1">

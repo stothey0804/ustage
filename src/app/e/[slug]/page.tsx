@@ -99,7 +99,7 @@ export default async function EventPublicPage({
     const admin = createAdminClient();
     const { data: seatRows } = await admin
       .from("bookings")
-      .select("status, quantity")
+      .select("status, quantity, cancelled_quantity")
       .eq("event_id", event.id);
     remainingSeats = seatRemaining(seatRows ?? [], event.capacity);
   }

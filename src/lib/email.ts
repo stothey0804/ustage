@@ -308,6 +308,16 @@ interface BookingCancelledParams {
   cancelPolicyHtml?: string;
   /** true면 주최자가 취소한 경우 — 참석자는 본인이 취소한 게 아니라 통보를 받는다 */
   byOwner?: boolean;
+  /**
+   * 부분 취소일 때만 채운다 — 취소된 인원 번호와 남은 매수.
+   * 채우면 "예약 전체 취소"가 아니라 "일부 티켓 취소" 문구로 바뀐다.
+   */
+  partial?: {
+    cancelledAttendeeNos: number[];
+    remainingQuantity: number;
+    /** 유료 스테이지의 환불 대상 금액(취소 매수 × 가격). 무료면 undefined */
+    refundAmount?: number;
+  };
 }
 
 /** 예약 취소 안내 메일 (참석자 본인 취소 / 주최자 취소 공용) — 환불은 주최자 문의로 안내 */
@@ -321,13 +331,25 @@ export async function sendBookingCancelled({
   contact,
   cancelPolicyHtml,
   byOwner = false,
+  partial,
 }: BookingCancelledParams): Promise<void> {
-  const heading = byOwner
-    ? "주최자가 예약을 취소했습니다"
-    : "예약이 취소되었습니다";
-  const lead = byOwner
-    ? "발급된 입장 QR은 더 이상 사용할 수 없습니다. 취소 사유와 환불은 주최자에게 문의해 주세요."
-    : "입장 QR은 더 이상 사용할 수 없습니다. 환불이 필요하면 주최자에게 문의해 주세요.";
+  const cancelledLabel = partial
+    ? partial.cancelledAttendeeNos.map((no) => `#${no}`).join(", ")
+    : "";
+
+  const heading = partial
+    ? "예약 일부가 취소되었습니다"
+    : byOwner
+      ? "주최자가 예약을 취소했습니다"
+      : "예약이 취소되었습니다";
+  const lead = partial
+    ? `취소된 티켓 ${cancelledLabel}의 입장 QR은 더 이상 사용할 수 없습니다. 남은 ${partial.remainingQuantity}매는 그대로 유효합니다.` +
+      (partial.refundAmount
+        ? ` 환불 대상 금액은 ${partial.refundAmount.toLocaleString()}원이며, 환불은 주최자가 직접 처리합니다.`
+        : " 환불이 필요하면 주최자에게 문의해 주세요.")
+    : byOwner
+      ? "발급된 입장 QR은 더 이상 사용할 수 없습니다. 취소 사유와 환불은 주최자에게 문의해 주세요."
+      : "입장 QR은 더 이상 사용할 수 없습니다. 환불이 필요하면 주최자에게 문의해 주세요.";
 
   const html = `
 <div style="max-width:480px;margin:0 auto;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a1a;">
@@ -363,9 +385,11 @@ export async function sendBookingCancelled({
 
   await sendEmail({
     to,
-    subject: byOwner
-      ? `[어스테이지] ${eventTitle} 예약이 취소되었습니다`
-      : `[어스테이지] ${eventTitle} 예약 취소 완료`,
+    subject: partial
+      ? `[어스테이지] ${eventTitle} 예약 일부(${cancelledLabel}) 취소`
+      : byOwner
+        ? `[어스테이지] ${eventTitle} 예약이 취소되었습니다`
+        : `[어스테이지] ${eventTitle} 예약 취소 완료`,
     html,
   });
 }

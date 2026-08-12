@@ -22,6 +22,8 @@ export type DrawCandidateRow = {
         ticket_number: number;
         attendee_no: number | null;
         checked_in: boolean;
+        /** 부분 취소된 티켓 — 후보에서 제외한다 */
+        cancelled_at?: string | null;
       }[]
     | null;
 };
@@ -49,6 +51,8 @@ export function selectDrawCandidates(
     if (row.status === "cancelled") continue;
     for (const ticket of row.booking_tickets ?? []) {
       if (!ticket.checked_in) continue;
+      // 부분 취소된 티켓 제외 — 입장한 티켓은 취소할 수 없으므로 실제로는 걸리지 않는 방어선
+      if (ticket.cancelled_at) continue;
       if (excludeTicketIds.has(ticket.id)) continue;
       candidates.push({
         ticketId: ticket.id,

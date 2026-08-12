@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { computeInitialStatus } from "@/lib/auto-status";
 import { posterStoragePath } from "@/lib/poster";
+import { occupiedSeats } from "@/lib/seats";
 import { eventSchema, type EventFormValues } from "@/lib/validations/event";
 
 type ActionResult = { error?: string; success?: boolean; id?: string };
@@ -125,10 +126,7 @@ export async function updateEvent(
     .neq("status", "cancelled");
 
   const activeCount = activeBookings?.length ?? 0;
-  const seatCount = (activeBookings ?? []).reduce(
-    (sum, b) => sum + (b.quantity ?? 1),
-    0
-  );
+  const seatCount = occupiedSeats(activeBookings ?? []);
 
   // 유료↔무료 전환은 기존 예매의 입금 흐름(pending/confirmed 판정)을 깨뜨림
   if (activeCount > 0 && (current.price === 0) !== (v.price === 0)) {

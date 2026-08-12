@@ -8,6 +8,8 @@ interface Ticket {
   checked_in: boolean;
   /** 인원 번호 — 현장 호명·추첨 기준 */
   attendee_no?: number | null;
+  /** 부분 취소된 티켓 — QR을 감추고 취소로 표시한다 */
+  cancelled_at?: string | null;
 }
 
 interface QRTicketProps {
@@ -36,7 +38,11 @@ export function QRTicket({ name, tickets }: QRTicketProps) {
               </span>
             )}
           </p>
-          {ticket.checked_in ? (
+          {ticket.cancelled_at ? (
+            <div className="flex aspect-square w-full max-w-[200px] items-center justify-center rounded bg-rose-50 text-rose-700">
+              <p className="text-sm font-medium">취소된 티켓</p>
+            </div>
+          ) : ticket.checked_in ? (
             <div className="flex items-center justify-center w-full max-w-[200px] aspect-square rounded bg-green-50 text-green-700">
               <p className="text-sm font-medium">입장 완료</p>
             </div>
@@ -49,7 +55,11 @@ export function QRTicket({ name, tickets }: QRTicketProps) {
             </div>
           )}
           <p className="text-xs text-gray-500">
-            {ticket.checked_in ? "이미 입장 처리되었습니다" : "현장에서 스캔해 주세요"}
+            {ticket.cancelled_at
+              ? "이 티켓은 취소되어 입장할 수 없습니다"
+              : ticket.checked_in
+                ? "이미 입장 처리되었습니다"
+                : "현장에서 스캔해 주세요"}
           </p>
         </div>
       ))}

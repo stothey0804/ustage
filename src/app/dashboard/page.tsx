@@ -5,7 +5,12 @@ import { Mic, Ticket } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { deriveAutoStatus } from "@/lib/auto-status";
 import { formatKST } from "@/lib/date";
-import { confirmedSeats, occupancyPercent, occupiedSeats } from "@/lib/seats";
+import {
+  confirmedSeats,
+  effectiveQuantity,
+  occupancyPercent,
+  occupiedSeats,
+} from "@/lib/seats";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { BookingStatusBadge, EventStatusBadge } from "@/components/StatusBadge";
@@ -56,7 +61,7 @@ export default async function DashboardPage() {
   if (upcomingEvent) {
     const { data: rows } = await supabase
       .from("bookings")
-      .select("status, quantity, created_at")
+      .select("status, quantity, cancelled_quantity, created_at")
       .eq("event_id", upcomingEvent.id);
     for (const row of rows ?? []) {
       if (row.status === "pending" && row.created_at) {
@@ -74,7 +79,7 @@ export default async function DashboardPage() {
   // 내가 예매한 티켓 — 가장 가까운 미종료 1건
   const { data: myBookings } = await supabase
     .from("bookings")
-    .select("id, status, quantity, events(title, event_date, venue, price)")
+    .select("id, status, quantity, cancelled_quantity, events(title, event_date, venue, price)")
     .eq("user_id", user.id)
     .neq("status", "cancelled");
 
@@ -82,6 +87,7 @@ export default async function DashboardPage() {
     id: string;
     status: string;
     quantity: number | null;
+    cancelled_quantity: number | null;
     events: {
       title: string;
       event_date: string;
@@ -152,7 +158,7 @@ export default async function DashboardPage() {
               </span>
               <span className="block text-xs text-muted-foreground">
                 {formatKST(upcomingTicket.events.event_date, LIST_DATE_FORMAT)} ·{" "}
-                {upcomingTicket.quantity ?? 1}매
+                {effectiveQuantity(upcomingTicket)}매
               </span>
             </span>
             <BookingStatusBadge

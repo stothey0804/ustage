@@ -54,7 +54,7 @@ export async function runDraw(
   const { data: bookings, error: bookingsError } = await supabase
     .from("bookings")
     .select(
-      "id, booking_no, name, email, status, booking_tickets(id, ticket_number, attendee_no, checked_in)"
+      "id, booking_no, name, email, status, booking_tickets(id, ticket_number, attendee_no, checked_in, cancelled_at)"
     )
     .eq("event_id", eventId);
 

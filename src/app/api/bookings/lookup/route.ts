@@ -116,7 +116,7 @@ export async function POST(req: Request) {
   if (eventCapacity) {
     const { data: seatRows } = await adminSupabase
       .from("bookings")
-      .select("status, quantity")
+      .select("status, quantity, cancelled_quantity")
       .eq("event_id", event_id);
     remaining = remainingSeats(seatRows ?? [], eventCapacity);
   }
@@ -125,7 +125,7 @@ export async function POST(req: Request) {
     matched.map(async (booking) => {
       const { data: tickets } = await adminSupabase
         .from("booking_tickets")
-        .select("qr_token, ticket_number, checked_in, attendee_no")
+        .select("qr_token, ticket_number, checked_in, attendee_no, cancelled_at")
         .eq("booking_id", booking.id)
         .order("ticket_number", { ascending: true });
 

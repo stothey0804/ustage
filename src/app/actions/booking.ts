@@ -407,7 +407,7 @@ export async function resendBookingConfirmation(
   const { data: booking } = await ctx.supabase
     .from("bookings")
     .select(
-      "id, booking_no, name, email, quantity, status, user_id, booking_tickets(ticket_number, qr_token, attendee_no), events!inner(title, event_date, venue, venue_address, slug)"
+      "id, booking_no, name, email, quantity, cancelled_quantity, status, user_id, booking_tickets(ticket_number, qr_token, attendee_no, cancelled_at), events!inner(title, event_date, venue, venue_address, slug)"
     )
     .eq("id", bookingId)
     .single();
@@ -418,7 +418,9 @@ export async function resendBookingConfirmation(
   }
   if (!booking.email) return { error: "이메일이 없어 발송할 수 없습니다." };
 
+  // 부분 취소된 티켓의 QR은 무효이므로 메일에 싣지 않는다
   const tickets = (booking.booking_tickets ?? [])
+    .filter((t) => !t.cancelled_at)
     .slice()
     .sort((a, b) => a.ticket_number - b.ticket_number)
     .map((t) => ({
@@ -443,7 +445,7 @@ export async function resendBookingConfirmation(
     sendBookingConfirmed({
       to: email,
       name: booking.name,
-      quantity: booking.quantity ?? 1,
+      quantity: tickets.length,
       eventTitle: ev.title,
       eventDate: formatKST(ev.event_date),
       eventVenue: ev.venue_address || ev.venue,
@@ -657,7 +659,9 @@ export async function forceCheckIn(
       checked_in_by: ctx.userId,
     })
     .eq("booking_id", bookingId)
-    .eq("checked_in", false);
+    .eq("checked_in", false)
+    // 부분 취소된 티켓은 강제 입장도 막는다 (QR 스캔 경로와 같은 규칙)
+    .is("cancelled_at", null);
 
   if (ticketId) {
     query = query.eq("id", ticketId);
@@ -672,6 +676,143 @@ export async function forceCheckIn(
 
   revalidatePath(`/dashboard/events/${ctx.eventId}`);
   return { success: true };
+}
+
+/**
+ * 부분(티켓 단위) 취소 — 주최자·스태프 전용.
+ *
+ * 2매 이상 예매에서 일부만 취소한다. 취소된 티켓의 QR은 즉시 무효가 되고 좌석은
+ * 그만큼 반환된다(`lib/seats.ts`의 유효 매수 계산). 입장 처리된 티켓은 취소할 수
+ * 없다 — "당첨 티켓 = 입장 티켓" 불변식이 깨지기 때문이며, 되돌릴 일은 예매 전체
+ * 취소로 처리한다. 전량이 취소되면 RPC가 같은 트랜잭션에서 예매를 cancelled로
+ * 승격시킨다(승격을 빼먹으면 중복 이메일 검사가 재예매를 영구 차단한다).
+ *
+ * 참석자 셀프 부분 취소는 아직 없다 — 문의를 받아 주최자가 처리한다.
+ */
+export async function cancelBookingTickets(
+  bookingId: string,
+  ticketIds: string[]
+): Promise<ActionResult & { cancelled?: number; remaining?: number }> {
+  if (ticketIds.length === 0) return { error: "취소할 티켓을 선택해 주세요." };
+
+  const ctx = await assertBookingOwner(bookingId, "cancel_booking");
+  if ("error" in ctx) return { error: ctx.error };
+
+  // 메일에 쓸 정보는 갱신 전에 읽는다(취소된 인원 번호를 알아야 한다)
+  const { data: before } = await ctx.supabase
+    .from("bookings")
+    .select(
+      "id, name, email, quantity, cancelled_quantity, status, booking_tickets(id, attendee_no, ticket_number, checked_in, cancelled_at), events!inner(title, event_date, venue, venue_address, contact, cancel_policy, price)"
+    )
+    .eq("id", bookingId)
+    .single();
+
+  if (!before) return { error: "예매를 찾을 수 없습니다." };
+  if (before.status === "cancelled") {
+    return { error: "이미 취소된 예매입니다." };
+  }
+
+  const selected = (before.booking_tickets ?? []).filter((t) =>
+    ticketIds.includes(t.id)
+  );
+  if (selected.length !== ticketIds.length) {
+    return { error: "이 예매의 티켓이 아닙니다." };
+  }
+  if (selected.some((t) => t.checked_in)) {
+    return {
+      error:
+        "입장 처리된 티켓은 부분 취소할 수 없습니다. 필요하면 예매 전체를 취소해 주세요.",
+    };
+  }
+  if (selected.some((t) => t.cancelled_at)) {
+    return { error: "이미 취소된 티켓이 포함되어 있습니다." };
+  }
+
+  const admin = createAdminClient();
+  // database.ts 재생성 전까지 RPC 타입 부재 — 이 지점에서만 우회 캐스팅
+  const rpc = admin.rpc.bind(admin) as unknown as (
+    fn: string,
+    args: Record<string, unknown>
+  ) => PromiseLike<{
+    data: unknown;
+    error: { message?: string } | null;
+  }>;
+
+  const { data, error } = await rpc("cancel_booking_tickets", {
+    p_booking_id: bookingId,
+    p_ticket_ids: ticketIds,
+    p_actor: ctx.userId,
+  });
+
+  if (error) {
+    console.error("[cancelBookingTickets]", error);
+    const message = error.message ?? "";
+    if (message.includes("TICKET_NOT_CANCELLABLE")) {
+      return {
+        error:
+          "선택한 티켓 중 입장 처리되었거나 이미 취소된 것이 있습니다. 화면을 새로고침해 주세요.",
+      };
+    }
+    if (message.includes("ALREADY_CANCELLED")) {
+      return { error: "이미 취소된 예매입니다." };
+    }
+    return { error: "티켓 취소에 실패했습니다." };
+  }
+
+  const result = (data ?? {}) as {
+    cancelled?: number;
+    remaining?: number;
+    promoted?: boolean;
+  };
+  const cancelled = result.cancelled ?? selected.length;
+  const remaining = result.remaining ?? 0;
+
+  const ev = before.events as unknown as {
+    title: string;
+    event_date: string;
+    venue: string;
+    venue_address: string | null;
+    contact: string;
+    cancel_policy: string | null;
+    price: number;
+  };
+  const email = before.email;
+  const cancelledNos = selected
+    .map((t) => t.attendee_no ?? t.ticket_number)
+    .sort((a, b) => a - b);
+
+  if (email) {
+    after(() =>
+      sendBookingCancelled({
+        to: email,
+        name: before.name,
+        quantity: before.quantity ?? 1,
+        eventTitle: ev.title,
+        eventDate: formatKST(ev.event_date),
+        eventVenue: ev.venue_address || ev.venue,
+        contact: ev.contact,
+        cancelPolicyHtml: ev.cancel_policy
+          ? sanitizeEventHtml(ev.cancel_policy)
+          : undefined,
+        byOwner: true,
+        // 전량 취소면 부분이 아니라 전체 취소 메일로 보낸다
+        partial:
+          remaining > 0
+            ? {
+                cancelledAttendeeNos: cancelledNos,
+                remainingQuantity: remaining,
+                refundAmount:
+                  ev.price > 0 && before.status === "confirmed"
+                    ? ev.price * cancelled
+                    : undefined,
+              }
+            : undefined,
+      }).catch((err) => console.error("[email]", err))
+    );
+  }
+
+  revalidatePath(`/dashboard/events/${ctx.eventId}`);
+  return { success: true, cancelled, remaining };
 }
 
 export async function resetBookingPassword(

@@ -9,7 +9,11 @@ import {
 function booking(
   id: string,
   bookingNo: number,
-  tickets: { checkedIn: boolean; attendeeNo?: number | null }[],
+  tickets: {
+    checkedIn: boolean;
+    attendeeNo?: number | null;
+    cancelledAt?: string | null;
+  }[],
   overrides: Partial<DrawCandidateRow> = {}
 ): DrawCandidateRow {
   return {
@@ -23,6 +27,7 @@ function booking(
       ticket_number: i + 1,
       attendee_no: t.attendeeNo === undefined ? bookingNo + i : t.attendeeNo,
       checked_in: t.checkedIn,
+      cancelled_at: t.cancelledAt ?? null,
     })),
     ...overrides,
   };
@@ -63,6 +68,18 @@ describe("selectDrawCandidates", () => {
       booking("b", 2, [{ checkedIn: true }]),
     ]);
     expect(candidates.map((c) => c.bookingId)).toEqual(["b"]);
+  });
+
+  it("부분 취소된 티켓은 후보에서 제외한다", () => {
+    // 입장한 티켓은 취소할 수 없으므로 실제로는 생기지 않는 조합이지만,
+    // 데이터가 어긋나도 취소된 사람이 뽑히지 않게 방어한다
+    const candidates = selectDrawCandidates([
+      booking("a", 1, [
+        { checkedIn: true, cancelledAt: "2026-08-12T10:00:00Z" },
+        { checkedIn: true },
+      ]),
+    ]);
+    expect(candidates.map((c) => c.attendeeNo)).toEqual([2]);
   });
 
   it("이전 당첨 티켓만 제외하고, 같은 예매의 다른 티켓은 후보로 남는다", () => {

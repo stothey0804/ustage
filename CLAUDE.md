@@ -312,6 +312,32 @@ ended  (행사 종료) → event_date 경과
   - 취소 후 참석자에게 취소 완료 메일, 주최자에게 취소 알림 메일 발송
   - 좌석은 별도 처리 없이 반환됨 (잔여석 계산이 `status != 'cancelled'` 합산이므로)
 
+### 부분(티켓 단위) 취소 — 1차: 주최자·스태프 전용
+
+2매 이상 예매에서 **일부 티켓만** 취소한다(3매 중 1매 취소). 마이그레이션
+`supabase/migrations/20260812100000_partial_cancel.sql`을 **코드 배포 전에** 적용한다.
+
+- 모델: `booking_tickets.cancelled_at`/`cancelled_by` + `bookings.cancelled_quantity`.
+  **아무것도 지우지 않는다** — 티켓 행 삭제·booking_id 이동·`quantity` 감소는
+  `attendee_no = booking_no + ticket_number - 1` 계산식, `(booking_id, ticket_number)` UNIQUE,
+  트리거의 범위 검증, `event_draws.ticket_id`를 한꺼번에 깨뜨린다.
+- `bookings.quantity`는 **구매 이력값으로 불변**. 유효 매수 = `quantity - cancelled_quantity`.
+  예매번호 범위 표기(`#2–4`)는 구매 매수 기준을 유지하고, 취소는 별도로 표시한다.
+- `cancelled_quantity`는 코드가 아니라 **트리거**(`booking_tickets_sync_cancelled`)가 계산한다.
+  좌석 합산의 SQL 단일 출처는 `event_booked_seats(event_id)`, TS 단일 출처는 `lib/seats.ts`
+  (`effectiveQuantity`/`occupiedSeats`). 한 곳이라도 빠지면 오버부킹이 난다.
+- 취소는 `cancel_booking_tickets` RPC(service_role 전용)로만 한다 — 예매 행 `FOR UPDATE` 잠금 +
+  `cancelled_at is null and checked_in = false` 조건부 갱신(동시 QR 스캔과 대칭 차단) +
+  **전량 취소 시 예매를 cancelled로 승격**(승격을 빼먹으면 중복 이메일 검사가 재예매를 영구 차단).
+- **입장 처리된 티켓은 부분 취소할 수 없다**(주최자도) — "당첨 티켓 = 입장 티켓" 불변식이
+  깨진다. 되돌릴 일은 예매 전체 취소로 처리한다.
+- 취소된 티켓: QR 스캔·강제 입장 거부, 확정 메일 재발송에서 제외, 추첨 후보 제외,
+  참석자 화면에서 "취소된 티켓"으로 표시, CSV는 `취소매수` 컬럼과 유효 매수로 기록.
+  참석자에게는 부분 취소 메일(취소 인원 번호 · 남은 매수 · 환불 대상 금액)이 나간다.
+- **참석자 셀프 부분 취소는 도입하지 않았다(2차 보류).** 문의를 받아 주최자가 처리한다.
+- 취소 판정은 항상 OR: 예매 `status='cancelled'` **또는** 티켓 `cancelled_at` 존재.
+  기존 전체 취소 예매의 티켓에 `cancelled_at`을 백필하지 않는다(감사 기록 오염 방지).
+
 ### 입금 확인 처리
 
 - 이벤트 소유자만 가능 (`/dashboard/events/[id]`)
@@ -643,6 +669,14 @@ ended  (행사 종료) → event_date 경과
   입금대기 행은 틴트로 강조하고, 입금자명이 예매자명과 다르면 '불일치' 칩.
 - 우측 360px 상세 패널: 예약 정보 · 커스텀 답변 · 진행 타임라인 · 티켓별 입장 처리 ·
   확정 메일 재발송 · 취소 · 비밀번호 초기화 · 삭제
+- **커스텀 필드는 컬럼으로 붙는다** — `events.custom_fields` 순서대로 입금자명과 신청일시
+  사이에 삽입하고, 개수 제한·표시 토글은 두지 않는다(명단은 가로 스크롤 전제).
+  컬럼 폭은 타입별로 정하고 `gridTemplateColumns`와 테이블 `minWidth`를 함께 계산한다.
+  값 표기는 `lib/custom-answers.ts`의 `formatCustomAnswer` 하나만 쓴다(테이블 셀·상세 패널·CSV
+  공용) — 예매 폼이 체크박스를 `"true"/"false"` **문자열**로 저장하기 때문에 화면마다 판별하면
+  "true"가 그대로 노출된다(실제 있던 버그). 미응답은 테이블 `—`, CSV 빈 값.
+  검색은 체크박스를 뺀 답변까지 대조한다("true"로 전원이 걸리는 오탐 방지).
+  필드별 필터 UI는 두지 않는다 — 상태 칩 + 자유 검색으로 충분하다.
 - 예약번호는 `lib/booking-code.ts`의 `bookingCode(id)`로 uuid에서 파생한 **표시 전용** 값이다.
   조회·인증 키로 쓰지 않는다.
 - 대시보드 레이아웃은 폭을 제한하지 않고(`max-w-[1520px]`) 각 페이지가 자기 max-width를 정한다.

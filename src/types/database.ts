@@ -24,6 +24,8 @@ export type Database = {
           checked_in: boolean
           checked_in_at: string | null
           checked_in_by: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
         }
         Insert: {
           id?: string
@@ -35,6 +37,8 @@ export type Database = {
           checked_in?: boolean
           checked_in_at?: string | null
           checked_in_by?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
         }
         Update: {
           id?: string
@@ -45,6 +49,8 @@ export type Database = {
           checked_in?: boolean
           checked_in_at?: string | null
           checked_in_by?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
         }
         Relationships: [
           {
@@ -59,6 +65,8 @@ export type Database = {
       bookings: {
         Row: {
           booking_no: number
+          /** 부분 취소된 매수 — booking_tickets_sync_cancelled 트리거가 채운다 */
+          cancelled_quantity: number
           checked_in: boolean | null
           checked_in_at: string | null
           created_at: string | null
@@ -81,6 +89,7 @@ export type Database = {
         Insert: {
           /** bookings_assign_no 트리거가 채운다 — 코드에서 지정하지 않는다 */
           booking_no?: number
+          cancelled_quantity?: number
           checked_in?: boolean | null
           checked_in_at?: string | null
           created_at?: string | null
@@ -102,6 +111,7 @@ export type Database = {
         }
         Update: {
           booking_no?: number
+          cancelled_quantity?: number
           checked_in?: boolean | null
           checked_in_at?: string | null
           created_at?: string | null

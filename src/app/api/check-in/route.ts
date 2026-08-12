@@ -47,7 +47,7 @@ export async function POST(req: Request) {
   const admin = createAdminClient();
   const { data: ticket } = await admin
     .from("booking_tickets")
-    .select("id, ticket_number, checked_in, checked_in_at, booking_id, attendee_no")
+    .select("id, ticket_number, checked_in, checked_in_at, booking_id, attendee_no, cancelled_at")
     .eq("qr_token", qr_token)
     .single();
 
@@ -78,6 +78,18 @@ export async function POST(req: Request) {
     booking.quantity > 1
       ? `#${attendeeNo} ${booking.name} (${ticket.ticket_number}/${booking.quantity})`
       : `#${attendeeNo} ${booking.name}`;
+
+  // 부분 취소된 티켓 — 예매는 살아 있어도 이 티켓만 무효다
+  if (ticket.cancelled_at) {
+    return NextResponse.json(
+      {
+        result: "cancelled",
+        name: ticketLabel,
+        message: "취소된 티켓입니다.",
+      },
+      { status: 200 }
+    );
+  }
 
   // 취소된 예매
   if (booking.status === "cancelled") {
@@ -122,6 +134,7 @@ export async function POST(req: Request) {
     })
     .eq("id", ticket.id)
     .eq("checked_in", false)
+    .is("cancelled_at", null)
     .select("id");
 
   if (updateError) {

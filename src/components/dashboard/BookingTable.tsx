@@ -12,11 +12,13 @@ import {
   LogIn,
   Mail,
   Trash2,
+  XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import type { Tables } from "@/types/database";
 import {
+  cancelBookingTickets,
   deleteBooking,
   forceCheckIn,
   resendBookingConfirmation,
@@ -34,7 +36,11 @@ import {
   downloadCsv,
 } from "@/lib/bookings-csv";
 import { cn } from "@/lib/utils";
-import { occupancyPercent } from "@/lib/seats";
+import {
+  formatCustomAnswer,
+  searchableCustomAnswers,
+} from "@/lib/custom-answers";
+import { effectiveQuantity, occupancyPercent } from "@/lib/seats";
 import { visibleBookingActions, type EventRole } from "@/lib/staff-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,24 +125,63 @@ type FilterKey =
 type SortKey = "created" | "name";
 type SortDir = "asc" | "desc";
 
-/** 명단 테이블 컬럼 폭 — 헤더와 데이터 행이 공유한다. */
-const COLUMNS =
-  "40px minmax(160px, 1fr) 116px 56px 100px 140px 116px 96px 104px";
+/**
+ * 명단 테이블 컬럼 폭 — 헤더와 데이터 행이 공유한다.
+ * 커스텀 필드는 입금자명과 신청일시 사이에 타입별 폭으로 끼워 넣는다.
+ */
+const COLUMNS_HEAD = "40px minmax(160px, 1fr) 116px 56px 100px 140px";
+const COLUMNS_TAIL = "116px 96px 104px";
+/** 커스텀 필드가 없을 때의 기본 최소 폭 */
+const BASE_MIN_WIDTH = 1064;
+
+function customFieldWidth(type: CustomField["type"]): {
+  css: string;
+  px: number;
+} {
+  switch (type) {
+    case "checkbox":
+      return { css: "72px", px: 72 };
+    case "number":
+      return { css: "88px", px: 88 };
+    case "select":
+      return { css: "120px", px: 120 };
+    default:
+      return { css: "minmax(120px, 180px)", px: 140 };
+  }
+}
 
 const won = (n: number) => `${n.toLocaleString("ko-KR")}원`;
+
+/** jsonb 답변을 안전하게 객체로 — 배열·null은 답변 없음으로 본다 */
+function customAnswerMap(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
 
 function ticketStats(booking: BookingRow) {
   const tickets = (booking.booking_tickets ?? [])
     .slice()
     .sort((a, b) => a.ticket_number - b.ticket_number);
-  const quantity = booking.quantity ?? 1;
-  const checkedIn = tickets.filter((t) => t.checked_in).length;
+  // quantity는 구매 이력값(불변) — 유효 매수는 부분 취소분을 뺀 값이다
+  const bought = booking.quantity ?? 1;
+  const cancelledTickets = tickets.filter((t) => t.cancelled_at).length;
+  const cancelledQuantity = booking.cancelled_quantity ?? cancelledTickets;
+  const quantity = Math.max(bought - cancelledQuantity, 0);
+  const activeTicketList = tickets.filter((t) => !t.cancelled_at);
+  const checkedIn = activeTicketList.filter((t) => t.checked_in).length;
   return {
     tickets,
+    /** 살아 있는 티켓만 — 입장 처리·취소 UI가 쓴다 */
+    activeTickets: activeTicketList,
+    /** 구매 매수 (표시·기록용) */
+    bought,
+    /** 유효 매수 = 구매 − 부분 취소 */
     quantity,
+    cancelledQuantity,
     checkedIn,
-    allCheckedIn: tickets.length > 0 && checkedIn === quantity,
-    noneCheckedIn: tickets.length === 0 || checkedIn === 0,
+    allCheckedIn: quantity > 0 && checkedIn === quantity,
+    noneCheckedIn: activeTicketList.length === 0 || checkedIn === 0,
   };
 }
 
@@ -186,6 +231,11 @@ export function BookingTable({
   );
 
   const [cancelTarget, setCancelTarget] = useState<string[] | null>(null);
+  // 티켓 단위 취소 확인 대상 (부분 취소)
+  const [ticketCancelTarget, setTicketCancelTarget] = useState<{
+    bookingId: string;
+    ticketId: string;
+  } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [resetTarget, setResetTarget] = useState<{ id: string; name: string } | null>(null);
   const [resetPw, setResetPw] = useState("");
@@ -195,6 +245,29 @@ export function BookingTable({
     [customFields]
   );
 
+  const fieldTypeMap = useMemo(
+    () =>
+      Object.fromEntries(
+        (customFields ?? []).map((f) => [f.id, f.type])
+      ) as Record<string, CustomField["type"]>,
+    [customFields]
+  );
+
+  // 커스텀 필드를 컬럼으로 붙인다 — 개수 제한·토글 없음(명단은 가로 스크롤 전제)
+  const columnFields = useMemo(() => customFields ?? [], [customFields]);
+  const gridColumns = useMemo(() => {
+    const custom = columnFields
+      .map((f) => customFieldWidth(f.type).css)
+      .join(" ");
+    return [COLUMNS_HEAD, custom, COLUMNS_TAIL].filter(Boolean).join(" ");
+  }, [columnFields]);
+  const tableMinWidth = useMemo(
+    () =>
+      BASE_MIN_WIDTH +
+      columnFields.reduce((sum, f) => sum + customFieldWidth(f.type).px, 0),
+    [columnFields]
+  );
+
   /* ─── 집계 ─── */
 
   const stats = useMemo(() => {
@@ -202,8 +275,9 @@ export function BookingTable({
     const confirmed = initialBookings.filter((b) => b.status === "confirmed");
     const pending = initialBookings.filter((b) => b.status === "pending");
     const cancelled = initialBookings.filter((b) => b.status === "cancelled");
+    // 좌석은 부분 취소분을 뺀 유효 매수 합산 (lib/seats.ts)
     const seats = (rows: BookingRow[]) =>
-      rows.reduce((sum, b) => sum + (b.quantity ?? 1), 0);
+      rows.reduce((sum, b) => sum + effectiveQuantity(b), 0);
 
     const checkedInCount = initialBookings.filter(
       (b) => b.status !== "cancelled" && ticketStats(b).allCheckedIn
@@ -265,6 +339,8 @@ export function BookingTable({
         b.name.toLowerCase().includes(q) ||
         (b.email ?? "").toLowerCase().includes(q) ||
         b.depositor_name.toLowerCase().includes(q) ||
+        // 커스텀 답변도 찾는다(좌석 번호·소속 등). 체크박스는 제외 — "true"로 전원이 걸린다
+        searchableCustomAnswers(columnFields, b.custom_answers).includes(q) ||
         matchesBookingNoRange(b.booking_no, b.quantity ?? 1, b.id, query)
       );
     });
@@ -274,7 +350,7 @@ export function BookingTable({
       if (sortKey === "name") return a.name.localeCompare(b.name, "ko") * dir;
       return (a.created_at ?? "").localeCompare(b.created_at ?? "") * dir;
     });
-  }, [initialBookings, filter, query, sortKey, sortDir]);
+  }, [initialBookings, filter, query, sortKey, sortDir, columnFields]);
 
   const visibleIds = visible.map((b) => b.id);
   const allSelected =
@@ -358,6 +434,23 @@ export function BookingTable({
       }
       if (sent > 0) toast.success(`확정 메일 ${sent}건을 발송했습니다.`);
       resetSelection();
+    });
+  }
+
+  function runCancelTicket(bookingId: string, ticketId: string) {
+    startTransition(async () => {
+      const result = await cancelBookingTickets(bookingId, [ticketId]);
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(
+        result.remaining
+          ? `티켓을 취소했습니다. 남은 ${result.remaining}매는 유효합니다.`
+          : "예매의 모든 티켓이 취소되어 예매가 취소 처리되었습니다."
+      );
+      setTicketCancelTarget(null);
+      router.refresh();
     });
   }
 
@@ -510,7 +603,11 @@ export function BookingTable({
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <Input
             className="w-full sm:w-60"
-            placeholder="이름 · 예매번호 · 입금자명 검색"
+            placeholder={
+                columnFields.length > 0
+                  ? "이름 · 예매번호 · 입금자명 · 추가 정보 검색"
+                  : "이름 · 예매번호 · 입금자명 검색"
+              }
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -541,7 +638,7 @@ export function BookingTable({
         {/* 테이블 */}
         <div className="w-full min-w-0 overflow-hidden rounded-4xl bg-card shadow-md ring-1 ring-foreground/5 xl:flex-1">
           <div className="overflow-x-auto">
-            <div className="min-w-[1064px]">
+            <div style={{ minWidth: `${tableMinWidth}px` }}>
               {/* 일괄 처리 바 */}
               <div
                 className={cn(
@@ -612,7 +709,7 @@ export function BookingTable({
               {/* 헤더 행 */}
               <div
                 className="grid h-10 items-center border-b px-5 text-xs text-muted-foreground"
-                style={{ gridTemplateColumns: COLUMNS }}
+                style={{ gridTemplateColumns: gridColumns }}
               >
                 <span />
                 <button
@@ -627,6 +724,11 @@ export function BookingTable({
                 <span>매수</span>
                 <span>{isFree ? "참가비" : "금액"}</span>
                 <span>입금자명</span>
+                {columnFields.map((f) => (
+                  <span key={f.id} className="truncate" title={f.label}>
+                    {f.label}
+                  </span>
+                ))}
                 <button
                   type="button"
                   className="text-left hover:text-foreground"
@@ -648,7 +750,7 @@ export function BookingTable({
                 </div>
               ) : (
                 visible.map((booking) => {
-                  const { quantity, checkedIn, allCheckedIn } =
+                  const { bought, quantity, cancelledQuantity, checkedIn, allCheckedIn } =
                     ticketStats(booking);
                   const isSelected = selected.includes(booking.id);
                   const isDetail = detailId === booking.id;
@@ -674,7 +776,7 @@ export function BookingTable({
                             : "hover:bg-muted/50",
                         isDetail && "ring-1 ring-inset ring-primary/30"
                       )}
-                      style={{ gridTemplateColumns: COLUMNS }}
+                      style={{ gridTemplateColumns: gridColumns }}
                     >
                       <CheckBox
                         checked={isSelected}
@@ -701,11 +803,18 @@ export function BookingTable({
                       <span className="font-mono text-xs text-muted-foreground">
                         {formatBookingNoRange(
                           booking.booking_no,
-                          quantity,
+                          bought,
                           booking.id
                         )}
                       </span>
-                      <span className="text-[13px]">{quantity}매</span>
+                      <span className="text-[13px]">
+                        {quantity}매
+                        {cancelledQuantity > 0 && (
+                          <span className="ml-1 text-xs text-rose-600 dark:text-rose-400">
+                            ({cancelledQuantity}매 취소)
+                          </span>
+                        )}
+                      </span>
                       <span className="text-[13px]">
                         {isFree
                           ? "무료"
@@ -717,6 +826,23 @@ export function BookingTable({
                       <span className="truncate text-[13px]">
                         {isFree ? "—" : booking.depositor_name}
                       </span>
+
+                      {columnFields.map((f) => {
+                        const answers = customAnswerMap(booking.custom_answers);
+                        const shown = formatCustomAnswer(f, answers?.[f.id]);
+                        return (
+                          <span
+                            key={f.id}
+                            className={cn(
+                              "truncate text-[13px]",
+                              shown === null && "text-muted-foreground"
+                            )}
+                            title={shown ?? undefined}
+                          >
+                            {shown ?? "—"}
+                          </span>
+                        );
+                      })}
 
                       <span className="text-[13px] text-muted-foreground">
                         {formatCreated(booking.created_at)}
@@ -780,11 +906,15 @@ export function BookingTable({
               price={price}
               isPending={isPending}
               fieldLabelMap={fieldLabelMap}
+              fieldTypeMap={fieldTypeMap}
               onConfirm={() => runStatus([detail.id], "confirmed")}
               onRevert={() => runStatus([detail.id], "pending")}
               onResend={() => resendConfirmed([detail.id])}
               onCancel={() => setCancelTarget([detail.id])}
               onCheckIn={runCheckIn}
+              onCancelTicket={(ticketId) =>
+                setTicketCancelTarget({ bookingId: detail.id, ticketId })
+              }
               onResetPassword={() =>
                 setResetTarget({ id: detail.id, name: detail.name })
               }
@@ -861,6 +991,52 @@ export function BookingTable({
               }}
             >
               예매 취소
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 티켓 부분 취소 확인 */}
+      <Dialog
+        open={ticketCancelTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setTicketCancelTarget(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>티켓 1매 취소</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              선택한 티켓 1매만 취소합니다. 그 티켓의 입장 QR은 사용할 수 없게
+              되고 좌석 1석이 반환됩니다. 남은 티켓은 그대로 유효합니다.
+            </p>
+            <p className="rounded-3xl border bg-muted/40 px-3.5 py-3 text-xs text-muted-foreground">
+              참석자에게 부분 취소 안내 메일이 발송됩니다. 환불이 필요한 경우
+              계좌 이체는 직접 처리해야 합니다.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setTicketCancelTarget(null)}
+              disabled={isPending}
+            >
+              닫기
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isPending}
+              onClick={() => {
+                if (!ticketCancelTarget) return;
+                runCancelTicket(
+                  ticketCancelTarget.bookingId,
+                  ticketCancelTarget.ticketId
+                );
+              }}
+            >
+              티켓 취소
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1024,11 +1200,13 @@ function DetailPanel({
   price,
   isPending,
   fieldLabelMap,
+  fieldTypeMap,
   onConfirm,
   onRevert,
   onResend,
   onCancel,
   onCheckIn,
+  onCancelTicket,
   onResetPassword,
   onDelete,
 }: {
@@ -1038,21 +1216,19 @@ function DetailPanel({
   price: number;
   isPending: boolean;
   fieldLabelMap: Record<string, string>;
+  fieldTypeMap: Record<string, CustomField["type"]>;
   onConfirm: () => void;
   onRevert: () => void;
   onResend: () => void;
   onCancel: () => void;
   onCheckIn: (bookingId: string, ticketId?: string) => void;
+  onCancelTicket: (ticketId: string) => void;
   onResetPassword: () => void;
   onDelete: () => void;
 }) {
-  const { tickets, quantity, checkedIn, allCheckedIn } = ticketStats(booking);
-  const customAnswers =
-    booking.custom_answers &&
-    typeof booking.custom_answers === "object" &&
-    !Array.isArray(booking.custom_answers)
-      ? (booking.custom_answers as Record<string, unknown>)
-      : null;
+  const { tickets, bought, quantity, cancelledQuantity, checkedIn, allCheckedIn } =
+    ticketStats(booking);
+  const customAnswers = customAnswerMap(booking.custom_answers);
 
   const checkedInAt = tickets
     .filter((t) => t.checked_in && t.checked_in_at)
@@ -1115,13 +1291,19 @@ function DetailPanel({
 
       {customAnswers && Object.keys(customAnswers).length > 0 && (
         <div className="space-y-3 rounded-3xl bg-input/50 p-4 text-[13px]">
-          {Object.entries(customAnswers).map(([key, value]) => (
-            <DetailRow
-              key={key}
-              label={fieldLabelMap[key] || key}
-              value={typeof value === "boolean" ? (value ? "예" : "아니오") : String(value)}
-            />
-          ))}
+          {Object.entries(customAnswers).map(([key, value]) => {
+            const field = fieldTypeMap[key];
+            const shown = field
+              ? formatCustomAnswer({ type: field }, value)
+              : String(value);
+            return (
+              <DetailRow
+                key={key}
+                label={fieldLabelMap[key] || key}
+                value={shown ?? "—"}
+              />
+            );
+          })}
         </div>
       )}
 
@@ -1143,23 +1325,35 @@ function DetailPanel({
         ))}
       </div>
 
-      {/* 티켓별 입장 현황 */}
+      {/* 티켓별 입장 현황 + 티켓 단위 취소 */}
       {tickets.length > 0 && (
         <div className="space-y-2">
           <p className="text-[13px] font-semibold">
             입장 {checkedIn}/{quantity}
+            {cancelledQuantity > 0 && (
+              <span className="ml-1.5 text-xs font-normal text-rose-600 dark:text-rose-400">
+                · {bought}매 중 {cancelledQuantity}매 취소
+              </span>
+            )}
           </p>
           <div className="space-y-1.5">
             {tickets.map((ticket) => (
               <div
                 key={ticket.id}
-                className="flex items-center justify-between rounded-3xl border px-3 py-2 text-[13px]"
+                className={cn(
+                  "flex items-center justify-between rounded-3xl border px-3 py-2 text-[13px]",
+                  ticket.cancelled_at && "opacity-60"
+                )}
               >
                 <span className="flex items-center gap-2">
                   <span className="font-mono text-primary">
                     #{ticket.attendee_no ?? ticket.ticket_number}
                   </span>
-                  {ticket.checked_in ? (
+                  {ticket.cancelled_at ? (
+                    <span className="text-rose-600 dark:text-rose-400">
+                      취소됨
+                    </span>
+                  ) : ticket.checked_in ? (
                     <span className="flex items-center gap-1 text-primary">
                       <Check className="size-3.5" /> 입장완료
                     </span>
@@ -1167,18 +1361,38 @@ function DetailPanel({
                     <span className="text-muted-foreground">미입장</span>
                   )}
                 </span>
-                {!ticket.checked_in && booking.status === "confirmed" && (
-                  <Button
-                    variant="outline"
-                    size="xs"
-                    className="gap-1"
-                    disabled={isPending}
-                    onClick={() => onCheckIn(booking.id, ticket.id)}
-                  >
-                    <LogIn className="size-3" />
-                    입장처리
-                  </Button>
-                )}
+                <span className="flex items-center gap-1.5">
+                  {!ticket.cancelled_at &&
+                    !ticket.checked_in &&
+                    booking.status === "confirmed" && (
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        className="gap-1"
+                        disabled={isPending}
+                        onClick={() => onCheckIn(booking.id, ticket.id)}
+                      >
+                        <LogIn className="size-3" />
+                        입장처리
+                      </Button>
+                    )}
+                  {/* 입장 처리된 티켓은 부분 취소하지 않는다 — 전체 취소로 처리 */}
+                  {!ticket.cancelled_at &&
+                    !ticket.checked_in &&
+                    booking.status !== "cancelled" &&
+                    quantity > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        className="gap-1 text-destructive hover:bg-destructive/10"
+                        disabled={isPending}
+                        onClick={() => onCancelTicket(ticket.id)}
+                      >
+                        <XCircle className="size-3" />
+                        취소
+                      </Button>
+                    )}
+                </span>
               </div>
             ))}
           </div>

@@ -10,6 +10,7 @@ import { autoTransitionStatus } from "@/lib/auto-status";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { getAccountEmail } from "@/lib/account-email";
 import { formatBookingNoRange } from "@/lib/booking-code";
+import { occupiedSeats } from "@/lib/seats";
 import type { CustomField } from "@/lib/validations/event";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
@@ -128,14 +129,10 @@ async function legacyCreateBooking(
   if (capacity) {
     const { data: sumResult } = await admin
       .from("bookings")
-      .select("quantity")
-      .eq("event_id", row.event_id)
-      .neq("status", "cancelled");
+      .select("status, quantity, cancelled_quantity")
+      .eq("event_id", row.event_id);
 
-    const totalBooked = (sumResult ?? []).reduce(
-      (sum, b) => sum + (b.quantity ?? 1),
-      0
-    );
+    const totalBooked = occupiedSeats(sumResult ?? []);
 
     if (totalBooked + row.quantity > capacity) {
       return { status: 409, error: capacityError(capacity - totalBooked) };

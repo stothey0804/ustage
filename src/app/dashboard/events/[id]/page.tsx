@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { formatKST } from "@/lib/date";
+import { occupiedSeats } from "@/lib/seats";
 import {
   ChevronLeft,
   Edit,
@@ -93,10 +94,8 @@ export default async function EventDetailPage({
     .order("created_at", { ascending: false });
 
   const bookingCount = bookings?.length ?? 0;
-  // 좌석 점유는 예매 API와 같은 기준으로: 취소 제외, 매수(quantity) 합산
-  const seatCount = (bookings ?? [])
-    .filter((b) => b.status !== "cancelled")
-    .reduce((sum, b) => sum + (b.quantity ?? 1), 0);
+  // 좌석 점유는 예매 API와 같은 기준(lib/seats.ts): 취소·부분 취소 제외
+  const seatCount = occupiedSeats(bookings ?? []);
 
   const status = (event.status ?? "draft") as
     | "draft"
@@ -114,7 +113,7 @@ export default async function EventDetailPage({
     .filter((b) => b.status !== "cancelled")
     .flatMap((b) =>
       (b.booking_tickets ?? [])
-        .filter((t) => t.checked_in)
+        .filter((t) => t.checked_in && !t.cancelled_at)
         .map((t) => t.attendee_no ?? b.booking_no + t.ticket_number - 1)
     )
     .sort((a, b) => a - b);

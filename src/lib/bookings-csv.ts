@@ -3,6 +3,7 @@ import { ko } from "date-fns/locale";
 
 import type { CustomField } from "@/lib/validations/event";
 import { formatBookingNoRange } from "@/lib/booking-code";
+import { formatCustomAnswer } from "@/lib/custom-answers";
 
 export type CsvBooking = {
   id: string;
@@ -10,12 +11,14 @@ export type CsvBooking = {
   name: string;
   email?: string | null;
   quantity: number | null;
+  /** 부분 취소된 매수 — 유효 매수는 quantity - cancelled_quantity */
+  cancelled_quantity?: number | null;
   depositor_name: string;
   deposited_at: string;
   status: string;
   created_at: string | null;
   custom_answers?: unknown;
-  booking_tickets?: { checked_in: boolean }[];
+  booking_tickets?: { checked_in: boolean; cancelled_at?: string | null }[];
 };
 
 /** CSV 셀 이스케이프 — 쉼표/따옴표/개행 포함 시 큰따옴표로 감싼다. */
@@ -40,6 +43,7 @@ export function buildBookingsCsv(
     "이름",
     "이메일",
     "매수",
+    "취소매수",
     "입금자명",
     "입금시간",
     "상태",
@@ -51,24 +55,28 @@ export function buildBookingsCsv(
 
   const lines = bookings.map((b) => {
     const tickets = b.booking_tickets ?? [];
-    const checkedIn = tickets.filter((t) => t.checked_in).length;
-    const quantity = b.quantity ?? 1;
+    // 부분 취소된 티켓은 입장·금액·매수에서 제외하되, 취소 매수는 별도 컬럼으로 남긴다
+    const bought = b.quantity ?? 1;
+    const cancelledQuantity =
+      b.cancelled_quantity ?? tickets.filter((t) => t.cancelled_at).length;
+    const quantity = Math.max(bought - cancelledQuantity, 0);
+    const checkedIn = tickets.filter(
+      (t) => t.checked_in && !t.cancelled_at
+    ).length;
     const answers = (b.custom_answers ?? {}) as Record<string, unknown>;
     return [
-      formatBookingNoRange(b.booking_no, quantity, b.id),
+      formatBookingNoRange(b.booking_no, bought, b.id),
       b.name,
       b.email ?? "",
       quantity,
+      cancelledQuantity,
       b.depositor_name,
       b.deposited_at,
       bookingStatusLabel(b.status, opts.isFree),
       `${checkedIn}/${quantity}`,
       ...(opts.isFree ? [] : [opts.price * quantity]),
-      ...fields.map((f) => {
-        const v = answers[f.id];
-        if (typeof v === "boolean") return v ? "예" : "아니오";
-        return v ?? "";
-      }),
+      // 표기는 명단 테이블·상세 패널과 같은 함수를 쓴다 (미응답은 빈 값)
+      ...fields.map((f) => formatCustomAnswer(f, answers[f.id]) ?? ""),
       b.created_at
         ? format(new Date(b.created_at), "yyyy-MM-dd HH:mm", { locale: ko })
         : "",

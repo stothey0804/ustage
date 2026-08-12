@@ -70,7 +70,10 @@ export default async function BookingDetailPage({
 
   const status = booking.status;
   const isFree = event?.price === 0;
-  const quantity = booking.quantity ?? 1;
+  // 부분 취소분을 뺀 유효 매수 (구매 매수는 booking.quantity에 그대로 남는다)
+  const bought = booking.quantity ?? 1;
+  const cancelledQuantity = booking.cancelled_quantity ?? 0;
+  const quantity = Math.max(bought - cancelledQuantity, 0);
   const cancelPolicyHtml = event?.cancel_policy
     ? sanitizeEventHtml(event.cancel_policy)
     : undefined;
@@ -81,7 +84,7 @@ export default async function BookingDetailPage({
   if (event?.capacity) {
     const { data: seatRows } = await admin
       .from("bookings")
-      .select("status, quantity")
+      .select("status, quantity, cancelled_quantity")
       .eq("event_id", event.id);
     remaining = remainingSeats(seatRows ?? [], event.capacity);
   }
@@ -124,9 +127,14 @@ export default async function BookingDetailPage({
               {quantity > 1 && (
                 <Badge variant="outline">{quantity}매</Badge>
               )}
+              {cancelledQuantity > 0 && (
+                <Badge variant="outline" className="text-rose-600 dark:text-rose-400">
+                  {cancelledQuantity}매 취소
+                </Badge>
+              )}
             </div>
             <span className="font-mono text-[13px] font-medium text-primary">
-              {formatBookingNoRange(booking.booking_no, quantity, booking.id)}
+              {formatBookingNoRange(booking.booking_no, bought, booking.id)}
             </span>
           </div>
         </div>

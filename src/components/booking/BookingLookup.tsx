@@ -15,6 +15,7 @@ import { QRTicket } from "@/components/booking/QRTicket";
 import { AdditionalPurchase } from "@/components/booking/AdditionalPurchase";
 import { CancelBooking } from "@/components/booking/CancelBooking";
 import { selfCancelBlockReason } from "@/lib/booking-cancel";
+import { effectiveQuantity } from "@/lib/seats";
 import { RichTextView } from "@/components/RichTextView";
 import { CopyButton } from "@/components/ui/copy-button";
 
@@ -28,6 +29,8 @@ type LookupTicket = {
   ticket_number: number;
   checked_in: boolean;
   attendee_no: number | null;
+  /** 부분 취소된 티켓 — QR이 무효다 */
+  cancelled_at?: string | null;
 };
 
 type LookupResult = {
@@ -35,6 +38,8 @@ type LookupResult = {
   name: string;
   status: string;
   quantity: number;
+  /** 부분 취소된 매수 — 유효 매수는 quantity - cancelled_quantity */
+  cancelled_quantity?: number | null;
   depositor_name: string;
   deposited_at: string;
   created_at: string | null;
@@ -252,6 +257,9 @@ function BookingResultCard({
   const status = result.status;
   const policyHtml = result.events.cancel_policy_html ?? undefined;
   const blockReason = cancelBlockReason(result);
+  // 부분 취소분을 뺀 유효 매수 (lib/seats.ts와 같은 계산)
+  const cancelledQuantity = result.cancelled_quantity ?? 0;
+  const effective = effectiveQuantity(result);
 
   return (
     <div className="rounded-lg border p-4 space-y-4">
@@ -261,9 +269,12 @@ function BookingResultCard({
             <span className="text-muted-foreground text-xs mr-2">{label}</span>
           )}
           {result.name}
-          {result.quantity > 1 && (
-            <span className="text-muted-foreground ml-1">
-              ({result.quantity}매)
+          {effective > 1 && (
+            <span className="text-muted-foreground ml-1">({effective}매)</span>
+          )}
+          {cancelledQuantity > 0 && (
+            <span className="ml-1 text-xs text-rose-600 dark:text-rose-400">
+              {result.quantity}매 중 {cancelledQuantity}매 취소
             </span>
           )}
         </p>
@@ -295,9 +306,9 @@ function BookingResultCard({
               입금 금액
             </span>
             <span>
-              {(result.events.price * result.quantity).toLocaleString()}원
-              {result.quantity > 1 &&
-                ` (${result.events.price.toLocaleString()}원 × ${result.quantity}매)`}
+              {(result.events.price * effective).toLocaleString()}원
+              {effective > 1 &&
+                ` (${result.events.price.toLocaleString()}원 × ${effective}매)`}
             </span>
           </div>
         </div>

@@ -39,6 +39,20 @@ describe("좌석 계산", () => {
     expect(occupancyPercent(BOOKINGS, null)).toBeNull();
   });
 
+  it("부분 취소된 매수는 좌석에서 빠진다", () => {
+    // 3매 중 1매 취소 → 2석만 점유
+    const partial = [{ status: "confirmed", quantity: 3, cancelled_quantity: 1 }];
+    expect(occupiedSeats(partial)).toBe(2);
+    expect(confirmedSeats(partial)).toBe(2);
+    expect(remainingSeats(partial, 10)).toBe(8);
+    // 전량 취소분이 quantity와 같아도 음수가 되지 않는다
+    expect(
+      occupiedSeats([{ status: "pending", quantity: 2, cancelled_quantity: 5 }]),
+    ).toBe(0);
+    // 컬럼이 없으면 0으로 본다(좌석을 과소 계산하지 않는다)
+    expect(occupiedSeats([{ status: "pending", quantity: 2 }])).toBe(2);
+  });
+
   it("빈 목록은 0석", () => {
     expect(occupiedSeats([])).toBe(0);
     expect(remainingSeats([], 10)).toBe(10);

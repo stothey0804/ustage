@@ -51,18 +51,15 @@ export default async function SignupPage({ searchParams }: Props) {
         </header>
 
         {fromKakao ? (
-          <div className="space-y-2 rounded-lg border border-amber-300/60 bg-amber-50 p-3.5 text-xs leading-relaxed text-amber-900 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-200">
+          /* 한 줄 = 상황, 한 줄 = 다음 행동. 주소를 바꿀 수 있다는 안내는
+             실제로 바꾸는 곳(이메일 입력칸 아래)에 둔다. */
+          <div className="space-y-1 rounded-lg border border-amber-300/60 bg-amber-50 px-3.5 py-3 text-xs leading-relaxed text-amber-900 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-200">
             <p className="font-medium">
               {prefillEmail
                 ? `${prefillEmail}으로 가입된 계정이 없어요.`
                 : "카카오에서 이메일을 받지 못했어요."}
             </p>
-            <p>
-              어스테이지 계정은 <strong>이메일이 기준</strong>이에요. 아래에서
-              이메일과 비밀번호로 가입해 주세요. 가입 후{" "}
-              <strong>계정 설정 → 로그인 수단</strong>에서 카카오를 연결하면 다음부터
-              카카오 버튼으로 로그인할 수 있어요.
-            </p>
+            <p>가입을 마치면 카카오가 자동으로 연결돼요.</p>
           </div>
         ) : (
           <>
@@ -86,6 +83,7 @@ export default async function SignupPage({ searchParams }: Props) {
               : safeNext
           }
           defaultEmail={prefillEmail}
+          fromKakao={fromKakao}
         />
 
         <p className="text-center text-sm text-muted-foreground">

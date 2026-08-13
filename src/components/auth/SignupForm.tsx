@@ -17,9 +17,15 @@ interface Props {
   next?: string;
   /** 카카오에서 받은 주소 등 미리 채워둘 이메일 */
   defaultEmail?: string;
+  /** 카카오 로그인에서 넘어온 경우 — 주소를 바꿔도 된다는 안내를 붙인다 */
+  fromKakao?: boolean;
 }
 
-export function SignupForm({ next = "/dashboard", defaultEmail = "" }: Props) {
+export function SignupForm({
+  next = "/dashboard",
+  defaultEmail = "",
+  fromKakao = false,
+}: Props) {
   const callbackUrl = (origin: string) =>
     `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
 
@@ -168,6 +174,11 @@ export function SignupForm({ next = "/dashboard", defaultEmail = "" }: Props) {
         />
         {errors.email ? (
           <p className="text-sm text-destructive">{errors.email.message}</p>
+        ) : fromKakao ? (
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            자주 쓰는 주소로 바꿔도 돼요. 카카오·다음 메일은 휴면 상태면 인증 메일을
+            받지 못합니다.
+          </p>
         ) : null}
       </div>
 

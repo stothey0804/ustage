@@ -13,6 +13,7 @@ import {
   getBaseUrl,
 } from "@/lib/email";
 import { onsiteBookingSchema } from "@/lib/validations/booking";
+import type { CustomField } from "@/lib/validations/event";
 import { sanitizeEventHtml } from "@/lib/sanitize";
 import { formatKST } from "@/lib/date";
 import { formatBookingNoRange } from "@/lib/booking-code";
@@ -69,6 +70,10 @@ export async function assertEventOwner(
         event_date: string;
         venue: string;
         venue_address: string | null;
+        /** 현장 예매의 필수 항목 검사용 */
+        custom_fields: unknown;
+        /** 현장 예매의 좌석 상한 표시용 */
+        capacity: number | null;
       };
       role: EventRole;
       userId: string;
@@ -491,6 +496,8 @@ export async function createOnsiteBooking(input: {
   quantity: number;
   password?: string;
   confirmNow: boolean;
+  /** 커스텀 필드 답변 — 공개 예매와 같은 필수 검사를 통과해야 한다 */
+  customAnswers?: Record<string, string | undefined>;
   /** 중복 이메일 재확인 후 재시도 */
   allowDuplicate?: boolean;
 }): Promise<
@@ -509,6 +516,7 @@ export async function createOnsiteBooking(input: {
     quantity: input.quantity,
     password: input.password || undefined,
     confirmNow: input.confirmNow,
+    custom_answers: input.customAnswers,
   });
 
   if (!parsed.success) {
@@ -520,6 +528,28 @@ export async function createOnsiteBooking(input: {
 
   const { event } = ctx;
   const values = parsed.data;
+
+  // 커스텀 필드: 정의되지 않은 키를 버리고 필수 항목을 확인한다.
+  // 공개 예매(api/bookings)와 같은 규칙 — 현장 예매만 빈 답변으로 남지 않게.
+  const customFields = (event.custom_fields ?? []) as CustomField[];
+  const knownIds = new Set(customFields.map((f) => f.id));
+  const customAnswers = Object.fromEntries(
+    Object.entries(values.custom_answers ?? {}).filter(
+      ([key, value]) => knownIds.has(key) && value !== undefined
+    )
+  ) as Record<string, string>;
+
+  for (const field of customFields) {
+    if (!field.required) continue;
+    const value = customAnswers[field.id];
+    const missing =
+      field.type === "checkbox"
+        ? value !== "true"
+        : value === undefined || value.trim() === "";
+    if (missing) {
+      return { error: `'${field.label}' 항목을 입력해 주세요.` };
+    }
+  }
   const email = values.email.toLowerCase();
   const isFree = event.price === 0;
   // 무료 스테이지는 입금 개념이 없으므로 항상 확정
@@ -552,6 +582,8 @@ export async function createOnsiteBooking(input: {
     p_quantity: values.quantity,
     p_status: status,
     p_allow_duplicate: input.allowDuplicate ?? false,
+    p_custom_answers:
+      Object.keys(customAnswers).length > 0 ? customAnswers : null,
   });
 
   if (error) {
@@ -579,7 +611,7 @@ export async function createOnsiteBooking(input: {
     if (error.code === "PGRST202" || message.includes("create_onsite_booking")) {
       console.warn(
         "[createOnsiteBooking] create_onsite_booking RPC가 없습니다. " +
-          "supabase/migrations/20260729110000_onsite_booking.sql을 적용하세요."
+          "supabase/migrations/20260820100000_onsite_custom_answers.sql을 적용하세요."
       );
       return {
         error:

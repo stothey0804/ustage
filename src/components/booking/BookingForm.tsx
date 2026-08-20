@@ -3,13 +3,19 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Controller, useForm } from "react-hook-form";
+import {
+  Controller,
+  useForm,
+  type Control,
+  type FieldErrors,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle, Loader2, Minus, Plus } from "lucide-react";
 
 import {
   bookingFormSchema,
   type BookingFormValues,
+  type CustomAnswersForm,
 } from "@/lib/validations/booking";
 import { CustomFieldRenderer } from "./CustomFieldRenderer";
 import { formatDepositTime } from "@/lib/date";
@@ -610,10 +616,12 @@ export function BookingForm({
             {customFields.length > 0 && (
               <>
                 <Separator />
+                {/* 렌더러는 custom_answers만 보므로 캐스팅해 넘긴다
+                    (RHF의 Control<T>는 폼 스키마마다 달라 구조적으로 호환되지 않는다) */}
                 <CustomFieldRenderer
                   fields={customFields}
-                  control={control}
-                  errors={errors}
+                  control={control as unknown as Control<CustomAnswersForm>}
+                  errors={errors as FieldErrors<CustomAnswersForm>}
                 />
               </>
             )}

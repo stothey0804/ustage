@@ -12,12 +12,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { CustomField } from "@/lib/validations/event";
-import type { BookingFormValues } from "@/lib/validations/booking";
+import type { CustomAnswersForm } from "@/lib/validations/booking";
 
+/**
+ * 커스텀 필드 입력 — 공개 예매 폼과 현장 예매 폼이 함께 쓴다.
+ * `custom_answers`만 보므로 호출부는 `control`을 이 타입으로 캐스팅해 넘긴다.
+ */
 interface CustomFieldRendererProps {
   fields: CustomField[];
-  control: Control<BookingFormValues>;
-  errors: FieldErrors<BookingFormValues>;
+  control: Control<CustomAnswersForm>;
+  errors: FieldErrors<CustomAnswersForm>;
 }
 
 export function CustomFieldRenderer({

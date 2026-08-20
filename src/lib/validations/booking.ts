@@ -39,6 +39,16 @@ export const bookingFormSchema = z.object({
 export type BookingFormValues = z.infer<typeof bookingFormSchema>;
 
 /**
+ * `CustomFieldRenderer`가 동작하는 최소 형태 — `custom_answers`만 공유한다.
+ * 공개 예매 폼과 주최자의 현장 예매 폼이 스키마는 다르지만 이 필드는 같으므로,
+ * 렌더러를 이 타입으로 두고 호출부에서 `control`을 캐스팅해 재사용한다
+ * (RHF 제네릭은 `Path<T>` 해석이 막혀 제네릭 렌더러로는 타입이 성립하지 않는다).
+ */
+export type CustomAnswersForm = {
+  custom_answers?: Record<string, string | undefined>;
+};
+
+/**
  * 현장 예매 — 주최자가 명단에서 비회원 예매를 대신 만든다.
  * 현장에서 빠르게 입력해야 하므로 항목을 최소로 둔다(입금자명·입금시간은 서버가 채움).
  */
@@ -62,6 +72,11 @@ export const onsiteBookingSchema = z.object({
     .optional(),
   /** true면 즉시 입금확인(확정) 상태로 만들고 입장 QR 메일을 보낸다 */
   confirmNow: z.boolean(),
+  /**
+   * 커스텀 필드 답변 — 값 없는 키를 허용한다(예매 폼과 같은 이유: select·checkbox는
+   * 손대기 전까지 값이 없다). 필수 검사는 RHF 룰과 서버 액션이 한다.
+   */
+  custom_answers: z.record(z.string(), z.string().optional()).optional(),
 });
 
 export type OnsiteBookingValues = z.infer<typeof onsiteBookingSchema>;

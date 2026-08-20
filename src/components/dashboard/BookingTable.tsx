@@ -39,7 +39,11 @@ import {
   formatCustomAnswer,
   searchableCustomAnswers,
 } from "@/lib/custom-answers";
-import { effectiveQuantity, occupancyPercent } from "@/lib/seats";
+import {
+  effectiveQuantity,
+  occupancyPercent,
+  remainingSeats,
+} from "@/lib/seats";
 import { visibleBookingActions, type EventRole } from "@/lib/staff-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -616,6 +620,8 @@ export function BookingTable({
               eventId={eventId}
               isFree={isFree}
               price={price}
+              remainingSeats={remainingSeats(initialBookings, capacity)}
+              customFields={columnFields}
             />
             <Button
               type="button"

@@ -2,12 +2,19 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import {
+  useForm,
+  type Control,
+  type FieldErrors,
+} from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Minus, Plus, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { createOnsiteBooking } from "@/app/actions/booking";
+import { CustomFieldRenderer } from "@/components/booking/CustomFieldRenderer";
+import type { CustomAnswersForm } from "@/lib/validations/booking";
+import type { CustomField } from "@/lib/validations/event";
 import { formatBookingNoRange } from "@/lib/booking-code";
 import {
   onsiteBookingSchema,
@@ -30,6 +37,10 @@ interface Props {
   isFree: boolean;
   /** 1매 가격 (원) */
   price: number;
+  /** 남은 좌석 — 정원이 없으면 null(상한 20매). 좌석은 주최자도 초과할 수 없다 */
+  remainingSeats?: number | null;
+  /** 스테이지의 커스텀 필드 — 필수 항목은 현장 예매에서도 받아야 한다 */
+  customFields?: CustomField[];
 }
 
 type Created = {
@@ -46,7 +57,13 @@ type Created = {
  * 스테이지가 마감·종료 상태여도 생성되며(서버 액션이 상태를 검사하지 않는다),
  * 좌석 정원과 중복 이메일만 막는다.
  */
-export function OnsiteBookingDialog({ eventId, isFree, price }: Props) {
+export function OnsiteBookingDialog({
+  eventId,
+  isFree,
+  price,
+  remainingSeats = null,
+  customFields = [],
+}: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -63,6 +80,7 @@ export function OnsiteBookingDialog({ eventId, isFree, price }: Props) {
     reset,
     setValue,
     watch,
+    control,
     formState: { errors },
   } = useForm<OnsiteBookingValues>({
     resolver: zodResolver(onsiteBookingSchema),
@@ -72,11 +90,21 @@ export function OnsiteBookingDialog({ eventId, isFree, price }: Props) {
       quantity: 1,
       password: undefined,
       confirmNow: true,
+      custom_answers: {},
     },
   });
 
   const quantity = watch("quantity") || 1;
   const confirmNow = watch("confirmNow");
+  /**
+   * 고를 수 있는 최대 매수 — 잔여석이 있으면 그 값이 상한이다.
+   * 좌석은 물리적 제약이라 주최자도 초과할 수 없다(서버 RPC도 같은 검사를 한다).
+   */
+  const maxQuantity = Math.max(
+    1,
+    remainingSeats === null ? 20 : Math.min(20, remainingSeats)
+  );
+  const soldOut = remainingSeats === 0;
 
   function closeAndReset(next: boolean) {
     if (isPending) return;
@@ -102,6 +130,7 @@ export function OnsiteBookingDialog({ eventId, isFree, price }: Props) {
         quantity: values.quantity,
         password: values.password,
         confirmNow: values.confirmNow,
+        customAnswers: values.custom_answers,
         allowDuplicate,
       });
 
@@ -284,9 +313,9 @@ export function OnsiteBookingDialog({ eventId, isFree, price }: Props) {
                     variant="outline"
                     size="icon-sm"
                     aria-label="매수 늘리기"
-                    disabled={quantity >= 20}
+                    disabled={quantity >= maxQuantity}
                     onClick={() =>
-                      setValue("quantity", Math.min(quantity + 1, 20))
+                      setValue("quantity", Math.min(quantity + 1, maxQuantity))
                     }
                   >
                     <Plus className="size-4" />
@@ -302,7 +331,33 @@ export function OnsiteBookingDialog({ eventId, isFree, price }: Props) {
                     {errors.quantity.message}
                   </p>
                 )}
+                {remainingSeats !== null && (
+                  <p
+                    className={
+                      soldOut
+                        ? "text-xs font-medium text-destructive"
+                        : "text-xs text-muted-foreground"
+                    }
+                  >
+                    {soldOut
+                      ? "좌석이 모두 찼어요. 좌석 한도를 늘린 뒤 등록해 주세요."
+                      : `남은 좌석 ${remainingSeats}석 — 최대 ${maxQuantity}매까지 등록할 수 있어요.`}
+                  </p>
+                )}
               </div>
+
+              {/* 커스텀 필드 — 필수 항목은 현장 예매에서도 받는다.
+                  예전에는 이 폼에 아예 없어서 현장 예매만 답변이 빈 채로 남았다. */}
+              {customFields.length > 0 && (
+                <>
+                  <Separator />
+                  <CustomFieldRenderer
+                    fields={customFields}
+                    control={control as unknown as Control<CustomAnswersForm>}
+                    errors={errors as FieldErrors<CustomAnswersForm>}
+                  />
+                </>
+              )}
 
               {!isFree && (
                 <label className="flex cursor-pointer items-center gap-2 text-[13px]">
@@ -384,7 +439,11 @@ export function OnsiteBookingDialog({ eventId, isFree, price }: Props) {
                 >
                   취소
                 </Button>
-                <Button type="submit" className="flex-1" disabled={isPending}>
+                <Button
+                  type="submit"
+                  className="flex-1"
+                  disabled={isPending || soldOut}
+                >
                   {isPending && <Loader2 className="size-4 mr-2 animate-spin" />}
                   등록
                 </Button>

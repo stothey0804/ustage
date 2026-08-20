@@ -23,6 +23,10 @@ type EventRow = {
   venue: string;
   venue_address: string | null;
   performer_id: string;
+  /** 현장 예매의 필수 항목 검사용 */
+  custom_fields: unknown;
+  /** 현장 예매의 좌석 상한 표시용 */
+  capacity: number | null;
 };
 
 export type EventAccess = {
@@ -44,7 +48,8 @@ async function resolveRole(
   const { data: event } = await supabase
     .from("events")
     .select(
-      "id, title, slug, price, bank_info, event_date, venue, venue_address, performer_id"
+      // custom_fields·capacity는 현장 예매(주최자 대행)에서 필수 항목·좌석을 검사하는 데 쓴다
+      "id, title, slug, price, bank_info, event_date, venue, venue_address, performer_id, custom_fields, capacity"
     )
     .eq("id", eventId)
     .single();

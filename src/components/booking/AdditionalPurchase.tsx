@@ -61,10 +61,17 @@ export function AdditionalPurchase({
   const [depositorName, setDepositorName] = useState("");
   const [depositedAt, setDepositedAt] = useState("");
   const [error, setError] = useState<string | null>(null);
+  /** 서버가 알려준 잔여석 — 동시 제출로 좌석이 줄었을 때만 채워진다 */
+  const [seatLimit, setSeatLimit] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  // 잔여석보다 많이 고를 수 없게 한다 — 예전에는 1~20 고정이라 제출 후에야 거절됐다
-  const maxSelectable = Math.max(1, Math.min(20, maxQuantity));
+  // 잔여석보다 많이 고를 수 없게 한다 — 예전에는 1~20 고정이라 제출 후에야 거절됐다.
+  // 제출 뒤 서버가 알려준 잔여석(seatLimit)이 있으면 그 값이 더 우선한다.
+  const maxSelectable = Math.max(
+    1,
+    Math.min(20, seatLimit === null ? maxQuantity : Math.min(maxQuantity, seatLimit))
+  );
+  const soldOut = seatLimit === 0;
   const totalAmount = price * quantity;
 
   const handleSubmit = () => {
@@ -92,6 +99,13 @@ export function AdditionalPurchase({
       const json = await res.json().catch(() => null);
 
       if (!res.ok) {
+        // 동시 제출로 좌석이 줄었으면 모달을 닫지 않고 선택 상한만 낮춘다
+        if (res.status === 409 && json?.code === "capacity_exceeded") {
+          const remaining =
+            typeof json.remaining === "number" ? json.remaining : 0;
+          setSeatLimit(remaining);
+          if (remaining > 0 && quantity > remaining) setQuantity(remaining);
+        }
         setError(json?.error ?? "추가 구매 처리 중 오류가 발생했습니다.");
         return;
       }
@@ -214,7 +228,7 @@ export function AdditionalPurchase({
                 type="button"
                 className="flex-1"
                 onClick={handleSubmit}
-                disabled={isPending}
+                disabled={isPending || soldOut}
               >
                 {isPending && <Loader2 className="size-4 mr-2 animate-spin" />}
                 {isFree ? "추가 신청" : "추가 구매"}

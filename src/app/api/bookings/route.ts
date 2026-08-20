@@ -31,7 +31,8 @@ type NewBooking = {
 
 type CreateResult =
   | { bookingId: string }
-  | { status: number; error: string; code?: string };
+  /** remaining: 정원 초과일 때 남은 좌석 수 — 폼이 매수 상한을 낮추는 데 쓴다 */
+  | { status: number; error: string; code?: string; remaining?: number };
 
 const DUPLICATE_EMAIL_ERROR = "이미 동일한 이메일로 예매된 내역이 있습니다.";
 
@@ -40,10 +41,26 @@ const DUPLICATE_EMAIL_ERROR = "이미 동일한 이메일로 예매된 내역이
 const DUMMY_HASH =
   "$2b$10$oTQzYOh9/OwmdGkVxQ0CFeN15copdbNHCuOKsxkQNrRUsOjoFwgyG";
 
-function capacityError(remaining: number): string {
-  return remaining <= 0
-    ? "좌석이 모두 찼습니다."
-    : `잔여 좌석이 ${remaining}석입니다. 수량을 조정해 주세요.`;
+/**
+ * 정원 초과 응답. 남은 좌석 수를 함께 돌려줘 **폼이 모달을 닫지 않고** 매수를
+ * 그 자리에서 줄일 수 있게 한다(동시 제출로 좌석이 줄어드는 일이 잦다).
+ */
+function capacityExceeded(remaining: number): {
+  status: number;
+  error: string;
+  code: string;
+  remaining: number;
+} {
+  const safe = Math.max(remaining, 0);
+  return {
+    status: 409,
+    error:
+      safe <= 0
+        ? "좌석이 모두 찼습니다."
+        : `잔여 좌석이 ${safe}석입니다. 매수를 조정해 주세요.`,
+    code: "capacity_exceeded",
+    remaining: safe,
+  };
 }
 
 /**
@@ -95,7 +112,7 @@ async function createBookingAtomic(
 
   const capacityMatch = message.match(/CAPACITY_EXCEEDED:(\d+)/);
   if (capacityMatch) {
-    return { status: 409, error: capacityError(Number(capacityMatch[1])) };
+    return capacityExceeded(Number(capacityMatch[1]));
   }
 
   if (message.includes("EVENT_NOT_OPEN")) {
@@ -136,7 +153,7 @@ async function legacyCreateBooking(
     const totalBooked = occupiedSeats(sumResult ?? []);
 
     if (totalBooked + row.quantity > capacity) {
-      return { status: 409, error: capacityError(capacity - totalBooked) };
+      return capacityExceeded(capacity - totalBooked);
     }
   }
 
@@ -466,7 +483,7 @@ export async function POST(req: Request) {
 
   if ("error" in created) {
     return NextResponse.json(
-      { error: created.error, code: created.code },
+      { error: created.error, code: created.code, remaining: created.remaining },
       { status: created.status }
     );
   }

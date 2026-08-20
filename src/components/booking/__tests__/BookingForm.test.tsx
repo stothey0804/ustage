@@ -153,6 +153,60 @@ describe("BookingForm — 예매자 정보(2단계)", () => {
   });
 });
 
+describe("BookingForm — 잔여석 부족(동시 제출)", () => {
+  /** 2단계까지 진행해 제출하고, 서버가 capacity_exceeded를 돌려주게 한다 */
+  async function submitAndExceed(remaining: number) {
+    mockFetch({
+      ok: false,
+      status: 409,
+      json: {
+        code: "capacity_exceeded",
+        remaining,
+        error: `잔여 좌석이 ${remaining}석입니다. 매수를 조정해 주세요.`,
+      },
+    });
+    const u = user();
+    render(
+      <BookingForm {...BASE_PROPS} price={0} isLoggedIn userEmail="me@example.com" />,
+    );
+    await u.click(screen.getByRole("button", { name: "참가 신청하기" }));
+    // 3매로 올린 뒤 제출
+    const dialog = screen.getByRole("dialog");
+    const plus = within(dialog).getByRole("button", { name: "매수 늘리기" });
+    await u.click(plus);
+    await u.click(plus);
+    await u.type(screen.getByLabelText(/이름/), "홍길동");
+    await u.click(screen.getByRole("button", { name: "참가 신청" }));
+    return u;
+  }
+
+  it("모달을 닫지 않고 매수를 줄일 수 있게 상한을 낮춘다", async () => {
+    await submitAndExceed(2);
+
+    // 폼 모달이 그대로 열려 있어야 한다
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByText(/방금 좌석이 줄어 최대 2매까지/),
+    ).toBeInTheDocument();
+    // 초과분은 잔여석으로 자동 조정된다
+    expect(within(dialog).getByText("2매")).toBeInTheDocument();
+    // 상한에 걸려 더 늘릴 수 없다
+    expect(
+      within(dialog).getByRole("button", { name: "매수 늘리기" }),
+    ).toBeDisabled();
+  });
+
+  it("좌석이 0이면 매진을 알리고 제출을 막는다", async () => {
+    await submitAndExceed(0);
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(/좌석이 모두 찼어요/)).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", { name: "참가 신청" }),
+    ).toBeDisabled();
+  });
+});
+
 describe("BookingForm — 제출과 안내(3단계)", () => {
   it("무료 신청은 확정 안내와 예약번호를 보여준다", async () => {
     const fetchMock = mockFetch({

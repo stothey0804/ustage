@@ -93,6 +93,11 @@ export function BookingForm({
   const [sameName, setSameName] = useState(true);
   // 제출 성공 후 안내에 쓰는 예약번호
   const [createdCode, setCreatedCode] = useState<string | null>(null);
+  /**
+   * 서버가 알려준 잔여석 — 동시 제출로 좌석이 줄었을 때만 채워진다.
+   * 모달을 닫지 않고 그 자리에서 매수를 줄일 수 있게 상한을 낮춘다.
+   */
+  const [seatLimit, setSeatLimit] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const {
@@ -118,9 +123,15 @@ export function BookingForm({
 
   const quantityValue = watch("quantity") || 1;
   const totalAmount = price * quantityValue;
+  // 서버가 잔여석을 알려주면 그 값이 상한이 된다(더 작은 쪽을 쓴다)
+  const effectiveMax = Math.max(
+    1,
+    seatLimit === null ? maxQuantity : Math.min(maxQuantity, seatLimit)
+  );
+  const soldOut = seatLimit === 0;
 
   const setQuantity = (next: number) => {
-    const clamped = Math.min(Math.max(next, 1), maxQuantity);
+    const clamped = Math.min(Math.max(next, 1), effectiveMax);
     setValue("quantity", clamped, { shouldValidate: true });
   };
 
@@ -184,6 +195,24 @@ export function BookingForm({
           setPendingValues(values);
           setModalError(null);
           setDuplicateOpen(true);
+          return;
+        }
+
+        // 동시 제출로 좌석이 줄어든 경우 — 폼을 닫지 않고 매수 상한만 낮춘다.
+        // (예전에는 모달을 닫고 1단계로 돌아가 매수를 다시 고르게 했다)
+        if (res.status === 409 && json.code === "capacity_exceeded") {
+          const remaining = typeof json.remaining === "number" ? json.remaining : 0;
+          setSeatLimit(remaining);
+          if (remaining > 0 && values.quantity > remaining) {
+            setValue("quantity", remaining, { shouldValidate: true });
+          }
+          const message = json.error ?? "잔여 좌석이 부족합니다.";
+          if (additional) setModalError(message);
+          else setServerError(message);
+          // 최종 확인 모달이 열려 있으면 닫고, 입력 폼으로 되돌린다
+          setConfirmOpen(false);
+          setDuplicateOpen(false);
+          setStep("form");
           return;
         }
         const message = json.error ?? "예매 처리 중 오류가 발생했습니다.";
@@ -339,7 +368,7 @@ export function BookingForm({
               variant="outline"
               size="icon-sm"
               aria-label="매수 늘리기"
-              disabled={quantityValue >= maxQuantity}
+              disabled={quantityValue >= effectiveMax}
               onClick={() => setQuantity(quantityValue + 1)}
             >
               <Plus className="size-4" />
@@ -347,9 +376,9 @@ export function BookingForm({
           </div>
         </div>
 
-        {maxQuantity < 20 && (
+        {effectiveMax < 20 && (
           <p className="text-xs text-muted-foreground">
-            잔여석 기준 최대 {maxQuantity}매까지 예매할 수 있어요.
+            잔여석 기준 최대 {effectiveMax}매까지 예매할 수 있어요.
           </p>
         )}
 
@@ -395,19 +424,55 @@ export function BookingForm({
           <div className="flex flex-col gap-1 rounded-4xl bg-primary/8 px-4 py-3.5">
             <span className="text-sm font-semibold">{eventTitle}</span>
             <span className="text-xs text-muted-foreground">{eventDateLabel}</span>
+            {/* 매수는 이 단계에서도 조정할 수 있다 — 동시 제출로 좌석이 줄었을 때
+                모달을 닫고 1단계로 돌아가지 않아도 되게 한다 */}
             <div className="mt-1.5 flex items-center justify-between gap-3 border-t border-primary/15 pt-2">
-              <span className="text-[13px] text-muted-foreground">
-                예매 매수{" "}
-                <span className="font-semibold text-primary">
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] text-muted-foreground">예매 매수</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-xs"
+                  aria-label="매수 줄이기"
+                  disabled={isPending || quantityValue <= 1}
+                  onClick={() => setQuantity(quantityValue - 1)}
+                >
+                  <Minus className="size-3" />
+                </Button>
+                <span className="min-w-8 text-center font-mono text-[15px] font-semibold text-primary">
                   {quantityValue}매
                 </span>
-              </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-xs"
+                  aria-label="매수 늘리기"
+                  disabled={isPending || quantityValue >= effectiveMax}
+                  onClick={() => setQuantity(quantityValue + 1)}
+                >
+                  <Plus className="size-3" />
+                </Button>
+              </div>
               {!isFree && (
                 <span className="text-[13px] font-semibold">
                   {totalAmount.toLocaleString()}원
                 </span>
               )}
             </div>
+
+            {seatLimit !== null && (
+              <p
+                className={
+                  soldOut
+                    ? "mt-1 text-xs font-medium text-destructive"
+                    : "mt-1 text-xs text-muted-foreground"
+                }
+              >
+                {soldOut
+                  ? "좌석이 모두 찼어요. 예매를 진행할 수 없습니다."
+                  : `방금 좌석이 줄어 최대 ${effectiveMax}매까지 예매할 수 있어요.`}
+              </p>
+            )}
           </div>
 
           {noticeHtml && (
@@ -591,7 +656,11 @@ export function BookingForm({
               >
                 이전
               </Button>
-              <Button type="submit" disabled={isPending} className="flex-1">
+              <Button
+                type="submit"
+                disabled={isPending || soldOut}
+                className="flex-1"
+              >
                 {isPending && <Loader2 className="size-4 mr-2 animate-spin" />}
                 {isFree ? "참가 신청" : "입금 안내 받기"}
               </Button>

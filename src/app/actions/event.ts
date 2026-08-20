@@ -121,7 +121,7 @@ export async function updateEvent(
 
   const { data: activeBookings } = await supabase
     .from("bookings")
-    .select("quantity, status")
+    .select("quantity, status, cancelled_quantity")
     .eq("event_id", id)
     .neq("status", "cancelled");
 
@@ -285,14 +285,11 @@ export async function updateEventStatus(
     if (event.capacity) {
       const { data: bookings } = await supabase
         .from("bookings")
-        .select("quantity, status")
-        .eq("event_id", id)
-        .neq("status", "cancelled");
+        .select("quantity, status, cancelled_quantity")
+        .eq("event_id", id);
 
-      const seatCount = (bookings ?? []).reduce(
-        (sum, b) => sum + (b.quantity ?? 1),
-        0
-      );
+      // 부분 취소분까지 뺀 점유 좌석 (lib/seats.ts — 예매 차단과 같은 기준)
+      const seatCount = occupiedSeats(bookings ?? []);
       if (seatCount >= event.capacity) {
         return { error: "좌석이 모두 차서 오픈할 수 없습니다." };
       }

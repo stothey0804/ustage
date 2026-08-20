@@ -32,7 +32,6 @@ import {
 } from "@/lib/booking-code";
 import {
   buildBookingsCsv,
-  bookingStatusLabel,
   downloadCsv,
 } from "@/lib/bookings-csv";
 import { cn } from "@/lib/utils";
@@ -44,7 +43,6 @@ import { effectiveQuantity, occupancyPercent } from "@/lib/seats";
 import { visibleBookingActions, type EventRole } from "@/lib/staff-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { BookingStatusBadge } from "@/components/StatusBadge";
 import { RichTextView } from "@/components/RichTextView";
@@ -355,7 +353,6 @@ export function BookingTable({
   const visibleIds = visible.map((b) => b.id);
   const allSelected =
     visibleIds.length > 0 && visibleIds.every((id) => selected.includes(id));
-  const selectedRows = initialBookings.filter((b) => selected.includes(b.id));
   const detail = initialBookings.find((b) => b.id === detailId) ?? null;
 
   function toggleSort(key: SortKey) {

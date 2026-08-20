@@ -16,6 +16,7 @@ import { onsiteBookingSchema } from "@/lib/validations/booking";
 import { sanitizeEventHtml } from "@/lib/sanitize";
 import { formatKST } from "@/lib/date";
 import { formatBookingNoRange } from "@/lib/booking-code";
+import { effectiveQuantity } from "@/lib/seats";
 import {
   assertBookingAccess,
   assertEventAccess,
@@ -132,7 +133,7 @@ export async function updateBookingStatus(
     const { data: full } = await ctx.supabase
       .from("bookings")
       .select(
-        "name, email, quantity, status, events!inner(title, event_date, venue, venue_address, contact, cancel_policy)"
+        "name, email, quantity, cancelled_quantity, status, events!inner(title, event_date, venue, venue_address, contact, cancel_policy)"
       )
       .eq("id", bookingId)
       .single();
@@ -150,7 +151,8 @@ export async function updateBookingStatus(
       cancelTarget = {
         email: full.email,
         name: full.name,
-        quantity: full.quantity ?? 1,
+        // 부분 취소분을 뺀 유효 매수 — 환불 판단이 이 숫자를 따라간다
+        quantity: effectiveQuantity(full),
         eventTitle: ev.title,
         eventDate: formatKST(ev.event_date),
         eventVenue: ev.venue_address || ev.venue,
@@ -169,7 +171,7 @@ export async function updateBookingStatus(
     const { data: full } = await ctx.supabase
       .from("bookings")
       .select(
-        "booking_no, name, email, quantity, status, user_id, booking_tickets(ticket_number, qr_token, attendee_no), events!inner(title, event_date, venue, venue_address, slug)"
+        "booking_no, name, email, quantity, status, user_id, booking_tickets(ticket_number, qr_token, attendee_no, cancelled_at), events!inner(title, event_date, venue, venue_address, slug)"
       )
       .eq("id", bookingId)
       .single();
@@ -183,10 +185,21 @@ export async function updateBookingStatus(
         venue_address: string | null;
         slug: string;
       };
+      // 부분 취소된 티켓의 QR은 무효 — 메일에 싣지 않는다 (재발송 경로와 같은 규칙)
+      const activeTickets = (full.booking_tickets ?? [])
+        .filter((t) => !t.cancelled_at)
+        .slice()
+        .sort((a, b) => a.ticket_number - b.ticket_number)
+        .map((t) => ({
+          ticket_number: t.ticket_number,
+          qr_token: t.qr_token,
+          attendee_no: t.attendee_no,
+        }));
       confirmTarget = {
         email: full.email,
         name: full.name,
-        quantity: full.quantity ?? 1,
+        quantity: activeTickets.length,
+        // 번호 범위 표기는 구매 매수 기준 유지 (부분 취소 정책)
         bookingNoLabel: formatBookingNoRange(
           full.booking_no,
           full.quantity ?? 1,
@@ -197,14 +210,7 @@ export async function updateBookingStatus(
         eventDate: formatKST(ev.event_date),
         eventVenue: ev.venue_address || ev.venue,
         slug: ev.slug,
-        tickets: (full.booking_tickets ?? [])
-          .slice()
-          .sort((a, b) => a.ticket_number - b.ticket_number)
-          .map((t) => ({
-            ticket_number: t.ticket_number,
-            qr_token: t.qr_token,
-            attendee_no: t.attendee_no,
-          })),
+        tickets: activeTickets,
       };
     }
   }
@@ -288,7 +294,7 @@ export async function updateBookingStatusBulk(
   const { data: rows, error: readError } = await supabase
     .from("bookings")
     .select(
-      "id, booking_no, name, email, quantity, status, user_id, event_id, booking_tickets(ticket_number, qr_token, attendee_no), events!inner(performer_id, title, event_date, venue, venue_address, slug, contact, cancel_policy)"
+      "id, booking_no, name, email, quantity, cancelled_quantity, status, user_id, event_id, booking_tickets(ticket_number, qr_token, attendee_no, cancelled_at), events!inner(performer_id, title, event_date, venue, venue_address, slug, contact, cancel_policy)"
     )
     .in("id", bookingIds);
 
@@ -341,10 +347,12 @@ export async function updateBookingStatusBulk(
     for (const row of changing) {
       if (!row.email) continue;
       const ev = eventInfo(row);
-      const quantity = row.quantity ?? 1;
+      // 부분 취소분을 뺀 유효 매수 (메일의 매수·QR 첨부 기준)
+      const quantity = effectiveQuantity(row);
 
       if (status === "confirmed") {
         const tickets = (row.booking_tickets ?? [])
+          .filter((t) => !t.cancelled_at)
           .slice()
           .sort((a, b) => a.ticket_number - b.ticket_number)
           .map((t) => ({
@@ -364,7 +372,8 @@ export async function updateBookingStatusBulk(
             ? `${baseUrl}/dashboard/bookings/${row.id}`
             : `${baseUrl}/e/${ev.slug}/me`,
           tickets,
-          bookingNoLabel: formatBookingNoRange(row.booking_no, quantity, row.id),
+          // 번호 범위 표기는 구매 매수 기준 유지 (부분 취소 정책)
+          bookingNoLabel: formatBookingNoRange(row.booking_no, row.quantity ?? 1, row.id),
         }).catch((err) => console.error("[email]", err));
       }
 

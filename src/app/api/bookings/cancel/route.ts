@@ -10,6 +10,7 @@ import { getAccountEmail } from "@/lib/account-email";
 import { sendBookingCancelled, sendOwnerCancelNotice, getBaseUrl } from "@/lib/email";
 import { formatKST } from "@/lib/date";
 import { selfCancelBlockReason } from "@/lib/booking-cancel";
+import { effectiveQuantity } from "@/lib/seats";
 
 const cancelSchema = z.object({
   booking_id: z.string().uuid(),
@@ -76,7 +77,7 @@ export async function POST(req: Request) {
   const { data: booking, error } = await admin
     .from("bookings")
     .select(
-      "id, user_id, name, email, password_hash, quantity, status, booking_tickets(checked_in), events!inner(id, title, slug, event_date, event_end_date, venue, venue_address, contact, cancel_policy, performer_id, price)"
+      "id, user_id, name, email, password_hash, quantity, cancelled_quantity, status, booking_tickets(checked_in), events!inner(id, title, slug, event_date, event_end_date, venue, venue_address, contact, cancel_policy, performer_id, price)"
     )
     .eq("id", booking_id)
     .single();
@@ -153,7 +154,8 @@ export async function POST(req: Request) {
   }
 
   const wasConfirmed = booking.status === "confirmed";
-  const quantity = booking.quantity ?? 1;
+  // 부분 취소분을 뺀 유효 매수 — 주최자의 환불 판단이 이 숫자를 따라간다
+  const quantity = effectiveQuantity(booking);
   const eventDate = formatKST(event.event_date);
   const baseUrl = getBaseUrl();
 

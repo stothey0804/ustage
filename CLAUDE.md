@@ -140,7 +140,7 @@ email           text             # 예매자 이메일 (확인 메일 발송, �
 password_hash   text             # bcrypt, 비회원 예매 시에만 사용 (회원 예매는 빈 문자열 "")
 depositor_name  text             # 입금자명 (참석자 입력, 무료 이벤트는 name으로 자동 채움)
 deposited_at    text             # 입금시간 (참석자 입력, 자유형식, 무료 이벤트는 "무료입장")
-quantity        integer          # 예매 매수 (1~10)
+quantity        integer          # 예매 매수 (1~20)
 status          text             # 'pending' | 'confirmed' | 'cancelled' (무료 이벤트는 즉시 confirmed)
 custom_answers  jsonb            # {field_id: value}
 created_at      timestamptz

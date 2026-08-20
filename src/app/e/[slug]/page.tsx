@@ -53,9 +53,11 @@ export async function generateMetadata({
   const base: Metadata = { robots: { index: false, follow: false } };
   if (!event) return base;
 
-  // 규칙(포스터 유무에 따른 이미지·카드 종류)은 lib/og-share.ts에서 정한다
   const share = bookingShareMeta(event, (iso) => formatKST(iso));
 
+  // 미리보기 **이미지**는 여기서 정하지 않는다 — 파일 기반 메타데이터가
+  // generateMetadata보다 우선하므로 openGraph.images를 줘도 무시된다.
+  // 포스터 카드는 같은 세그먼트의 opengraph-image.tsx가 그린다.
   return {
     ...base,
     title: share.title,
@@ -66,15 +68,12 @@ export async function generateMetadata({
       url: `/e/${slug}`,
       title: share.title,
       description: share.description,
-      ...(share.imageUrl
-        ? { images: [{ url: share.imageUrl, alt: `${share.title} 포스터` }] }
-        : {}),
     },
     twitter: {
-      card: share.twitterCard,
+      // opengraph-image가 1200×630 가로 카드를 만들므로 큰 카드가 맞다
+      card: "summary_large_image",
       title: share.title,
       description: share.description,
-      ...(share.imageUrl ? { images: [share.imageUrl] } : {}),
     },
   };
 }

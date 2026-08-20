@@ -842,12 +842,18 @@ ended  (행사 종료) → event_date 경과
   Satori 주의점 둘: JSX로 넣은 SVG는 gradient/defs가 깨져 **data URI `<img>`** 로 넘겨야 하고,
   **Fragment는 flex 자식으로 배치되지 않아** 형제 div로 나눠야 한다.
   한글은 폰트 데이터를 직접 넘겨야 렌더링되므로 Noto Sans KR 서브셋을 fetch한다.
-- **공개 예매 페이지는 포스터가 있으면 그것을 미리보기로 쓴다.** 규칙은
-  `lib/og-share.ts`의 `bookingShareMeta`(순수 함수, vitest로 검증):
-  포스터가 없으면 `images`를 **넘기지 않아** 루트 OG 이미지를 상속하고(빈 배열을 주면
-  상속이 끊긴다), 포스터는 세로라 트위터 카드는 `summary`(정사각)를 쓴다.
-  `robots: noindex`는 유지한다 — 비공개 링크라 검색에 걸리지 않아야 하고, 메신저
-  크롤러는 그 값과 무관하게 OG를 읽는다.
+- **공개 예매 페이지는 포스터를 미리보기로 쓴다** — `app/e/[slug]/opengraph-image.tsx`.
+  ⚠️ **파일 기반 메타데이터가 `generateMetadata`보다 우선한다**(Next 공식 규칙). 그래서
+  루트 `opengraph-image.tsx`가 있는 한 페이지에서 `openGraph.images`로 포스터를 지정해도
+  무시된다 — 반드시 **그 세그먼트에 파일을 둬야** 한다. 페이지의 `generateMetadata`는
+  제목·설명만 정하고(`lib/og-share.ts`), 이미지는 손대지 않는다.
+  - 포스터는 세로가 길어 1200×630을 채울 수 없으므로 브랜드 배경 위에 전체를 담고
+    (`objectFit: contain`) 옆에 제목·일시·장소·워드마크를 둔다. 카드 레이아웃은
+    `lib/og-card.tsx`로 분리해 실제 예매 데이터 없이도 모양을 확인할 수 있다.
+  - 포스터는 **미리 fetch해 data URI로** 넘긴다. 원격 URL을 그대로 주면 그 요청이 실패할 때
+    렌더 전체가 터져 OG 이미지가 아예 없는 상태가 된다 — 실패 시 브랜드 마크로 대체한다.
+  - `robots: noindex`는 유지한다 — 비공개 링크라 검색에 걸리지 않아야 하고, 메신저
+    크롤러는 그 값과 무관하게 OG를 읽는다.
 
 ## 클로드 디자인(Design System) 동기화
 

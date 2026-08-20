@@ -244,13 +244,38 @@ export function BookingForm({
     });
   };
 
-  // 예매 불가 상태
+  // 예매 불가 상태 — 예매는 못 하지만 **이미 예매한 사람**은 이 화면에서 갈 곳이 있어야 한다.
+  // (예전에는 사유 문구만 있어, 비회원 조회 링크 외에는 로그인 통로가 없었다)
   if (!isOpen) {
     return (
-      <div className="rounded-2xl border bg-muted/30 p-6 text-center">
+      <div className="space-y-4 rounded-2xl border bg-muted/30 p-6 text-center">
         <p className="text-sm text-muted-foreground">
           {closedReason ?? "현재 예매를 받지 않습니다."}
         </p>
+
+        <Separator />
+
+        <div className="space-y-2.5">
+          <p className="text-xs text-muted-foreground">
+            이미 예매하셨나요? 예약 내역과 입장 QR을 확인할 수 있어요.
+          </p>
+          {isLoggedIn ? (
+            <Button asChild size="sm" className="w-full">
+              <Link href="/dashboard/bookings">내 티켓 확인하기</Link>
+            </Button>
+          ) : (
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button asChild size="sm" className="flex-1">
+                <Link href={`/login?next=${encodeURIComponent(pathname)}`}>
+                  로그인하고 확인
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="flex-1">
+                <Link href={`${pathname}/me`}>비회원 예약 조회</Link>
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
     );
   }

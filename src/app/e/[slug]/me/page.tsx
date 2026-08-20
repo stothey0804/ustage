@@ -42,6 +42,18 @@ export default async function BookingLookupPage({ params }: Props) {
       </div>
 
       <BookingLookup eventId={event.id} isFree={event.price === 0} />
+
+      {/* 회원으로 예매했다면 비밀번호 조회가 아니라 로그인이 맞다 — 통로를 함께 둔다
+          (회원 예매는 password_hash가 빈 값이라 이 화면에서는 찾을 수 없다) */}
+      <p className="text-center text-xs text-muted-foreground">
+        로그인해서 예매하셨나요?{" "}
+        <Link
+          href={`/login?next=${encodeURIComponent(`/e/${slug}`)}`}
+          className="font-medium underline underline-offset-2 hover:text-foreground"
+        >
+          로그인하고 내 티켓 보기
+        </Link>
+      </p>
     </div>
   );
 }

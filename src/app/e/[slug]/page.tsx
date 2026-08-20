@@ -318,24 +318,36 @@ export default async function EventPublicPage({
         />
       </section>
 
-      {/* 예약 조회 링크 */}
-      <div className="text-center">
-        {user ? (
-          <Link
-            href="/dashboard/bookings"
-            className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
-          >
-            내 티켓 확인하기
-          </Link>
-        ) : (
-          <Link
-            href={`/e/${slug}/me`}
-            className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
-          >
-            비회원 예약 조회
-          </Link>
-        )}
-      </div>
+      {/* 예약 조회 통로 — 마감 상태에서는 BookingForm이 같은 링크를 버튼으로 크게
+          보여주므로 여기서는 생략한다(같은 링크가 두 번 나오지 않게). */}
+      {isOpen && (
+        <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground">
+          {user ? (
+            <Link
+              href="/dashboard/bookings"
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              내 티켓 확인하기
+            </Link>
+          ) : (
+            <>
+              <Link
+                href={`/e/${slug}/me`}
+                className="underline underline-offset-2 hover:text-foreground"
+              >
+                비회원 예약 조회
+              </Link>
+              <span aria-hidden="true">·</span>
+              <Link
+                href={`/login?next=${encodeURIComponent(`/e/${slug}`)}`}
+                className="underline underline-offset-2 hover:text-foreground"
+              >
+                로그인
+              </Link>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

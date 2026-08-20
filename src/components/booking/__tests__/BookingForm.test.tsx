@@ -36,7 +36,7 @@ afterEach(() => {
 });
 
 describe("BookingForm — 매수 선택(1단계)", () => {
-  it("isOpen=false면 사유만 표시한다", () => {
+  it("isOpen=false면 예매를 막고, 이미 예매한 사람의 통로를 준다", () => {
     render(
       <BookingForm
         {...BASE_PROPS}
@@ -46,6 +46,34 @@ describe("BookingForm — 매수 선택(1단계)", () => {
     );
     expect(screen.getByText("예매 기간이 종료되었습니다.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "비회원 예매" })).not.toBeInTheDocument();
+
+    // 마감 화면에서도 로그인·비회원 조회로 갈 수 있어야 한다
+    expect(screen.getByRole("link", { name: "로그인하고 확인" })).toHaveAttribute(
+      "href",
+      "/login?next=%2Fe%2Ftest-slug",
+    );
+    expect(
+      screen.getByRole("link", { name: "비회원 예약 조회" }),
+    ).toHaveAttribute("href", "/e/test-slug/me");
+  });
+
+  it("마감 + 로그인 상태면 내 티켓으로 보낸다", () => {
+    render(
+      <BookingForm
+        {...BASE_PROPS}
+        isOpen={false}
+        isLoggedIn
+        userEmail="me@example.com"
+        closedReason="예매가 마감되었습니다."
+      />,
+    );
+    expect(
+      screen.getByRole("link", { name: "내 티켓 확인하기" }),
+    ).toHaveAttribute("href", "/dashboard/bookings");
+    // 비회원 조회는 노출하지 않는다(로그인 사용자에게는 맞는 경로가 아니다)
+    expect(
+      screen.queryByRole("link", { name: "비회원 예약 조회" }),
+    ).not.toBeInTheDocument();
   });
 
   it("비로그인 시 로그인/비회원 예매 버튼을 보여준다", () => {

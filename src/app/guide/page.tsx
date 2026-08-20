@@ -3,6 +3,7 @@ import type { ComponentType } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
+  BadgeCheck,
   ChevronLeft,
   ClipboardList,
   Link2,
@@ -70,6 +71,46 @@ const desktop = (src: string, alt: string): Shot => ({
   height: 2000,
   kind: "desktop",
 });
+
+/**
+ * 참석자 관점의 예매 흐름 — 개별 기능 설명(SECTIONS)에 들어가기 전 전체 지도.
+ *
+ * 래스터 목업 대신 마크업으로 그린다: 6단계를 이미지로 굽으면 모바일 폭에서
+ * 글자가 읽을 수 없게 줄어들고(가로 이미지) 다크모드에도 대응하지 못한다.
+ * 마크업이면 좁은 화면은 세로, 넓은 화면은 3열로 흐른다.
+ */
+const BOOKING_FLOW: { icon: IconType; title: string; detail: string }[] = [
+  {
+    icon: Link2,
+    title: "예매 페이지",
+    detail: "주최자가 공유한 비공개 링크를 엽니다.",
+  },
+  {
+    icon: Ticket,
+    title: "매수 선택",
+    detail: "매수를 고르고 회원·비회원 중 하나로 신청합니다.",
+  },
+  {
+    icon: ClipboardList,
+    title: "폼 입력",
+    detail: "이름·이메일·입금자명과 추가 항목을 채웁니다.",
+  },
+  {
+    icon: Mail,
+    title: "신청 완료",
+    detail: "입금 안내 메일이 자동으로 발송됩니다.",
+  },
+  {
+    icon: BadgeCheck,
+    title: "입금 확인 → QR",
+    detail: "주최자가 확인하면 입장 QR이 메일로 오고, 예매 조회에서도 보입니다.",
+  },
+  {
+    icon: ScanLine,
+    title: "당일 QR 입장",
+    detail: "현장에서 QR을 스캔하면 바로 입장 처리됩니다.",
+  },
+];
 
 const SECTIONS: Section[] = [
   {
@@ -218,6 +259,8 @@ export default function GuidePage() {
         </div>
       </header>
 
+      <BookingFlow />
+
       <div className="space-y-12">
         {[...SECTIONS, EXTRA, STAFF].map((section, index) => (
           <SectionBlock key={section.title} section={section} index={index + 1} />
@@ -239,6 +282,47 @@ export default function GuidePage() {
         </div>
       </footer>
     </main>
+  );
+}
+
+/** 예매 흐름 6단계 — 좁은 화면은 세로 타임라인, 넓은 화면은 3열 그리드 */
+function BookingFlow() {
+  return (
+    <section className="space-y-4 rounded-4xl bg-card p-5 shadow-md ring-1 ring-foreground/5 sm:p-6">
+      <div className="space-y-1">
+        <h2 className="text-[15px] font-semibold">예매 흐름 한눈에</h2>
+        <p className="text-[13px] leading-relaxed text-muted-foreground">
+          참석자가 링크를 여는 순간부터 당일 입장까지 여섯 단계로 끝납니다.
+        </p>
+      </div>
+
+      <ol className="grid gap-x-4 gap-y-3 sm:grid-cols-3">
+        {BOOKING_FLOW.map((step, i) => {
+          const { icon: Icon, title, detail } = step;
+          return (
+            <li
+              key={title}
+              className="relative flex gap-3 rounded-3xl bg-input/40 p-3.5"
+            >
+              <span className="grid size-8 shrink-0 place-items-center rounded-2xl bg-primary/10">
+                <Icon className="size-4 text-primary" />
+              </span>
+              <div className="min-w-0 space-y-0.5">
+                <p className="text-[13px] font-semibold leading-snug">
+                  <span className="mr-1.5 font-mono text-xs text-primary">
+                    {i + 1}
+                  </span>
+                  {title}
+                </p>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {detail}
+                </p>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
   );
 }
 

@@ -800,6 +800,14 @@ ended  (행사 종료) → event_date 경과
 - 모든 폼은 `react-hook-form` + `zod` resolver 사용
 - zod 스키마는 `lib/validations/`에 분리 보관
 - 에러 메시지는 한국어로 작성
+- **zod는 `@/lib/zod`에서만 가져온다** — 그 모듈이 한국어 로케일(`z.config(ko())`)을
+  깔아두므로, message를 적지 않은 검증도 기본 문구가 한국어로 나온다.
+  `from "zod"`를 직접 쓰면 설정이 안 걸린 인스턴스가 섞여 영문 문구가 노출된다.
+  기본 문구는 개발자 말투에 가까우니 **사용자에게 보일 검증에는 message를 직접 적는다.**
+- 커스텀 필드 답변(`custom_answers`)은 **값이 `undefined`인 키를 허용**한다.
+  select·checkbox는 Controller가 등록만 하고 손대기 전까지 값이 없어서, 스키마에서
+  막으면 zod 기본 문구가 필드 아래 뜬다. 필수 검사는 `CustomFieldRenderer`의 RHF 룰
+  (필드 이름이 들어간 한국어 문구)과 `api/bookings`의 서버 검사가 담당한다.
 
 ### 날짜·시간
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
+import { z } from "@/lib/zod";
 
 import { createClient } from "@/lib/supabase/server";
 import { assertEventAccess } from "@/lib/event-access";

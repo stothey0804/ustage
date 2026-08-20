@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "@/lib/zod";
 
 /** 스태프 초대 — 이메일 하나만 받는다(가입 여부는 알려주지 않는다). */
 export const staffInviteSchema = z.object({

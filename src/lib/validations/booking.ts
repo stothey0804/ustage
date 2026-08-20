@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "@/lib/zod";
 
 export const bookingApiSchema = z.object({
   event_id: z.string().uuid("올바른 스테이지 ID가 아닙니다."),
@@ -26,7 +26,14 @@ export const bookingFormSchema = z.object({
   deposited_at: z.string(),
   quantity: z.number().int().min(1).max(20),
   password: z.string().optional(),
-  custom_answers: z.record(z.string(), z.string()).optional(),
+  /**
+   * 값이 `undefined`인 키를 허용한다 — select·checkbox는 Controller가 등록만 하고
+   * 손대기 전까지 값이 없어서, `z.string()`으로 두면 "잘못된 입력: 예상 타입은
+   * string…" 같은 zod 기본 문구가 필드 아래 그대로 떴다.
+   * 필수 여부는 CustomFieldRenderer의 RHF 룰(필드 이름이 들어간 한국어 문구)과
+   * 서버(api/bookings)의 required 검사가 담당한다.
+   */
+  custom_answers: z.record(z.string(), z.string().optional()).optional(),
 });
 
 export type BookingFormValues = z.infer<typeof bookingFormSchema>;

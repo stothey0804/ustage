@@ -16,6 +16,8 @@ import { AdditionalPurchase } from "@/components/booking/AdditionalPurchase";
 import { CancelBooking } from "@/components/booking/CancelBooking";
 import { selfCancelBlockReason } from "@/lib/booking-cancel";
 import { effectiveQuantity } from "@/lib/seats";
+import { formatBookingNoRange } from "@/lib/booking-code";
+import { BookingStatusBadge } from "@/components/StatusBadge";
 import { RichTextView } from "@/components/RichTextView";
 import { CopyButton } from "@/components/ui/copy-button";
 
@@ -38,6 +40,8 @@ type LookupResult = {
   name: string;
   status: string;
   quantity: number;
+  /** 인원(티켓) 번호의 첫 값 — 회원 예약 상세와 같은 형식으로 표기한다 */
+  booking_no?: number | null;
   /** 부분 취소된 매수 — 유효 매수는 quantity - cancelled_quantity */
   cancelled_quantity?: number | null;
   depositor_name: string;
@@ -68,18 +72,6 @@ function cancelBlockReason(result: LookupResult): string | null {
     checkedIn: result.tickets.some((t) => t.checked_in),
     eventEnd: new Date(result.events.event_end_date ?? result.events.event_date),
   });
-}
-
-function getStatusLabel(status: string, isFree: boolean) {
-  if (status === "confirmed") return isFree ? "참가확정" : "입금완료";
-  if (status === "cancelled") return "취소";
-  return "입금대기";
-}
-
-function getStatusVariant(status: string) {
-  if (status === "confirmed") return "default";
-  if (status === "cancelled") return "outline";
-  return "secondary";
 }
 
 const lookupFormSchema = z.object({
@@ -263,28 +255,37 @@ function BookingResultCard({
 
   return (
     <div className="rounded-lg border p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="font-medium">
+      {/* 헤더 구성은 회원 예약 상세(dashboard/bookings/[id])와 통일한다 —
+          왼쪽에 이름, 오른쪽에 상태 배지 + 매수, 그 아래 예매번호를 primary로 강조 */}
+      <div className="flex items-start justify-between gap-3">
+        <p className="min-w-0 font-medium">
           {label && (
             <span className="text-muted-foreground text-xs mr-2">{label}</span>
           )}
           {result.name}
-          {effective > 1 && (
-            <span className="text-muted-foreground ml-1">({effective}매)</span>
-          )}
-          {cancelledQuantity > 0 && (
-            <span className="ml-1 text-xs text-rose-600 dark:text-rose-400">
-              {result.quantity}매 중 {cancelledQuantity}매 취소
-            </span>
-          )}
         </p>
-        <Badge
-          variant={
-            getStatusVariant(status) as "secondary" | "default" | "outline"
-          }
-        >
-          {getStatusLabel(status, isFree)}
-        </Badge>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <div className="flex items-center gap-1.5">
+            <BookingStatusBadge status={status} isFree={isFree} />
+            {effective > 1 && <Badge variant="outline">{effective}매</Badge>}
+            {cancelledQuantity > 0 && (
+              <Badge
+                variant="outline"
+                className="text-rose-600 dark:text-rose-400"
+              >
+                {cancelledQuantity}매 취소
+              </Badge>
+            )}
+          </div>
+          {/* 번호 범위는 구매 매수 기준(부분 취소 정책) */}
+          <span className="font-mono text-[13px] font-medium text-primary">
+            {formatBookingNoRange(
+              result.booking_no ?? null,
+              result.quantity,
+              result.id
+            )}
+          </span>
+        </div>
       </div>
 
       {!isFree && (

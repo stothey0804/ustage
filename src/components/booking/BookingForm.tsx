@@ -612,11 +612,11 @@ export function BookingForm({
               추가 예약은 기존 예약과 별도의 예약으로 생성됩니다.
             </p>
             <p className="text-xs text-muted-foreground">
-              이름과 추가 질문 답변은{" "}
+              이번에 입력한{" "}
               <span className="font-medium text-foreground">
-                기존 예약 정보로 자동 입력
+                이름·추가 질문 답변이 그대로 저장
               </span>
-              되며, 입금자명·입금 예상 시간만 이번에 입력한 값이 적용돼요.
+              돼요. 기존 예약은 그대로 남습니다.
             </p>
             {!isLoggedIn && (
               <p className="text-xs text-muted-foreground">

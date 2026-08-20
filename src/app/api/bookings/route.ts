@@ -11,6 +11,7 @@ import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { getAccountEmail } from "@/lib/account-email";
 import { formatBookingNoRange } from "@/lib/booking-code";
 import { occupiedSeats } from "@/lib/seats";
+import { resolveBookingIdentity } from "@/lib/booking-inherit";
 import type { CustomField } from "@/lib/validations/event";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
@@ -291,7 +292,6 @@ export async function POST(req: Request) {
   }
 
   // 커스텀 필드 서버 검증: 정의되지 않은 필드 제거 + required 확인
-  // (추가 구매는 기존 예약의 답변을 상속하므로 검증하지 않음)
   const customFields = (event.custom_fields ?? []) as CustomField[];
   const knownFieldIds = new Set(customFields.map((f) => f.id));
   const customAnswers = Object.fromEntries(
@@ -299,7 +299,15 @@ export async function POST(req: Request) {
       knownFieldIds.has(key)
     )
   );
-  if (!data.additional) {
+  /**
+   * 답변이 함께 왔는지 — 추가 구매의 상속 여부를 가른다.
+   * 예매 폼에서 온 추가 구매는 사용자가 필드를 채워 보내므로 **그 값을 쓴다**.
+   * 예약 조회 화면의 '추가 구매'는 필드 UI가 없어 답변을 보내지 않으므로 기존 값을 상속한다.
+   */
+  const hasSubmittedAnswers = Object.keys(customAnswers).length > 0;
+
+  // 답변을 보낸 경우에만 필수 검사 — 상속 경로는 원본이 이미 검사를 통과했다
+  if (!data.additional || hasSubmittedAnswers) {
     for (const field of customFields) {
       if (!field.required) continue;
       const value = customAnswers[field.id];
@@ -429,7 +437,13 @@ export async function POST(req: Request) {
     ? ""
     : (original?.password_hash ?? (await bcrypt.hash(data.password!, 10)));
 
-  const bookerName = original?.name ?? data.name;
+  // 이름·답변을 이번 입력값으로 쓸지 상속할지 — 규칙은 lib/booking-inherit.ts
+  const identity = resolveBookingIdentity({
+    submittedName: data.name,
+    submittedAnswers: customAnswers,
+    original,
+  });
+  const bookerName = identity.name;
 
   // 정원 검사 + 예매 + 티켓 생성 (원자적 — service_role로 RLS 우회)
   const created = await createBookingAtomic(
@@ -444,11 +458,7 @@ export async function POST(req: Request) {
       depositor_name: event.price === 0 ? bookerName : data.depositor_name,
       deposited_at: event.price === 0 ? "무료입장" : data.deposited_at,
       quantity: data.quantity,
-      custom_answers: data.additional
-        ? original?.custom_answers ?? null
-        : Object.keys(customAnswers).length > 0
-          ? customAnswers
-          : null,
+      custom_answers: identity.customAnswers as NewBooking["custom_answers"],
       status: event.price === 0 ? "confirmed" : "pending",
     },
     data.additional

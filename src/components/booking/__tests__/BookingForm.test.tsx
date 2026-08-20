@@ -48,12 +48,12 @@ describe("BookingForm — 매수 선택(1단계)", () => {
     expect(screen.queryByRole("button", { name: "비회원 예매" })).not.toBeInTheDocument();
 
     // 마감 화면에서도 로그인·비회원 조회로 갈 수 있어야 한다
-    expect(screen.getByRole("link", { name: "로그인하고 확인" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "로그인" })).toHaveAttribute(
       "href",
       "/login?next=%2Fe%2Ftest-slug",
     );
     expect(
-      screen.getByRole("link", { name: "비회원 예약 조회" }),
+      screen.getByRole("link", { name: "비회원 조회" }),
     ).toHaveAttribute("href", "/e/test-slug/me");
   });
 
@@ -72,7 +72,7 @@ describe("BookingForm — 매수 선택(1단계)", () => {
     ).toHaveAttribute("href", "/dashboard/bookings");
     // 비회원 조회는 노출하지 않는다(로그인 사용자에게는 맞는 경로가 아니다)
     expect(
-      screen.queryByRole("link", { name: "비회원 예약 조회" }),
+      screen.queryByRole("link", { name: "비회원 조회" }),
     ).not.toBeInTheDocument();
   });
 

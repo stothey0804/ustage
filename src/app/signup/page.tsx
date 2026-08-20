@@ -62,6 +62,18 @@ export default async function SignupPage({ searchParams }: Props) {
                   "카카오가 이메일 주소를 제공하지 않아 직접 입력이 필요해요."}
             </p>
             <p>가입을 마치면 카카오가 자동으로 연결돼요.</p>
+            {/* 이미 다른 메일로 가입한 사람이 이 화면에서 재가입하면 계정이 둘로
+                갈라진다(기존 예매·스테이지는 원래 계정에 남는다) — 로그인으로 돌려보낸다 */}
+            <p className="border-t border-amber-300/40 pt-1.5 dark:border-amber-700/40">
+              이미 다른 이메일로 가입하셨나요?{" "}
+              <Link
+                href={`/?next=${encodeURIComponent(safeNext)}`}
+                className="font-medium underline underline-offset-2"
+              >
+                그 계정으로 로그인
+              </Link>
+              한 뒤 계정 설정에서 카카오를 연결하세요.
+            </p>
           </div>
         ) : (
           <>

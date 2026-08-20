@@ -832,6 +832,23 @@ ended  (행사 종료) → event_date 경과
   `layout.tsx`의 next/font는 `--font-mono`(Geist Mono)만 남았다.
 - 라이선스는 SIL OFL 1.1 — `src/app/pretendard.css` 상단 주석에 원본 고지를 유지한다.
 
+## 공유 미리보기 (OG 이미지)
+
+- **브랜드 마크 벡터의 단일 출처는 `lib/brand-mark.ts`** — 인앱 `BrandMark` 컴포넌트와
+  루트 OG 이미지가 같은 문자열을 쓴다. `public/icon.svg`(파비콘·앱 아이콘)는 정적 파일이라
+  import할 수 없는 쌍둥이이므로, 마크를 고치면 **두 곳을 함께** 고친다.
+- 루트 `app/opengraph-image.tsx`는 브랜드 마크 + **us.tage 워드마크**를 그린다.
+  가운뎃점은 글꼴 마침표가 아니라 원 요소다(화면의 `Wordmark`와 같은 모양).
+  Satori 주의점 둘: JSX로 넣은 SVG는 gradient/defs가 깨져 **data URI `<img>`** 로 넘겨야 하고,
+  **Fragment는 flex 자식으로 배치되지 않아** 형제 div로 나눠야 한다.
+  한글은 폰트 데이터를 직접 넘겨야 렌더링되므로 Noto Sans KR 서브셋을 fetch한다.
+- **공개 예매 페이지는 포스터가 있으면 그것을 미리보기로 쓴다.** 규칙은
+  `lib/og-share.ts`의 `bookingShareMeta`(순수 함수, vitest로 검증):
+  포스터가 없으면 `images`를 **넘기지 않아** 루트 OG 이미지를 상속하고(빈 배열을 주면
+  상속이 끊긴다), 포스터는 세로라 트위터 카드는 `summary`(정사각)를 쓴다.
+  `robots: noindex`는 유지한다 — 비공개 링크라 검색에 걸리지 않아야 하고, 메신저
+  크롤러는 그 값과 무관하게 OG를 읽는다.
+
 ## 클로드 디자인(Design System) 동기화
 
 - 대상 프로젝트: **ustage Design System** (`ee7714ae-032d-448f-b6e4-e3d2ab1f93e5`).

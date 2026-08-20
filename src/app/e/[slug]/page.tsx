@@ -25,10 +25,59 @@ import { BookingForm } from "@/components/booking/BookingForm";
 import { AddToCalendar } from "@/components/booking/AddToCalendar";
 import { VenueMapLinks } from "@/components/booking/VenueMapLinks";
 import type { CustomField } from "@/lib/validations/event";
+import { bookingShareMeta } from "@/lib/og-share";
 
-export const metadata: Metadata = {
-  robots: { index: false, follow: false },
-};
+/**
+ * 공유 미리보기(OG) — 포스터가 있으면 그 이미지를 그대로 쓴다.
+ *
+ * 카카오톡·메신저에 링크를 붙였을 때 서비스 로고가 아니라 **그 공연의 포스터**가
+ * 보이는 편이 낫다. 포스터가 없으면 images를 비워 루트의 `opengraph-image.tsx`
+ * (브랜드 마크 + us.tage)를 그대로 물려받는다.
+ *
+ * `robots: noindex`는 유지한다 — 비공개 링크라 검색에는 걸리지 않아야 하고,
+ * 메신저 크롤러는 이 값과 무관하게 OG를 읽는다.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const supabase = await createClient();
+  const { data: event } = await supabase
+    .from("events")
+    .select("title, description, poster_url, event_date, venue")
+    .eq("slug", slug)
+    .single();
+
+  const base: Metadata = { robots: { index: false, follow: false } };
+  if (!event) return base;
+
+  // 규칙(포스터 유무에 따른 이미지·카드 종류)은 lib/og-share.ts에서 정한다
+  const share = bookingShareMeta(event, (iso) => formatKST(iso));
+
+  return {
+    ...base,
+    title: share.title,
+    description: share.description,
+    openGraph: {
+      type: "website",
+      locale: "ko_KR",
+      url: `/e/${slug}`,
+      title: share.title,
+      description: share.description,
+      ...(share.imageUrl
+        ? { images: [{ url: share.imageUrl, alt: `${share.title} 포스터` }] }
+        : {}),
+    },
+    twitter: {
+      card: share.twitterCard,
+      title: share.title,
+      description: share.description,
+      ...(share.imageUrl ? { images: [share.imageUrl] } : {}),
+    },
+  };
+}
 
 /**
  * 포스터 기준 가로 너비(px). 예매 페이지 본문 폭도 이 값에 맞춘다 —

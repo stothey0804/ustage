@@ -1,10 +1,11 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "어스테이지 — 소규모 공연 예매 · QR 입장 시스템";
+import { brandMarkDataUri } from "@/lib/brand-mark";
+
+export const alt = "us.tage(어스테이지) — 소규모 공연 예매 · QR 입장 시스템";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const TITLE = "어스테이지";
 const TAGLINE = "소규모 공연 예매 · QR 입장 시스템";
 const SUB = "링크 하나로 예매부터 입장까지";
 
@@ -26,8 +27,15 @@ async function loadGoogleFont(text: string): Promise<ArrayBuffer | null> {
   }
 }
 
+/**
+ * 서비스 대표 OG 이미지 — 브랜드 마크 + us.tage 워드마크.
+ *
+ * 마크는 `lib/brand-mark.ts`의 벡터를 data URI로 넘긴다(Satori는 JSX 컴포넌트로
+ * 넣은 SVG의 gradient/defs를 온전히 그리지 못해 <img>로 준다).
+ * 워드마크의 가운뎃점은 글꼴 마침표가 아니라 원 요소다 — 화면의 `Wordmark`와 같은 모양.
+ */
 export default async function OgImage() {
-  const fontData = await loadGoogleFont(`${TITLE}${TAGLINE}${SUB}UStage`);
+  const fontData = await loadGoogleFont(`${TAGLINE}${SUB}`);
 
   return new ImageResponse(
     (
@@ -39,45 +47,46 @@ export default async function OgImage() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #1f6f6f 0%, #2b8a8a 55%, #3aa3a0 100%)",
+          background:
+            "linear-gradient(135deg, #1f6f6f 0%, #2b8a8a 55%, #3aa3a0 100%)",
           color: "#ffffff",
           fontFamily: fontData ? "NotoSansKR" : "sans-serif",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 28,
-          }}
-        >
-          {/* 브랜드 마크: 무대 위 스포트라이트 모티프 */}
+        <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- Satori는 next/image를 쓰지 못한다 */}
+          <img src={brandMarkDataUri()} width={132} height={132} alt="" />
+
+          {/* us.tage — 가운뎃점을 스포트라이트처럼 살린 소문자 워드마크 */}
           <div
             style={{
-              width: 120,
-              height: 120,
-              borderRadius: 32,
-              background: "rgba(255,255,255,0.14)",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              fontSize: 64,
+              fontSize: 104,
               fontWeight: 700,
+              letterSpacing: -3,
             }}
           >
-            US
-          </div>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ fontSize: 92, fontWeight: 700, letterSpacing: -2 }}>
-              {fontData ? TITLE : "UStage"}
-            </div>
+            <span>us</span>
+            <span
+              style={{
+                width: 22,
+                height: 22,
+                margin: "0 10px",
+                borderRadius: 999,
+                background: "#ffffff",
+              }}
+            />
+            <span>tage</span>
           </div>
         </div>
 
+        {/* Satori는 Fragment를 flex 자식으로 제대로 배치하지 못한다 — 형제 div로 각각 둔다 */}
         {fontData && (
           <div
             style={{
-              marginTop: 36,
+              display: "flex",
+              marginTop: 40,
               fontSize: 38,
               fontWeight: 700,
               opacity: 0.95,
@@ -87,7 +96,9 @@ export default async function OgImage() {
           </div>
         )}
         {fontData && (
-          <div style={{ marginTop: 14, fontSize: 28, opacity: 0.75 }}>
+          <div
+            style={{ display: "flex", marginTop: 14, fontSize: 28, opacity: 0.75 }}
+          >
             {SUB}
           </div>
         )}

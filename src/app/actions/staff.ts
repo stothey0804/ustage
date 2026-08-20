@@ -20,11 +20,13 @@ const MAX_STAFF_PER_EVENT = 10;
 /**
  * 스태프 초대 — 이메일로 초대 링크를 보낸다.
  *
- * 가입 여부를 조회하지 않고 **항상 같은 응답**을 준다: 소유자에게 "이 이메일이
- * 가입돼 있는지"를 알려주면 계정 열거(enumeration)가 되기 때문이다.
- * 미가입자도 링크를 누르면 로그인·가입(카카오면 이메일 등록까지)을 거쳐 수락된다.
- * 수락 시 연결되는 것은 그 세션의 auth.uid()이므로, 신뢰 경계가 아닌
- * user_metadata.contact_email로 계정을 매칭하는 위험을 피한다.
+ * **가입된 회원에게만 보낼 수 있다** (2026-08-20 정책 변경). 오타 난 주소로
+ * 초대가 조용히 새는 것을 막고, 초대 = 개인정보(명단) 접근 위임이므로 수신자가
+ * 어스테이지 계정으로 특정되는 편이 안전하다. 존재 여부가 소유자에게 드러나는
+ * 계정 열거 트레이드오프는 감수한다 — 로그인 사용자 + 계정당 시간당 10회
+ * rate limit이 대량 조회를 막는다.
+ * 수락 시 연결되는 것은 여전히 **링크를 누른 그 세션의 auth.uid()** 다 —
+ * 신뢰 경계가 아닌 user_metadata.contact_email로 계정을 매칭하지 않는다.
  */
 export async function inviteEventStaff(
   eventId: string,
@@ -47,6 +49,29 @@ export async function inviteEventStaff(
   }
 
   const admin = createAdminClient();
+
+  // 가입된 계정 이메일인지 확인 — 비밀번호 재설정과 같은 RPC를 쓴다.
+  // RPC 미적용 환경에서는 확인을 건너뛴다(fail-open — 예전 동작으로 되돌아갈 뿐).
+  // 자동생성 타입에 이 함수가 없어(권한상 introspection 제외) 우회 캐스팅한다.
+  const rpc = admin.rpc.bind(admin) as unknown as (
+    fn: string,
+    args: Record<string, unknown>
+  ) => PromiseLike<{ data: unknown; error: { message?: string } | null }>;
+  const { data: exists, error: existsError } = await rpc(
+    "account_email_exists",
+    { p_email: invitedEmail }
+  );
+  if (existsError) {
+    console.warn(
+      "[inviteEventStaff] account_email_exists RPC가 없어 가입 확인을 건너뜁니다.",
+      existsError.message
+    );
+  } else if (!exists) {
+    return {
+      error:
+        "어스테이지에 가입된 이메일이 아닙니다. 스태프가 먼저 가입한 뒤 다시 초대해 주세요.",
+    };
+  }
 
   const { count } = await admin
     .from("event_staff")
@@ -205,6 +230,15 @@ export async function acceptStaffInvite(token: string): Promise<
   );
 
   if (!verdict.ok) return { error: verdict.reason };
+
+  // 이미 이 계정으로 수락된 초대 — 갱신 없이 성공으로 (재로그인 후 재방문 흐름)
+  if (verdict.alreadyAccepted) {
+    return {
+      success: true,
+      eventId: invite!.event_id,
+      eventTitle: event!.title,
+    };
+  }
 
   // pending 조건부 갱신 — 같은 링크로 두 계정이 동시에 수락하는 것을 막는다
   const { data: updated, error } = await admin

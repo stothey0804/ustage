@@ -65,7 +65,7 @@ export type StaffInvite = {
 };
 
 export type InviteAcceptance =
-  | { ok: true }
+  | { ok: true; alreadyAccepted?: boolean }
   | { ok: false; reason: string };
 
 /**
@@ -87,8 +87,10 @@ export function validateInviteAcceptance(
     };
   }
   if (invite.status === "accepted") {
+    // 같은 계정의 재방문은 오류가 아니다 — 수락 직후 로그아웃했다가 메일 링크로
+    // 다시 들어오는 흐름(가입 인증 → 재로그인)에서 반드시 발생한다. 멱등 처리.
     return invite.user_id === userId
-      ? { ok: false, reason: "이미 이 스테이지의 스태프입니다." }
+      ? { ok: true, alreadyAccepted: true }
       : { ok: false, reason: "이미 사용된 초대입니다." };
   }
   if (invite.status !== "pending") {

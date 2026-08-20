@@ -151,8 +151,8 @@ export function StaffPanel({ eventId, staff }: Props) {
         </form>
 
         <p className="text-xs text-muted-foreground">
-          초대 링크는 7일 후 만료됩니다. 어스테이지 계정이 없어도 링크에서 가입하면
-          바로 참여할 수 있어요.
+          어스테이지에 가입된 이메일만 초대할 수 있어요. 초대 링크는 7일 후
+          만료됩니다.
         </p>
       </div>
 

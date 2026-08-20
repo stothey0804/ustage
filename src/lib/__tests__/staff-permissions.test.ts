@@ -115,13 +115,14 @@ describe("validateInviteAcceptance", () => {
     if (!result.ok) expect(result.reason).toContain("이미 사용된");
   });
 
-  it("본인이 이미 수락했으면 그 사실을 알려준다", () => {
+  it("본인이 이미 수락한 초대의 재방문은 성공이다 (멱등)", () => {
+    // 수락 → 로그아웃 → 메일 링크로 재진입(재로그인) 흐름에서 반드시 발생한다.
+    // 오류 화면을 보여주면 사용자는 수락이 실패했다고 오해한다.
     const result = validateInviteAcceptance(
       { ...base, status: "accepted", user_id: "user-2" },
       "user-2",
       NOW,
     );
-    expect(result).toMatchObject({ ok: false });
-    if (!result.ok) expect(result.reason).toContain("이미 이 스테이지의 스태프");
+    expect(result).toEqual({ ok: true, alreadyAccepted: true });
   });
 });

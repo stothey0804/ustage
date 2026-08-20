@@ -37,6 +37,7 @@ export function SignupForm({
   const {
     register,
     handleSubmit,
+    resetField,
     formState: { errors, isSubmitting },
   } = useForm<SignupValues>({
     resolver: zodResolver(signupSchema),
@@ -153,6 +154,20 @@ export function SignupForm({
           >
             인증을 마쳤어요 — 로그인 화면으로
           </Link>
+          {/* 메일이 끝내 오지 않는 경우(휴면 메일함·수신 차단)의 탈출구.
+              미인증 계정은 데이터가 없으므로 다른 주소로 새로 가입하는 것이
+              곧 주소 변경이다 — 미인증 상태의 이메일 변경 기능을 따로 만들지 않는다. */}
+          <button
+            type="button"
+            onClick={() => {
+              resetField("email");
+              setResendMessage(null);
+              setSentEmail(null);
+            }}
+            className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+          >
+            메일이 계속 오지 않나요? — 다른 이메일로 다시 가입
+          </button>
         </div>
         {resendMessage ? (
           <p className="text-xs text-muted-foreground">{resendMessage}</p>

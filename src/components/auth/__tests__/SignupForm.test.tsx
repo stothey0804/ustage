@@ -112,6 +112,25 @@ describe("SignupForm", () => {
     );
   });
 
+  it("대기 화면에서 '다른 이메일로 다시 가입'을 누르면 이메일이 비워진 폼으로 돌아간다", async () => {
+    // 인증 메일이 끝내 오지 않는 경우(휴면 메일함 등)의 탈출구
+    signUpMock.mockResolvedValue({
+      data: { user: { identities: [{ provider: "email" }] }, session: null },
+      error: null,
+    });
+    const u = userEvent.setup();
+    render(<SignupForm />);
+    await fillAndSubmit();
+
+    await u.click(
+      await screen.findByRole("button", { name: /다른 이메일로 다시 가입/ }),
+    );
+    const email = screen.getByLabelText("이메일") as HTMLInputElement;
+    expect(email.value).toBe("");
+    // 비밀번호 입력은 유지된다 (다시 치지 않아도 됨)
+    expect(screen.getByLabelText("비밀번호")).toHaveValue("secret123");
+  });
+
   it("메일 발송 대기 화면에서 '인증은 링크를 연 브라우저에서'를 안내하고 로그인 경로를 준다", async () => {
     signUpMock.mockResolvedValue({
       data: { user: { identities: [{ provider: "email" }] }, session: null },

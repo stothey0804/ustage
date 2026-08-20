@@ -57,7 +57,9 @@ export default async function SignupPage({ searchParams }: Props) {
             <p className="font-medium">
               {prefillEmail
                 ? `${prefillEmail}으로 가입된 계정이 없어요.`
-                : "카카오에서 이메일을 받지 못했어요."}
+                : /* 메일이 발송됐다는 뜻으로 읽히지 않게 — 카카오가 '주소'를 안 준 상황이다
+                     (이메일 제공 동의 거부 또는 비즈앱 심사 전) */
+                  "카카오가 이메일 주소를 제공하지 않아 직접 입력이 필요해요."}
             </p>
             <p>가입을 마치면 카카오가 자동으로 연결돼요.</p>
           </div>

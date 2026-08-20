@@ -290,7 +290,7 @@ function BookingFlow() {
   return (
     <section className="space-y-4 rounded-4xl bg-card p-5 shadow-md ring-1 ring-foreground/5 sm:p-6">
       <div className="space-y-1">
-        <h2 className="text-[15px] font-semibold">예매 흐름 한눈에</h2>
+        <h2 className="text-[15px] font-semibold">한 눈에 보는 예매 흐름</h2>
         <p className="text-[13px] leading-relaxed text-muted-foreground">
           참석자가 링크를 여는 순간부터 당일 입장까지 여섯 단계로 끝납니다.
         </p>

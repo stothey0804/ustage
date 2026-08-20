@@ -27,9 +27,13 @@ export function QRTicket({ name, tickets }: QRTicketProps) {
           key={ticket.qr_token}
           className="flex flex-col items-center gap-3 rounded-2xl border bg-white p-6 text-center"
         >
-          <p className="font-mono text-lg font-bold text-primary">
-            #{ticket.attendee_no ?? ticket.ticket_number}
-          </p>
+          {/* 입장번호는 현장 호명·추첨의 기준 — 캡처 화면에서 가장 먼저 읽혀야 한다 */}
+          <div className="space-y-0.5">
+            <p className="text-[11px] tracking-wide text-gray-500">입장번호</p>
+            <p className="font-mono text-4xl font-bold leading-none text-primary">
+              #{ticket.attendee_no ?? ticket.ticket_number}
+            </p>
+          </div>
           <p className="text-sm font-semibold text-gray-800">
             {name}
             {total > 1 && (
@@ -63,6 +67,14 @@ export function QRTicket({ name, tickets }: QRTicketProps) {
           </p>
         </div>
       ))}
+
+      {/* 캡처를 유도하는 안내 — 티켓 목록 아래 한 번만 */}
+      <p className="text-center text-xs leading-relaxed text-muted-foreground">
+        입장번호는 현장 추첨에 쓰일 수 있어요 —{" "}
+        <span className="font-medium text-foreground">
+          번호와 함께 캡처해 주세요.
+        </span>
+      </p>
     </div>
   );
 }

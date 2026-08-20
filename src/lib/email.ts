@@ -58,9 +58,11 @@ async function buildQrParts(tickets: EmailTicket[]): Promise<QrEmailParts> {
       contentId: cid,
     });
     const label = ticket.attendee_no ?? ticket.ticket_number;
+    // 입장번호는 현장 호명·추첨의 기준이라 QR보다 먼저 눈에 들어와야 한다
     blocks.push(`
-    <div style="display:inline-block;margin:8px;padding:12px;border:1px solid #e5e5e5;border-radius:8px;text-align:center;">
-      <p style="margin:0 0 6px;font-size:12px;color:#2b8a8a;font-weight:600;">#${label}</p>
+    <div style="display:inline-block;margin:8px;padding:14px 16px;border:1px solid #e5e5e5;border-radius:8px;text-align:center;">
+      <p style="margin:0;font-size:11px;color:#666;letter-spacing:0.04em;">입장번호</p>
+      <p style="margin:2px 0 10px;font-size:40px;line-height:1.1;color:#2b8a8a;font-weight:700;">#${label}</p>
       <img src="cid:${cid}" width="180" height="180" alt="입장 QR${tickets.length > 1 ? ` #${ticket.ticket_number}` : ""}" style="display:block;" />
     </div>`);
   }
@@ -69,6 +71,9 @@ async function buildQrParts(tickets: EmailTicket[]): Promise<QrEmailParts> {
     <div style="margin:20px 0 0;">
       <p style="margin:0 0 8px;font-size:12px;color:#666;">입장 QR 코드 — 행사장 입구에서 보여주세요</p>
       <div style="text-align:center;">${blocks.join("")}</div>
+      <p style="margin:10px 0 0;font-size:12px;line-height:1.6;color:#666;text-align:center;">
+        입장번호는 현장 추첨에 쓰일 수 있어요 — <strong style="color:#1a1a1a;">번호와 함께 캡처해 주세요.</strong>
+      </p>
     </div>`;
 
   return { html, attachments };

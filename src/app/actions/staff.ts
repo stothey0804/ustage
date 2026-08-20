@@ -25,6 +25,8 @@ const MAX_STAFF_PER_EVENT = 10;
  * 어스테이지 계정으로 특정되는 편이 안전하다. 존재 여부가 소유자에게 드러나는
  * 계정 열거 트레이드오프는 감수한다 — 로그인 사용자 + 계정당 시간당 10회
  * rate limit이 대량 조회를 막는다.
+ * 확인 RPC가 실패하면 **초대를 보내지 않는다(fail-closed)** — 통과시키면 규칙이
+ * 조용히 무력화된다.
  * 수락 시 연결되는 것은 여전히 **링크를 누른 그 세션의 auth.uid()** 다 —
  * 신뢰 경계가 아닌 user_metadata.contact_email로 계정을 매칭하지 않는다.
  */
@@ -62,11 +64,20 @@ export async function inviteEventStaff(
     { p_email: invitedEmail }
   );
   if (existsError) {
-    console.warn(
-      "[inviteEventStaff] account_email_exists RPC가 없어 가입 확인을 건너뜁니다.",
-      existsError.message
+    // **fail-closed.** 확인이 불가능할 때 통과시키면 "가입 회원만 초대" 규칙이
+    // 조용히 무력화되고, 오타 주소로 명단 접근 링크가 나간다.
+    console.error(
+      "[inviteEventStaff] account_email_exists RPC 호출 실패 — " +
+        "supabase/migrations/20260801100000_account_email_exists.sql 적용 여부와 " +
+        "PostgREST 스키마 캐시를 확인하세요.",
+      existsError
     );
-  } else if (!exists) {
+    return {
+      error:
+        "가입 여부를 확인할 수 없어 초대를 보내지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    };
+  }
+  if (!exists) {
     return {
       error:
         "어스테이지에 가입된 이메일이 아닙니다. 스태프가 먼저 가입한 뒤 다시 초대해 주세요.",

@@ -54,6 +54,15 @@ const mobile = (src: string, alt: string): Shot => ({
   kind: "mobile",
 });
 
+/** 목업 이미지 — 모바일 프레임으로 보여주되 캡처와 높이가 다르다 */
+const mockup = (src: string, alt: string): Shot => ({
+  src,
+  alt,
+  width: 780,
+  height: 1560,
+  kind: "mobile",
+});
+
 const desktop = (src: string, alt: string): Shot => ({
   src,
   alt,
@@ -65,11 +74,11 @@ const desktop = (src: string, alt: string): Shot => ({
 const SECTIONS: Section[] = [
   {
     icon: ClipboardList,
-    title: "왜 만들었나",
-    lead: "공연 명단 관리와 당일 입장 처리를 한 곳에서 끝내기 위해 만들었습니다.",
+    title: "명단·입금·입장을 한 곳에서",
+    lead: "신청부터 입금 확인, 당일 입장까지 하나의 명단 위에서 처리합니다.",
     points: [
-      "예매자 명단을 메신저·스프레드시트로 나눠 관리하면 입금 확인과 입장 확인이 어긋납니다.",
-      "어스테이지는 신청부터 입금 확인, 현장 입장까지 하나의 명단 위에서 처리합니다.",
+      "메신저·스프레드시트로 나눠 관리하면 입금 확인과 입장 확인이 어긋납니다.",
+      "어스테이지는 예매·입금·입장 기록을 같은 화면에서 잇습니다.",
       "명단 화면은 데스크톱 기준으로 설계했습니다 — 한 화면에서 훑고 바로 처리합니다.",
     ],
     shots: [desktop("/guide/07-roster.png", "예매 명단 관리 화면")],
@@ -136,7 +145,9 @@ const SECTIONS: Section[] = [
       "입금이 확인되지 않은 예매는 경고로 막고, 이미 입장한 티켓은 ‘재입장 시도’로 알려줍니다.",
       "QR에는 개인정보 없이 무작위 토큰만 담겨 있습니다.",
     ],
-    shots: [desktop("/guide/10-scan.png", "QR 스캔 입장 확인 화면")],
+    // 실제 캡처는 카메라 프리뷰가 초록 단색으로 찍혀 알아볼 수 없어, 스캔 순간을
+    // 재현한 모바일 목업을 쓴다(생성 스크립트: docs/mockups/gen-scan.mjs).
+    shots: [mockup("/guide/10-scan-mobile.png", "휴대폰으로 입장 QR을 스캔하는 화면")],
   },
   {
     icon: Shuffle,
@@ -147,10 +158,7 @@ const SECTIONS: Section[] = [
       "‘이전 당첨자 제외’를 켜면 회차를 이어가며 중복 없이 뽑습니다. 기록은 저장되어 새로고침해도 유지됩니다.",
       "결과는 예매번호와 마스킹된 이름·이메일로 표시합니다 — 화면을 함께 봐도 개인정보가 드러나지 않습니다.",
     ],
-    shots: [
-      desktop("/guide/08-draw-rolling.png", "추첨 중 — 후보 번호가 굴러가는 화면"),
-      desktop("/guide/08-draw.png", "추첨 결과 — 당첨 예매번호를 크게 표시"),
-    ],
+    shots: [desktop("/guide/08-draw.png", "추첨 결과 — 당첨 예매번호를 크게 표시")],
   },
 ];
 

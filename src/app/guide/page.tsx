@@ -4,12 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   BadgeCheck,
+  CalendarPlus,
   ChevronLeft,
   ClipboardList,
   Link2,
   Mail,
   QrCode,
   ScanLine,
+  Share2,
   Shuffle,
   Ticket,
   UserPlus,
@@ -72,45 +74,102 @@ const desktop = (src: string, alt: string): Shot => ({
   kind: "desktop",
 });
 
+type Flow = {
+  eyebrow: string;
+  title: string;
+  lead: string;
+  steps: { icon: IconType; title: string; detail: string }[];
+  /** 단계에 넣기 어려운 보충 안내 */
+  notes: string[];
+};
+
 /**
- * 참석자 관점의 예매 흐름 — 개별 기능 설명(SECTIONS)에 들어가기 전 전체 지도.
+ * 예매 흐름 — 개별 기능 설명(SECTIONS)에 들어가기 전 전체 지도.
+ * 관객(참석자)과 주최자 두 관점을 나란히 둔다.
  *
- * 래스터 목업 대신 마크업으로 그린다: 6단계를 이미지로 굽으면 모바일 폭에서
+ * 래스터 목업 대신 마크업으로 그린다: 단계를 이미지로 굽으면 모바일 폭에서
  * 글자가 읽을 수 없게 줄어들고(가로 이미지) 다크모드에도 대응하지 못한다.
  * 마크업이면 좁은 화면은 세로, 넓은 화면은 3열로 흐른다.
  */
-const BOOKING_FLOW: { icon: IconType; title: string; detail: string }[] = [
-  {
-    icon: Link2,
-    title: "예매 페이지",
-    detail: "주최자가 공유한 비공개 링크를 엽니다.",
-  },
-  {
-    icon: Ticket,
-    title: "매수 선택",
-    detail: "매수를 고르고 회원·비회원 중 하나로 신청합니다.",
-  },
-  {
-    icon: ClipboardList,
-    title: "폼 입력",
-    detail: "이름·이메일·입금자명과 추가 항목을 채웁니다.",
-  },
-  {
-    icon: Mail,
-    title: "신청 완료",
-    detail: "입금 안내 메일이 자동으로 발송됩니다.",
-  },
-  {
-    icon: BadgeCheck,
-    title: "입금 확인 → QR",
-    detail: "주최자가 확인하면 입장 QR이 메일로 오고, 예매 조회에서도 보입니다.",
-  },
-  {
-    icon: ScanLine,
-    title: "당일 QR 입장",
-    detail: "현장에서 QR을 스캔하면 바로 입장 처리됩니다.",
-  },
-];
+const ATTENDEE_FLOW: Flow = {
+  eyebrow: "관객",
+  title: "예매하고 입장하기",
+  lead: "링크를 여는 순간부터 당일 입장까지 다섯 단계로 끝납니다.",
+  steps: [
+    {
+      icon: Link2,
+      title: "스테이지 확인",
+      detail:
+        "공유받은 링크로 접속해 포스터·일시·장소·가격과 잔여 좌석을 확인합니다.",
+    },
+    {
+      icon: ClipboardList,
+      title: "인원 선택 후 예매",
+      detail:
+        "매수를 고르고 이메일·이름·입금자명·입금시간과 주최자가 추가한 항목을 채워 제출합니다. 비회원은 예매 조회용 비밀번호도 함께 정합니다.",
+    },
+    {
+      icon: Mail,
+      title: "예매 안내 메일",
+      detail: "입력한 주소로 예매 정보와 입금 안내가 바로 발송됩니다.",
+    },
+    {
+      icon: BadgeCheck,
+      title: "입금 확인 → 확정 메일",
+      detail: "주최자가 입금을 확인하면 입장 QR이 담긴 확정 메일이 갑니다.",
+    },
+    {
+      icon: ScanLine,
+      title: "당일 QR 입장",
+      detail: "스테이지 당일 현장에서 QR을 보여주면 바로 입장 처리됩니다.",
+    },
+  ],
+  notes: [
+    "메일을 확인하지 못했더라도 스테이지 주소에서 회원·비회원 예약조회로 QR과 예매 현황, 예매번호를 볼 수 있습니다.",
+    "예매번호는 주최자가 추첨 기능을 쓸 때 활용될 수 있습니다.",
+  ],
+};
+
+const HOST_FLOW: Flow = {
+  eyebrow: "주최자",
+  title: "스테이지 열고 운영하기",
+  lead: "스테이지를 만들어 링크를 공유하고, 당일 입장과 추첨까지 진행합니다.",
+  steps: [
+    {
+      icon: CalendarPlus,
+      title: "스테이지 생성",
+      detail: "회원으로 로그인한 뒤 주최할 스테이지를 만듭니다.",
+    },
+    {
+      icon: Share2,
+      title: "예매 링크 공유",
+      detail:
+        "‘내 스테이지’에서 만든 스테이지의 ‘상세보기’를 열면 예매 링크와 QR을 공유할 수 있습니다.",
+    },
+    {
+      icon: ClipboardList,
+      title: "명단 관리",
+      detail: "상세보기의 ‘예매 명단’ 탭에서 입금 확인과 취소를 처리합니다.",
+    },
+    {
+      icon: Users,
+      title: "스태프 초대",
+      detail: "명단·입장·추첨을 함께 맡을 스태프를 이메일로 초대합니다.",
+    },
+    {
+      icon: ScanLine,
+      title: "당일 QR 스캔",
+      detail: "스테이지 당일 ‘QR스캔’ 메뉴로 참석자를 입장 처리합니다.",
+    },
+    {
+      icon: Shuffle,
+      title: "현장 추첨",
+      detail:
+        "‘추첨’ 탭에서 현장 추첨을 진행합니다. 예매번호와 마스킹된 이름·메일 주소만 노출됩니다.",
+    },
+  ],
+  notes: [],
+};
 
 const SECTIONS: Section[] = [
   {
@@ -259,7 +318,15 @@ export default function GuidePage() {
         </div>
       </header>
 
-      <BookingFlow />
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold leading-snug">
+          한눈에 보는 예매 흐름
+        </h2>
+        <div className="space-y-4">
+          <FlowCard flow={ATTENDEE_FLOW} />
+          <FlowCard flow={HOST_FLOW} />
+        </div>
+      </section>
 
       <div className="space-y-12">
         {[...SECTIONS, EXTRA, STAFF].map((section, index) => (
@@ -285,23 +352,26 @@ export default function GuidePage() {
   );
 }
 
-/** 예매 흐름 6단계 — 좁은 화면은 세로 타임라인, 넓은 화면은 3열 그리드 */
-function BookingFlow() {
+/** 흐름 카드 — 좁은 화면은 세로 타임라인, 넓은 화면은 3열 그리드 */
+function FlowCard({ flow }: { flow: Flow }) {
+  const { eyebrow, title, lead, steps, notes } = flow;
+
   return (
     <section className="space-y-4 rounded-4xl bg-card p-5 shadow-md ring-1 ring-foreground/5 sm:p-6">
       <div className="space-y-1">
-        <h2 className="text-[15px] font-semibold">한 눈에 보는 예매 흐름</h2>
+        <p className="text-xs font-semibold text-primary">{eyebrow}</p>
+        <h3 className="text-[15px] font-semibold">{title}</h3>
         <p className="text-[13px] leading-relaxed text-muted-foreground">
-          참석자가 링크를 여는 순간부터 당일 입장까지 여섯 단계로 끝납니다.
+          {lead}
         </p>
       </div>
 
       <ol className="grid gap-x-4 gap-y-3 sm:grid-cols-3">
-        {BOOKING_FLOW.map((step, i) => {
-          const { icon: Icon, title, detail } = step;
+        {steps.map((step, i) => {
+          const { icon: Icon, title: stepTitle, detail } = step;
           return (
             <li
-              key={title}
+              key={stepTitle}
               className="relative flex gap-3 rounded-3xl bg-input/40 p-3.5"
             >
               <span className="grid size-8 shrink-0 place-items-center rounded-2xl bg-primary/10">
@@ -312,7 +382,7 @@ function BookingFlow() {
                   <span className="mr-1.5 font-mono text-xs text-primary">
                     {i + 1}
                   </span>
-                  {title}
+                  {stepTitle}
                 </p>
                 <p className="text-xs leading-relaxed text-muted-foreground">
                   {detail}
@@ -322,6 +392,20 @@ function BookingFlow() {
           );
         })}
       </ol>
+
+      {notes.length > 0 && (
+        <ul className="space-y-1.5 border-t pt-3.5">
+          {notes.map((note) => (
+            <li
+              key={note}
+              className="flex gap-2 text-xs leading-relaxed text-muted-foreground"
+            >
+              <span className="mt-1.5 size-1 shrink-0 rounded-full bg-primary/60" />
+              {note}
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

@@ -1,6 +1,8 @@
 import { Resend } from "resend";
 import QRCode from "qrcode";
 
+import { LOTTERY_NOTICE_TEXT } from "@/lib/lottery-notice";
+
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
@@ -71,9 +73,13 @@ async function buildQrParts(tickets: EmailTicket[]): Promise<QrEmailParts> {
     <div style="margin:20px 0 0;">
       <p style="margin:0 0 8px;font-size:12px;color:#666;">입장 QR 코드 — 행사장 입구에서 보여주세요</p>
       <div style="text-align:center;">${blocks.join("")}</div>
-      <p style="margin:10px 0 0;font-size:12px;line-height:1.6;color:#666;text-align:center;">
-        입장번호는 현장 추첨에 쓰일 수 있어요 — <strong style="color:#1a1a1a;">번호와 함께 캡처해 주세요.</strong>
-      </p>
+      <table role="presentation" style="width:100%;border-collapse:separate;margin:12px 0 0;background:#f0f7f7;border:1px solid #cfe3e3;border-radius:8px;">
+        <tr>
+          <td style="padding:12px 14px;font-size:13px;line-height:1.6;color:#4a4a4a;">
+            <strong style="color:#1a1a1a;">${LOTTERY_NOTICE_TEXT.lead}</strong> ${LOTTERY_NOTICE_TEXT.action}
+          </td>
+        </tr>
+      </table>
     </div>`;
 
   return { html, attachments };

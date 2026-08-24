@@ -2,6 +2,8 @@
 
 import QRCode from "react-qr-code";
 
+import { LotteryNotice } from "@/components/booking/LotteryNotice";
+
 interface Ticket {
   qr_token: string;
   ticket_number: number;
@@ -69,12 +71,7 @@ export function QRTicket({ name, tickets }: QRTicketProps) {
       ))}
 
       {/* 캡처를 유도하는 안내 — 티켓 목록 아래 한 번만 */}
-      <p className="text-center text-xs leading-relaxed text-muted-foreground">
-        입장번호는 현장 추첨에 쓰일 수 있어요 —{" "}
-        <span className="font-medium text-foreground">
-          번호와 함께 캡처해 주세요.
-        </span>
-      </p>
+      <LotteryNotice />
     </div>
   );
 }

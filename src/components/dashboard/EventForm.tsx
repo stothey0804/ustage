@@ -121,6 +121,11 @@ export function EventForm({
   const watchPrice = watch("price") ?? 0;
   const customFields = watch("custom_fields") ?? [];
 
+  // 현장 예매 가격 — 비우면(null) 온라인 가격과 동일. 체크박스가 그 의미를 명시한다.
+  const [sameOnsitePrice, setSameOnsitePrice] = useState(
+    (defaultValues?.onsite_price ?? null) == null
+  );
+
   // 새로고침·탭 닫기로 작성 내용이 사라지는 것을 막는다(앱 내부 이동은 '취소' 버튼에서 확인).
   useUnsavedWarning(isDirty && !isPending);
 
@@ -151,6 +156,10 @@ export function EventForm({
     // 포스터는 초안에 없으므로 비운 상태로 되살린다
     reset({ ...savedDraft.values, poster_url: "" } as EventFormValues);
     setPosterPreview(null);
+    setSameOnsitePrice(
+      ((savedDraft.values as Partial<EventFormValues>).onsite_price ?? null) ==
+        null
+    );
     setDraftDismissed(true);
     toast.success("작성하던 내용을 불러왔습니다.");
   }
@@ -308,7 +317,7 @@ export function EventForm({
       {showDraftBanner && savedDraft && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-4xl border border-primary/30 bg-primary/5 px-4 py-3.5">
           <div className="min-w-0 space-y-0.5">
-            <p className="text-[13px] font-semibold">작성하던 스테이지가 있어요.</p>
+            <p className="text-13 font-semibold">작성하던 스테이지가 있어요.</p>
             <p className="text-xs leading-relaxed text-muted-foreground">
               {formatKST(savedDraft.savedAt, "M월 d일 HH:mm")}에 이 브라우저에 저장된
               내용입니다. 포스터 이미지는 저장되지 않아 다시 올려야 해요.
@@ -447,6 +456,46 @@ export function EventForm({
               <p className="text-xs text-destructive">{errors.capacity.message}</p>
             )}
           </div>
+        </div>
+
+        {/* 현장 예매 가격 — 비우면(체크 시) 온라인 가격과 동일하게 받는다 */}
+        <div className="space-y-1.5">
+          <Label htmlFor="onsite_price">현장 예매 가격 (원)</Label>
+          {!sameOnsitePrice && (
+            <Input
+              id="onsite_price"
+              type="number"
+              min={0}
+              {...register("onsite_price", {
+                setValueAs: (v: string) => (v === "" ? undefined : Number(v)),
+              })}
+              placeholder="예: 15000"
+            />
+          )}
+          <label className="flex cursor-pointer items-center gap-2 text-13 text-muted-foreground">
+            <input
+              type="checkbox"
+              className="accent-primary"
+              checked={sameOnsitePrice}
+              onChange={(e) => {
+                setSameOnsitePrice(e.target.checked);
+                // 체크 = 동일 가격(null 저장). 해제 직후에는 빈 입력으로 시작한다.
+                setValue("onsite_price", undefined, { shouldDirty: true });
+              }}
+            />
+            온라인 예매 가격과 동일해요
+          </label>
+          {errors.onsite_price && (
+            <p className="text-xs text-destructive">
+              {errors.onsite_price.message}
+            </p>
+          )}
+          {!sameOnsitePrice && (
+            <p className="text-xs text-muted-foreground">
+              비워두면 온라인 예매 가격과 동일하게 적용됩니다. 현장 예매 등록의
+              금액 안내에만 쓰여요.
+            </p>
+          )}
         </div>
       </section>
 

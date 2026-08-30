@@ -43,6 +43,13 @@ export const eventSchema = z
       .min(0, "가격은 0원 이상이어야 합니다.")
       // DB가 integer라 상한을 두지 않으면 오버플로가 "생성에 실패했습니다"로만 보인다
       .max(10_000_000, "가격은 1,000만원 이하로 입력해 주세요."),
+    // 현장 예매 1매 가격 — 비우면(undefined) 온라인 가격과 동일한 것으로 저장(null)
+    onsite_price: z
+      .number({ error: "현장 예매 가격을 숫자로 입력해 주세요. (무료는 0)" })
+      .int("가격은 원 단위 정수로 입력해 주세요.")
+      .min(0, "가격은 0원 이상이어야 합니다.")
+      .max(10_000_000, "가격은 1,000만원 이하로 입력해 주세요.")
+      .optional(),
     // 폼은 항상 빈 문자열을 보내지만, 액션을 직접 호출한 경우에도 한국어 메시지가 나가게 한다
     bank_info: z.string({ error: "입금 계좌를 입력해 주세요." }),
     contact: z.string().min(1, "연락처를 입력해 주세요."),
@@ -60,11 +67,17 @@ export const eventSchema = z
     custom_fields: z.array(customFieldSchema).optional(),
   })
   // 유료 스테이지는 계좌가 없으면 입금 안내를 보낼 수 없다.
+  // 현장 예매 가격만 유료인 경우(온라인 무료)도 입금 안내가 나가므로 계좌가 필요하다.
   // 서버 액션에만 두면 폼에서 필드에 에러가 붙지 않아 사용자가 원인을 못 찾는다.
-  .refine((v) => v.price === 0 || v.bank_info.trim().length > 0, {
-    message: "유료 스테이지는 입금 계좌를 입력해 주세요.",
-    path: ["bank_info"],
-  })
+  .refine(
+    (v) =>
+      (v.price === 0 && (v.onsite_price ?? 0) === 0) ||
+      v.bank_info.trim().length > 0,
+    {
+      message: "유료 스테이지는 입금 계좌를 입력해 주세요.",
+      path: ["bank_info"],
+    }
+  )
   .refine((v) => !bothSet(v.event_end_date, v.event_date) || v.event_end_date! > v.event_date, {
     message: "스테이지 종료 일시는 시작 일시보다 뒤여야 합니다.",
     path: ["event_end_date"],

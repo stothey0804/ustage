@@ -257,6 +257,7 @@ export type Database = {
           event_date: string
           event_end_date: string | null
           id: string
+          onsite_price: number | null
           performer_id: string
           poster_url: string | null
           price: number
@@ -283,6 +284,7 @@ export type Database = {
           event_date: string
           event_end_date?: string | null
           id?: string
+          onsite_price?: number | null
           performer_id: string
           poster_url?: string | null
           price: number
@@ -309,6 +311,7 @@ export type Database = {
           event_date?: string
           event_end_date?: string | null
           id?: string
+          onsite_price?: number | null
           performer_id?: string
           poster_url?: string | null
           price?: number

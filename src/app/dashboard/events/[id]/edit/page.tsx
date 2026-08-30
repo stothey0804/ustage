@@ -58,6 +58,7 @@ export default async function EditEventPage({
     venue_lat: event.venue_lat ?? undefined,
     venue_lng: event.venue_lng ?? undefined,
     price: event.price,
+    onsite_price: event.onsite_price ?? undefined,
     bank_info: event.bank_info,
     contact: event.contact,
     capacity: event.capacity ?? undefined,

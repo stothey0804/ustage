@@ -34,9 +34,10 @@ import {
 
 interface Props {
   eventId: string;
-  isFree: boolean;
-  /** 1매 가격 (원) */
+  /** 온라인 예매 1매 가격 (원) */
   price: number;
+  /** 현장 예매 1매 가격 — null이면 온라인 가격과 동일 */
+  onsitePrice?: number | null;
   /** 남은 좌석 — 정원이 없으면 null(상한 20매). 좌석은 주최자도 초과할 수 없다 */
   remainingSeats?: number | null;
   /** 스테이지의 커스텀 필드 — 필수 항목은 현장 예매에서도 받아야 한다 */
@@ -59,11 +60,14 @@ type Created = {
  */
 export function OnsiteBookingDialog({
   eventId,
-  isFree,
   price,
+  onsitePrice = null,
   remainingSeats = null,
   customFields = [],
 }: Props) {
+  // 현장 예매는 현장 가격 기준으로 금액·무료 여부를 판정한다 (서버 액션과 같은 규칙)
+  const effectivePrice = onsitePrice ?? price;
+  const isFree = effectivePrice === 0;
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -203,7 +207,7 @@ export function OnsiteBookingDialog({
 
               {created.generatedPassword && (
                 <div className="space-y-1.5 rounded-3xl border p-3.5">
-                  <p className="text-[13px] font-semibold">
+                  <p className="text-13 font-semibold">
                     예약 조회 비밀번호
                   </p>
                   <div className="flex items-center gap-2">
@@ -223,7 +227,7 @@ export function OnsiteBookingDialog({
                 </div>
               )}
 
-              <p className="text-[13px] leading-relaxed text-muted-foreground">
+              <p className="text-13 leading-relaxed text-muted-foreground">
                 {created.confirmed
                   ? "입장 QR이 담긴 확정 메일을 보냈습니다."
                   : "입금 안내 메일을 보냈습니다. 입금을 확인하면 명단에서 확정 처리해 주세요."}
@@ -305,7 +309,7 @@ export function OnsiteBookingDialog({
                   >
                     <Minus className="size-4" />
                   </Button>
-                  <span className="min-w-5 text-center font-mono text-[15px]">
+                  <span className="min-w-5 text-center font-mono text-15">
                     {quantity}
                   </span>
                   <Button
@@ -321,14 +325,21 @@ export function OnsiteBookingDialog({
                     <Plus className="size-4" />
                   </Button>
                   {!isFree && (
-                    <span className="ml-auto text-[13px] font-medium">
-                      {(price * quantity).toLocaleString()}원
+                    <span className="ml-auto text-13 font-medium">
+                      {(effectivePrice * quantity).toLocaleString()}원
                     </span>
                   )}
                 </div>
                 {errors.quantity && (
                   <p className="text-xs text-destructive">
                     {errors.quantity.message}
+                  </p>
+                )}
+                {/* 현장 가격이 온라인과 다르면 헷갈리지 않게 명시한다 */}
+                {onsitePrice !== null && onsitePrice !== price && (
+                  <p className="text-xs text-muted-foreground">
+                    현장 예매 가격 {onsitePrice.toLocaleString()}원 기준 금액이에요
+                    (온라인 {price.toLocaleString()}원).
                   </p>
                 )}
                 {remainingSeats !== null && (
@@ -360,7 +371,7 @@ export function OnsiteBookingDialog({
               )}
 
               {!isFree && (
-                <label className="flex cursor-pointer items-center gap-2 text-[13px]">
+                <label className="flex cursor-pointer items-center gap-2 text-13">
                   <input
                     type="checkbox"
                     className="accent-primary"
@@ -404,7 +415,7 @@ export function OnsiteBookingDialog({
               )}
 
               {duplicateValues && (
-                <div className="space-y-2 rounded-3xl border p-3.5 text-[13px]">
+                <div className="space-y-2 rounded-3xl border p-3.5 text-13">
                   <p>이미 이 이메일로 예매된 내역이 있습니다.</p>
                   <p className="text-xs text-muted-foreground">
                     같은 사람이 추가로 구매한 경우라면 별도 예매로 하나 더 만들 수

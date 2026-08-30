@@ -18,6 +18,8 @@ type EventRow = {
   title: string;
   slug: string;
   price: number;
+  /** 현장 예매 1매 가격 — null이면 price와 동일 */
+  onsite_price: number | null;
   bank_info: string;
   event_date: string;
   venue: string;
@@ -49,7 +51,7 @@ async function resolveRole(
     .from("events")
     .select(
       // custom_fields·capacity는 현장 예매(주최자 대행)에서 필수 항목·좌석을 검사하는 데 쓴다
-      "id, title, slug, price, bank_info, event_date, venue, venue_address, performer_id, custom_fields, capacity"
+      "id, title, slug, price, onsite_price, bank_info, event_date, venue, venue_address, performer_id, custom_fields, capacity"
     )
     .eq("id", eventId)
     .single();

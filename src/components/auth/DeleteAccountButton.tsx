@@ -39,10 +39,10 @@ export function DeleteAccountButton() {
 
   return (
     <>
-      <Button
+      {/* 되돌릴 수 없는 동작 — 일부러 눈에 띄지 않는 회색 밑줄 텍스트로 둔다 */}
+      <button
         type="button"
-        variant="destructive"
-        size="sm"
+        className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
         onClick={() => {
           setConfirmText("");
           setError(null);
@@ -50,7 +50,7 @@ export function DeleteAccountButton() {
         }}
       >
         회원 탈퇴
-      </Button>
+      </button>
 
       <Dialog
         open={open}
@@ -67,7 +67,9 @@ export function DeleteAccountButton() {
           <div className="space-y-3">
             <div className="flex gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3.5 py-3 text-sm text-destructive">
               <TriangleAlert className="size-4 shrink-0 mt-0.5" />
-              <p>탈퇴하면 계정을 되돌릴 수 없습니다.</p>
+              <p>
+                탈퇴하면 계정과 계정에 담긴 데이터가 삭제되며 되돌릴 수 없습니다.
+              </p>
             </div>
 
             <ul className="space-y-1.5 text-xs text-muted-foreground leading-relaxed">
@@ -82,6 +84,14 @@ export function DeleteAccountButton() {
                 </span>{" "}
                 주최자가 없으면 입금 확인·입장 처리를 할 수 없으니, 해당 스테이지를
                 먼저 정리해 주세요.
+              </li>
+              <li>
+                •{" "}
+                <span className="font-medium text-foreground">
+                  입장 예정인 예매(티켓)가 있으면 탈퇴할 수 없습니다.
+                </span>{" "}
+                스테이지가 종료된 뒤에는 탈퇴할 수 있어요. 그 전에 탈퇴하려면 먼저
+                예매를 취소해 주세요.
               </li>
               <li>
                 • 내가 참석자로 넣은 예약은 주최자의 명단 보존을 위해 기록은 남고

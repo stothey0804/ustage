@@ -3,7 +3,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 
+import { LogOut } from "lucide-react";
+
 import { createClient } from "@/lib/supabase/server";
+import { signOut } from "@/app/actions/auth";
 import { getAccountEmail, isEmailPendingVerification } from "@/lib/account-email";
 import { AccountIdentities } from "@/components/auth/AccountIdentities";
 import { DeleteAccountButton } from "@/components/auth/DeleteAccountButton";
@@ -64,11 +67,11 @@ export default async function AccountPage({ searchParams }: Props) {
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm">{accountEmail}</span>
             {pending ? (
-              <Badge variant="outline" className="text-[10px]">
+              <Badge variant="outline" className="text-10">
                 인증 대기
               </Badge>
             ) : (
-              <Badge variant="secondary" className="text-[10px]">
+              <Badge variant="secondary" className="text-10">
                 인증 완료
               </Badge>
             )}
@@ -139,15 +142,22 @@ export default async function AccountPage({ searchParams }: Props) {
 
       <Separator />
 
-      {/* 회원 탈퇴 — 되돌릴 수 없으므로 항상 최하단에 둔다 */}
+      {/* 로그아웃 — 헤더에서 옮겨왔다 */}
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-destructive">회원 탈퇴</h2>
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          계정을 삭제하면 되돌릴 수 없습니다. 예매가 없는 스테이지는 함께 삭제되고,
-          예매 내역이 있는 스테이지가 남아 있으면 탈퇴할 수 없습니다.
-        </p>
-        <DeleteAccountButton />
+        <h2 className="text-sm font-semibold">로그아웃</h2>
+        <form action={signOut}>
+          <Button type="submit" variant="outline" size="sm">
+            <LogOut className="size-4" />
+            로그아웃
+          </Button>
+        </form>
       </section>
+
+      {/* 회원 탈퇴 — 되돌릴 수 없는 동작이라 일부러 눈에 띄지 않는 텍스트 링크로 둔다.
+          삭제되는 데이터·차단 조건 고지는 확인 다이얼로그가 담당한다. */}
+      <div className="pt-6">
+        <DeleteAccountButton />
+      </div>
     </div>
   );
 }

@@ -100,6 +100,10 @@ export async function requestPasswordReset(
  *  - 예매 이력(취소분 포함)이 있는 스테이지가 남아 있으면 **차단**한다.
  *    주최자가 없어진 스테이지는 입금 확인·입장 처리를 할 사람이 없어지므로,
  *    참석자가 있는 스테이지는 먼저 정리하도록 안내한다.
+ *  - **입장 예정인 예매(티켓)가 있으면 차단**한다 — 취소되지 않은 내 예매 중
+ *    스테이지가 아직 끝나지 않은(`event_end_date ?? event_date` 미경과) 것.
+ *    탈퇴하면 예약 조회 수단이 사라져 입장 QR·취소 안내를 받을 수 없기 때문이다.
+ *    스테이지가 종료된 예매는 막지 않는다.
  *  - 예매가 없는 내 스테이지는 함께 삭제하고 포스터 파일도 지운다.
  *  - 내가 참석자로 넣은 예약은 **삭제하지 않고 user_id만 끊는다.**
  *    주최자의 예매 명단·정산 기록을 훼손하지 않기 위해서다. (bookings.user_id에
@@ -114,6 +118,36 @@ export async function deleteAccount(): Promise<{ error?: string }> {
   if (!user) return { error: "로그인이 필요합니다." };
 
   const admin = createAdminClient();
+
+  // 입장 예정인 내 예매(티켓) 확인 — 스테이지가 끝나지 않았으면 탈퇴를 막는다.
+  const { data: myBookings, error: myBookingsError } = await admin
+    .from("bookings")
+    .select("id, status, events!inner(event_date, event_end_date)")
+    .eq("user_id", user.id)
+    .neq("status", "cancelled");
+
+  if (myBookingsError) {
+    console.error("[deleteAccount] my bookings lookup", myBookingsError);
+    return { error: "탈퇴 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요." };
+  }
+
+  const now = Date.now();
+  const hasUpcomingTicket = (myBookings ?? []).some((b) => {
+    const ev = b.events as unknown as {
+      event_date: string;
+      event_end_date: string | null;
+    } | null;
+    if (!ev) return false;
+    const end = new Date(ev.event_end_date ?? ev.event_date).getTime();
+    return !isNaN(end) && end >= now;
+  });
+
+  if (hasUpcomingTicket) {
+    return {
+      error:
+        "입장 예정인 예매(티켓)가 있어 탈퇴할 수 없습니다. 스테이지가 종료된 뒤 다시 시도하거나, 먼저 예매를 취소해 주세요.",
+    };
+  }
 
   const { data: events, error: eventsError } = await admin
     .from("events")

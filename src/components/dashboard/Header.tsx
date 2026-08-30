@@ -2,11 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, Mic, Ticket, UserCog } from "lucide-react";
+import { Mic, Ticket, UserCog } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
 import { Wordmark } from "@/components/Wordmark";
-import { Button } from "@/components/ui/button";
-import { signOut } from "@/app/actions/auth";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -15,7 +13,8 @@ interface Props {
 
 /**
  * 데스크톱 상단 네비게이션.
- * 모바일 이동은 BottomTabBar가 담당하므로 여기서는 브랜드와 계정/로그아웃만 남긴다.
+ * 모바일 이동은 BottomTabBar가 담당하므로 여기서는 브랜드와 계정 진입점만 남긴다.
+ * (로그아웃은 계정 설정 화면에 있다)
  */
 const NAV_ITEMS = [
   { href: "/dashboard/events", label: "내 스테이지", icon: Mic },
@@ -57,21 +56,14 @@ export function Header({ userEmail }: Props) {
           </nav>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Link
-            href="/dashboard/account"
-            className="hidden items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground sm:inline-flex"
-          >
-            <UserCog className="size-4" />
-            {userEmail ?? "계정 설정"}
-          </Link>
-          <form action={signOut}>
-            <Button type="submit" variant="ghost" size="sm">
-              <LogOut className="size-4" />
-              <span className="hidden sm:inline">로그아웃</span>
-            </Button>
-          </form>
-        </div>
+        {/* 로그아웃은 계정 설정 화면으로 옮겼다 — 헤더에는 계정 진입점만 둔다 */}
+        <Link
+          href="/dashboard/account"
+          className="hidden items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground sm:inline-flex"
+        >
+          <UserCog className="size-4" />
+          {userEmail ?? "계정 설정"}
+        </Link>
       </div>
     </header>
   );

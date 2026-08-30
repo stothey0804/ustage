@@ -139,7 +139,7 @@ export function AccountIdentities({ identities }: Props) {
               </span>
             </div>
             {identity.provider === "email" ? (
-              <span className="text-[11px] leading-snug text-muted-foreground">
+              <span className="text-11 leading-snug text-muted-foreground">
                 안내 메일·비밀번호 재설정에 쓰여요
               </span>
             ) : hasOtherMethod ? (
@@ -159,7 +159,7 @@ export function AccountIdentities({ identities }: Props) {
               // (single_identity_not_deletable). 버튼을 숨기면 "왜 없지?"가 되므로
               // 비활성 버튼과 사유를 함께 보여준다.
               <span
-                className="text-[11px] leading-snug text-muted-foreground"
+                className="text-11 leading-snug text-muted-foreground"
                 title="로그인 수단이 하나뿐이면 해제할 수 없습니다."
               >
                 유일한 로그인 수단이라 해제할 수 없어요

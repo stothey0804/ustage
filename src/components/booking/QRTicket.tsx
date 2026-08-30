@@ -31,7 +31,7 @@ export function QRTicket({ name, tickets }: QRTicketProps) {
         >
           {/* 입장번호는 현장 호명·추첨의 기준 — 캡처 화면에서 가장 먼저 읽혀야 한다 */}
           <div className="space-y-0.5">
-            <p className="text-[11px] tracking-wide text-gray-500">입장번호</p>
+            <p className="text-11 tracking-wide text-gray-500">입장번호</p>
             <p className="font-mono text-4xl font-bold leading-none text-primary">
               #{ticket.attendee_no ?? ticket.ticket_number}
             </p>

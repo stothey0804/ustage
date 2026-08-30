@@ -133,7 +133,7 @@ export default async function BookingDetailPage({
                 </Badge>
               )}
             </div>
-            <span className="font-mono text-[13px] font-medium text-primary">
+            <span className="font-mono text-13 font-medium text-primary">
               {formatBookingNoRange(booking.booking_no, bought, booking.id)}
             </span>
           </div>

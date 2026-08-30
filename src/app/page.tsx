@@ -107,7 +107,7 @@ export default async function Home({ searchParams }: Props) {
             <br />
             링크 하나로
           </h1>
-          <p className="text-[13px] leading-relaxed text-muted-foreground">
+          <p className="text-13 leading-relaxed text-muted-foreground">
             예매한 티켓과 내가 여는 스테이지를 한 계정에서 관리합니다.
           </p>
         </div>

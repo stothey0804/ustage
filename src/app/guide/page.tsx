@@ -360,8 +360,8 @@ function FlowCard({ flow }: { flow: Flow }) {
     <section className="space-y-4 rounded-4xl bg-card p-5 shadow-md ring-1 ring-foreground/5 sm:p-6">
       <div className="space-y-1">
         <p className="text-xs font-semibold text-primary">{eyebrow}</p>
-        <h3 className="text-[15px] font-semibold">{title}</h3>
-        <p className="text-[13px] leading-relaxed text-muted-foreground">
+        <h3 className="text-15 font-semibold">{title}</h3>
+        <p className="text-13 leading-relaxed text-muted-foreground">
           {lead}
         </p>
       </div>
@@ -378,7 +378,7 @@ function FlowCard({ flow }: { flow: Flow }) {
                 <Icon className="size-4 text-primary" />
               </span>
               <div className="min-w-0 space-y-0.5">
-                <p className="text-[13px] font-semibold leading-snug">
+                <p className="text-13 font-semibold leading-snug">
                   <span className="mr-1.5 font-mono text-xs text-primary">
                     {i + 1}
                   </span>
@@ -439,7 +439,7 @@ function SectionBlock({
         {points.map((point) => (
           <li
             key={point}
-            className="flex gap-2 text-[13px] leading-relaxed text-muted-foreground"
+            className="flex gap-2 text-13 leading-relaxed text-muted-foreground"
           >
             <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary/60" />
             {point}

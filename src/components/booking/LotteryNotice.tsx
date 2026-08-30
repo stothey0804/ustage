@@ -13,7 +13,7 @@ export function LotteryNotice({ className }: { className?: string }) {
       )}
     >
       <Shuffle className="mt-0.5 size-4 shrink-0 text-primary" />
-      <p className="text-[13px] leading-relaxed">
+      <p className="text-13 leading-relaxed">
         <span className="font-semibold text-foreground">
           {LOTTERY_NOTICE_TEXT.lead}
         </span>{" "}

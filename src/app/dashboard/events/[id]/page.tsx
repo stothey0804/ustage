@@ -255,9 +255,16 @@ export default async function EventDetailPage({
               icon={Banknote}
               label="가격"
               value={
-                event.price === 0
+                (event.price === 0
                   ? "무료"
-                  : `${event.price.toLocaleString()}원`
+                  : `${event.price.toLocaleString()}원`) +
+                (event.onsite_price !== null && event.onsite_price !== event.price
+                  ? ` · 현장 ${
+                      event.onsite_price === 0
+                        ? "무료"
+                        : `${event.onsite_price.toLocaleString()}원`
+                    }`
+                  : "")
               }
             />
             {event.capacity && (
@@ -325,6 +332,7 @@ export default async function EventDetailPage({
             eventTitle={event.title}
             isFree={event.price === 0}
             price={event.price}
+            onsitePrice={event.onsite_price}
             capacity={event.capacity}
             customFields={(event.custom_fields ?? []) as import("@/lib/validations/event").CustomField[]}
             cancelPolicyHtml={cancelPolicyHtml}

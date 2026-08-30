@@ -108,8 +108,8 @@ export function StaffPanel({ eventId, staff }: Props) {
     <div className="max-w-2xl space-y-5">
       <div className="space-y-4 rounded-4xl bg-card p-5 shadow-md ring-1 ring-foreground/5">
         <div className="space-y-1">
-          <h2 className="text-15 font-semibold">스태프</h2>
-          <p className="text-13 leading-relaxed text-muted-foreground">
+          <h2 className="text-[15px] font-semibold">스태프</h2>
+          <p className="text-[13px] leading-relaxed text-muted-foreground">
             함께 현장을 운영할 사람을 초대합니다. 스태프는{" "}
             <span className="font-medium text-foreground">
               명단 확인 · 입금 확인 · QR 입장 처리 · 현장 예매 · 추첨
@@ -158,7 +158,7 @@ export function StaffPanel({ eventId, staff }: Props) {
 
       {staff.length > 0 && (
         <div className="space-y-3 rounded-4xl bg-card p-5 shadow-md ring-1 ring-foreground/5">
-          <h3 className="text-13 font-semibold">
+          <h3 className="text-[13px] font-semibold">
             초대한 사람 {staff.length}명
           </h3>
           <ul className="divide-y rounded-3xl border">
@@ -170,7 +170,7 @@ export function StaffPanel({ eventId, staff }: Props) {
                   className="flex flex-wrap items-center gap-3 px-3.5 py-3"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-13 font-medium">
+                    <p className="truncate text-[13px] font-medium">
                       {row.invited_email}
                     </p>
                     <p className="text-xs text-muted-foreground">

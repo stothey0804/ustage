@@ -46,10 +46,10 @@ export default async function AcceptStaffInvitePage({ params }: Props) {
         <>
           <CircleCheck className="size-10 text-primary" strokeWidth={1.5} />
           <div className="space-y-1.5">
-            <p className="text-15 font-semibold">
+            <p className="text-[15px] font-semibold">
               스태프로 참여했습니다
             </p>
-            <p className="text-13 leading-relaxed text-muted-foreground">
+            <p className="text-[13px] leading-relaxed text-muted-foreground">
               <span className="font-medium text-foreground">
                 {result.eventTitle}
               </span>
@@ -72,8 +72,8 @@ export default async function AcceptStaffInvitePage({ params }: Props) {
         <>
           <TriangleAlert className="size-10 text-muted-foreground/60" strokeWidth={1.5} />
           <div className="space-y-1.5">
-            <p className="text-15 font-semibold">초대를 수락할 수 없습니다</p>
-            <p className="text-13 leading-relaxed text-muted-foreground">
+            <p className="text-[15px] font-semibold">초대를 수락할 수 없습니다</p>
+            <p className="text-[13px] leading-relaxed text-muted-foreground">
               {result.error}
             </p>
           </div>

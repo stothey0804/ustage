@@ -831,10 +831,6 @@ ended  (행사 종료) → event_date 경과
 - 컴포넌트 파일명: PascalCase (`BookingForm.tsx`)
 - 훅/유틸 파일명: camelCase (`useBooking.ts`)
 - 상수는 `UPPER_SNAKE_CASE`
-- **폰트 크기에 `text-[13px]` 같은 px 하드코딩 금지** — `text-10/11/13/15/17`
-  토큰 유틸리티(`globals.css`의 `@theme`)를 쓴다. sm 미만에서는 미디어쿼리가
-  텍스트 토큰 전체(`--text-xs`~`--text-2xl` 포함)를 1px씩 키우는데,
-  px 하드코딩은 이 모바일 스케일을 받지 못한다.
 
 ### Next.js App Router
 

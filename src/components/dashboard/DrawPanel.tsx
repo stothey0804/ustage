@@ -147,8 +147,8 @@ export function DrawPanel({
       {/* 추첨 설정 */}
       <div className="space-y-4 rounded-4xl bg-card p-5 shadow-md ring-1 ring-foreground/5">
         <div className="space-y-1">
-          <h2 className="text-15 font-semibold">현장 추첨</h2>
-          <p className="text-13 leading-relaxed text-muted-foreground">
+          <h2 className="text-[15px] font-semibold">현장 추첨</h2>
+          <p className="text-[13px] leading-relaxed text-muted-foreground">
             QR 스캔으로 <span className="font-medium text-foreground">입장 처리된
             참석자</span>만 추첨에 들어갑니다. 지금 대상은{" "}
             <span className="font-mono font-medium text-primary">
@@ -174,7 +174,7 @@ export function DrawPanel({
             />
           </div>
 
-          <label className="flex cursor-pointer items-center gap-2 pb-2.5 text-13">
+          <label className="flex cursor-pointer items-center gap-2 pb-2.5 text-[13px]">
             <input
               type="checkbox"
               className="accent-primary"
@@ -212,7 +212,7 @@ export function DrawPanel({
       {pastRounds.length > 0 && (
         <div className="space-y-3 rounded-4xl bg-card p-5 shadow-md ring-1 ring-foreground/5">
           <div className="flex items-center justify-between">
-            <h3 className="text-13 font-semibold">
+            <h3 className="text-[13px] font-semibold">
               추첨 기록 {pastRounds.length}회
             </h3>
             {canReset && (
@@ -239,7 +239,7 @@ export function DrawPanel({
                   {round.winners.map((winner) => (
                     <li
                       key={`${round.round}-${winner.attendeeNo}`}
-                      className="flex items-center gap-2 rounded-full bg-input/50 px-3 py-1.5 text-13"
+                      className="flex items-center gap-2 rounded-full bg-input/50 px-3 py-1.5 text-[13px]"
                     >
                       <span className="font-mono font-medium text-primary">
                         #{winner.attendeeNo}
@@ -279,7 +279,7 @@ export function DrawPanel({
               >
                 #{rollNo ?? "-"}
               </p>
-              <p className="text-13 text-muted-foreground">
+              <p className="text-[13px] text-muted-foreground">
                 입장 완료 {candidateCount}명 중에서 뽑고 있어요…
               </p>
             </div>

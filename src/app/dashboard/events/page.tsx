@@ -93,10 +93,10 @@ export default async function EventsPage() {
       <div className="mx-auto flex max-w-2xl flex-col items-center justify-center gap-5 py-16 text-center">
         <Mic className="size-10 text-muted-foreground/60" strokeWidth={1.5} />
         <div className="space-y-1.5">
-          <p className="text-15 font-semibold">
+          <p className="text-[15px] font-semibold">
             아직 등록한 스테이지가 없습니다
           </p>
-          <p className="text-13 leading-relaxed text-muted-foreground">
+          <p className="text-[13px] leading-relaxed text-muted-foreground">
             첫 스테이지를 만들어 예매 링크를 공유해보세요.
             <br />
             좌석 수와 가격만 정하면 바로 열립니다.
@@ -118,7 +118,7 @@ export default async function EventsPage() {
     <div className="mx-auto max-w-2xl space-y-5">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-17 font-bold tracking-tight sm:text-2xl">
+          <h1 className="text-[17px] font-bold tracking-tight sm:text-2xl">
             내 스테이지
           </h1>
           <p className="text-xs text-muted-foreground">
@@ -156,7 +156,7 @@ export default async function EventsPage() {
               </div>
 
               <div className="space-y-1">
-                <h2 className="truncate text-15 font-semibold">
+                <h2 className="truncate text-[15px] font-semibold">
                   {event.title}
                 </h2>
                 <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
@@ -181,8 +181,8 @@ export default async function EventsPage() {
                 <span
                   className={
                     pending > 0 && status === "open"
-                      ? "text-13 font-medium text-primary"
-                      : "text-13 text-muted-foreground"
+                      ? "text-[13px] font-medium text-primary"
+                      : "text-[13px] text-muted-foreground"
                   }
                 >
                   {isDraft

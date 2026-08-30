@@ -67,11 +67,11 @@ export default async function AccountPage({ searchParams }: Props) {
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm">{accountEmail}</span>
             {pending ? (
-              <Badge variant="outline" className="text-10">
+              <Badge variant="outline" className="text-[10px]">
                 인증 대기
               </Badge>
             ) : (
-              <Badge variant="secondary" className="text-10">
+              <Badge variant="secondary" className="text-[10px]">
                 인증 완료
               </Badge>
             )}

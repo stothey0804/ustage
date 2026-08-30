@@ -207,7 +207,7 @@ export function OnsiteBookingDialog({
 
               {created.generatedPassword && (
                 <div className="space-y-1.5 rounded-3xl border p-3.5">
-                  <p className="text-13 font-semibold">
+                  <p className="text-[13px] font-semibold">
                     예약 조회 비밀번호
                   </p>
                   <div className="flex items-center gap-2">
@@ -227,7 +227,7 @@ export function OnsiteBookingDialog({
                 </div>
               )}
 
-              <p className="text-13 leading-relaxed text-muted-foreground">
+              <p className="text-[13px] leading-relaxed text-muted-foreground">
                 {created.confirmed
                   ? "입장 QR이 담긴 확정 메일을 보냈습니다."
                   : "입금 안내 메일을 보냈습니다. 입금을 확인하면 명단에서 확정 처리해 주세요."}
@@ -309,7 +309,7 @@ export function OnsiteBookingDialog({
                   >
                     <Minus className="size-4" />
                   </Button>
-                  <span className="min-w-5 text-center font-mono text-15">
+                  <span className="min-w-5 text-center font-mono text-[15px]">
                     {quantity}
                   </span>
                   <Button
@@ -325,7 +325,7 @@ export function OnsiteBookingDialog({
                     <Plus className="size-4" />
                   </Button>
                   {!isFree && (
-                    <span className="ml-auto text-13 font-medium">
+                    <span className="ml-auto text-[13px] font-medium">
                       {(effectivePrice * quantity).toLocaleString()}원
                     </span>
                   )}
@@ -371,7 +371,7 @@ export function OnsiteBookingDialog({
               )}
 
               {!isFree && (
-                <label className="flex cursor-pointer items-center gap-2 text-13">
+                <label className="flex cursor-pointer items-center gap-2 text-[13px]">
                   <input
                     type="checkbox"
                     className="accent-primary"
@@ -415,7 +415,7 @@ export function OnsiteBookingDialog({
               )}
 
               {duplicateValues && (
-                <div className="space-y-2 rounded-3xl border p-3.5 text-13">
+                <div className="space-y-2 rounded-3xl border p-3.5 text-[13px]">
                   <p>이미 이 이메일로 예매된 내역이 있습니다.</p>
                   <p className="text-xs text-muted-foreground">
                     같은 사람이 추가로 구매한 경우라면 별도 예매로 하나 더 만들 수

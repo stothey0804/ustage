@@ -324,14 +324,14 @@ export function BookingForm({
         {!isFree && (
           <div className="space-y-3.5 rounded-4xl bg-card p-5 shadow-md ring-1 ring-foreground/5">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-13 text-muted-foreground">입금 계좌</span>
+              <span className="text-[13px] text-muted-foreground">입금 계좌</span>
               <CopyButton value={bankInfo} label="복사" />
             </div>
-            <p className="font-mono text-15 font-medium break-all">
+            <p className="font-mono text-[15px] font-medium break-all">
               {bankInfo}
             </p>
             <Separator />
-            <div className="flex justify-between text-13">
+            <div className="flex justify-between text-[13px]">
               <span className="text-muted-foreground">입금 금액</span>
               <span className="font-medium">
                 {totalAmount.toLocaleString()}원
@@ -347,8 +347,8 @@ export function BookingForm({
 
         {/* 확인 사항 */}
         <div className="space-y-1.5">
-          <p className="text-13 font-semibold">확인해주세요</p>
-          <ul className="space-y-1 text-13 leading-relaxed text-muted-foreground">
+          <p className="text-[13px] font-semibold">확인해주세요</p>
+          <ul className="space-y-1 text-[13px] leading-relaxed text-muted-foreground">
             {!isFree && (
               <>
                 <li>· 입금자명이 다르면 확인이 늦어질 수 있어요.</li>
@@ -381,7 +381,7 @@ export function BookingForm({
       {/* 1단계: 매수 선택 + 총액 — 별도 화면 없이 상세 하단에서 바로 고른다 */}
       <div className="space-y-3 rounded-4xl bg-card p-5 shadow-md ring-1 ring-foreground/5">
         <div className="flex items-center justify-between">
-          <span className="text-13 font-medium">매수</span>
+          <span className="text-[13px] font-medium">매수</span>
           <div className="flex items-center gap-3">
             <Button
               type="button"
@@ -393,7 +393,7 @@ export function BookingForm({
             >
               <Minus className="size-4" />
             </Button>
-            <span className="min-w-5 text-center font-mono text-15">
+            <span className="min-w-5 text-center font-mono text-[15px]">
               {quantityValue}
             </span>
             <Button
@@ -461,7 +461,7 @@ export function BookingForm({
                 모달을 닫고 1단계로 돌아가지 않아도 되게 한다 */}
             <div className="mt-1.5 flex items-center justify-between gap-3 border-t border-primary/15 pt-2">
               <div className="flex items-center gap-2">
-                <span className="text-13 text-muted-foreground">예매 매수</span>
+                <span className="text-[13px] text-muted-foreground">예매 매수</span>
                 <Button
                   type="button"
                   variant="outline"
@@ -472,7 +472,7 @@ export function BookingForm({
                 >
                   <Minus className="size-3" />
                 </Button>
-                <span className="min-w-8 text-center font-mono text-15 font-semibold text-primary">
+                <span className="min-w-8 text-center font-mono text-[15px] font-semibold text-primary">
                   {quantityValue}매
                 </span>
                 <Button
@@ -487,7 +487,7 @@ export function BookingForm({
                 </Button>
               </div>
               {!isFree && (
-                <span className="text-13 font-semibold">
+                <span className="text-[13px] font-semibold">
                   {totalAmount.toLocaleString()}원
                 </span>
               )}
@@ -595,7 +595,7 @@ export function BookingForm({
                       disabled={sameName}
                       className={sameName ? "bg-muted" : undefined}
                     />
-                    <label className="flex cursor-pointer items-center gap-2 text-13 text-muted-foreground">
+                    <label className="flex cursor-pointer items-center gap-2 text-[13px] text-muted-foreground">
                       <input
                         type="checkbox"
                         className="accent-primary"

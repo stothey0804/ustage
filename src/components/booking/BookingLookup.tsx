@@ -278,7 +278,7 @@ function BookingResultCard({
             )}
           </div>
           {/* 번호 범위는 구매 매수 기준(부분 취소 정책) */}
-          <span className="font-mono text-13 font-medium text-primary">
+          <span className="font-mono text-[13px] font-medium text-primary">
             {formatBookingNoRange(
               result.booking_no ?? null,
               result.quantity,

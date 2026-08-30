@@ -599,7 +599,7 @@ export function BookingTable({
                   resetSelection();
                 }}
                 className={cn(
-                  "h-8 rounded-full border px-3.5 text-13 font-medium transition-colors",
+                  "h-8 rounded-full border px-3.5 text-[13px] font-medium transition-colors",
                   active
                     ? FILTER_TONES[f.key].active
                     : FILTER_TONES[f.key].idle
@@ -668,7 +668,7 @@ export function BookingTable({
                     }
                     label="표시된 예매 전체 선택"
                   />
-                  <span className="text-13 font-medium">
+                  <span className="text-[13px] font-medium">
                     {selected.length > 0
                       ? `${selected.length}건 선택`
                       : "전체 선택"}
@@ -806,7 +806,7 @@ export function BookingTable({
                       />
 
                       <div className="flex min-w-0 flex-col">
-                        <span className="truncate text-13 font-medium">
+                        <span className="truncate text-[13px] font-medium">
                           {booking.name}
                         </span>
                         <span className="truncate text-xs text-muted-foreground">
@@ -821,7 +821,7 @@ export function BookingTable({
                           booking.id
                         )}
                       </span>
-                      <span className="text-13">
+                      <span className="text-[13px]">
                         {quantity}매
                         {cancelledQuantity > 0 && (
                           <span className="ml-1 text-xs text-rose-600 dark:text-rose-400">
@@ -829,7 +829,7 @@ export function BookingTable({
                           </span>
                         )}
                       </span>
-                      <span className="text-13">
+                      <span className="text-[13px]">
                         {isFree
                           ? "무료"
                           : booking.status === "cancelled"
@@ -837,7 +837,7 @@ export function BookingTable({
                             : won(price * quantity)}
                       </span>
 
-                      <span className="truncate text-13">
+                      <span className="truncate text-[13px]">
                         {isFree ? "—" : booking.depositor_name}
                       </span>
 
@@ -848,7 +848,7 @@ export function BookingTable({
                           <span
                             key={f.id}
                             className={cn(
-                              "truncate text-13",
+                              "truncate text-[13px]",
                               shown === null && "text-muted-foreground"
                             )}
                             title={shown ?? undefined}
@@ -858,7 +858,7 @@ export function BookingTable({
                         );
                       })}
 
-                      <span className="text-13 text-muted-foreground">
+                      <span className="text-[13px] text-muted-foreground">
                         {formatCreated(booking.created_at)}
                       </span>
 
@@ -868,7 +868,7 @@ export function BookingTable({
                           isFree={isFree}
                         />
                         {checkedIn > 0 && (
-                          <span className="text-11 text-muted-foreground">
+                          <span className="text-[11px] text-muted-foreground">
                             {allCheckedIn ? "입장" : `${checkedIn}/${quantity}`}
                           </span>
                         )}
@@ -939,7 +939,7 @@ export function BookingTable({
           ) : (
             <div className="space-y-2 py-10 text-center">
               <p className="text-sm font-medium">예매자를 선택해주세요</p>
-              <p className="text-13 leading-relaxed text-muted-foreground">
+              <p className="text-[13px] leading-relaxed text-muted-foreground">
                 행을 누르면 예매 내역과 입금·입장 진행을 여기에서 확인할 수
                 있습니다.
               </p>
@@ -1171,7 +1171,7 @@ function StatCard({
           />
         </div>
       ) : sub ? (
-        <span className="text-11 leading-snug text-muted-foreground">
+        <span className="text-[11px] leading-snug text-muted-foreground">
           {sub}
         </span>
       ) : null}
@@ -1196,7 +1196,7 @@ function CheckBox({
       aria-label={label}
       onClick={onChange}
       className={cn(
-        "grid size-[18px] place-items-center rounded-md border text-11 transition-colors",
+        "grid size-[18px] place-items-center rounded-md border text-[11px] transition-colors",
         checked
           ? "border-primary bg-primary text-primary-foreground"
           : "border-border bg-transparent hover:border-primary/60"
@@ -1286,7 +1286,7 @@ function DetailPanel({
         </div>
       </div>
 
-      <div className="space-y-3 rounded-3xl bg-input/50 p-4 text-13">
+      <div className="space-y-3 rounded-3xl bg-input/50 p-4 text-[13px]">
         <DetailRow
           label="예매번호"
           mono
@@ -1304,7 +1304,7 @@ function DetailPanel({
       </div>
 
       {customAnswers && Object.keys(customAnswers).length > 0 && (
-        <div className="space-y-3 rounded-3xl bg-input/50 p-4 text-13">
+        <div className="space-y-3 rounded-3xl bg-input/50 p-4 text-[13px]">
           {Object.entries(customAnswers).map(([key, value]) => {
             const field = fieldTypeMap[key];
             const shown = field
@@ -1322,7 +1322,7 @@ function DetailPanel({
       )}
 
       <div className="space-y-2">
-        <p className="text-13 font-semibold">진행</p>
+        <p className="text-[13px] font-semibold">진행</p>
         {timeline.map((step) => (
           <div key={step.label} className="flex items-baseline gap-2.5">
             <span
@@ -1331,7 +1331,7 @@ function DetailPanel({
                 step.done ? "bg-primary" : "bg-border"
               )}
             />
-            <span className="flex-1 text-13">{step.label}</span>
+            <span className="flex-1 text-[13px]">{step.label}</span>
             <span className="font-mono text-xs text-muted-foreground">
               {step.at}
             </span>
@@ -1342,7 +1342,7 @@ function DetailPanel({
       {/* 티켓별 입장 현황 + 티켓 단위 취소 */}
       {tickets.length > 0 && (
         <div className="space-y-2">
-          <p className="text-13 font-semibold">
+          <p className="text-[13px] font-semibold">
             입장 {checkedIn}/{quantity}
             {cancelledQuantity > 0 && (
               <span className="ml-1.5 text-xs font-normal text-rose-600 dark:text-rose-400">
@@ -1355,7 +1355,7 @@ function DetailPanel({
               <div
                 key={ticket.id}
                 className={cn(
-                  "flex items-center justify-between rounded-3xl border px-3 py-2 text-13",
+                  "flex items-center justify-between rounded-3xl border px-3 py-2 text-[13px]",
                   ticket.cancelled_at && "opacity-60"
                 )}
               >
@@ -1437,7 +1437,7 @@ function DetailPanel({
             >
               {isFree ? "참가 확정하기" : "입금 확인하기"}
             </Button>
-            <p className="px-1 text-11 leading-snug text-muted-foreground">
+            <p className="px-1 text-[11px] leading-snug text-muted-foreground">
               누르면 참석자에게 입장 QR 확정 메일이 자동으로 갑니다.
             </p>
           </>

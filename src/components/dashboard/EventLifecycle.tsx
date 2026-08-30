@@ -73,7 +73,7 @@ export function EventLifecycle({ event }: { event: Event }) {
                 {/* 노드 */}
                 <span
                   className={cn(
-                    "flex size-5 shrink-0 items-center justify-center rounded-full border text-10 font-semibold",
+                    "flex size-5 shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold",
                     state === "done" && "border-primary bg-primary text-primary-foreground",
                     state === "current" &&
                       "border-primary bg-primary/15 text-primary ring-2 ring-primary/30",
@@ -96,7 +96,7 @@ export function EventLifecycle({ event }: { event: Event }) {
               </div>
               <span
                 className={cn(
-                  "whitespace-nowrap text-center text-11 leading-tight",
+                  "whitespace-nowrap text-center text-[11px] leading-tight",
                   state === "current"
                     ? "font-semibold text-primary"
                     : state === "done"
@@ -107,7 +107,7 @@ export function EventLifecycle({ event }: { event: Event }) {
                 {phase.label}
               </span>
               {phase.at && (
-                <span className="whitespace-nowrap text-center text-10 leading-tight text-muted-foreground">
+                <span className="whitespace-nowrap text-center text-[10px] leading-tight text-muted-foreground">
                   {formatKST(phase.at, "M.d HH:mm")}
                 </span>
               )}

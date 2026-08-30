@@ -137,7 +137,7 @@ export default async function DashboardPage() {
       {/* 인사 — 지금 신경 쓸 일 한 줄 */}
       <div className="space-y-1">
         <h1 className="text-xl font-bold tracking-tight">{headline}</h1>
-        <p className="text-13 text-muted-foreground">
+        <p className="text-[13px] text-muted-foreground">
           {isHost
             ? pendingCount > 0
               ? `입금대기 ${pendingCount}건을 확인하면 QR 티켓이 발송됩니다.`
@@ -151,7 +151,7 @@ export default async function DashboardPage() {
       {/* 내 티켓 요약 */}
       <section className="space-y-2.5">
         <div className="flex items-center justify-between">
-          <h2 className="text-13 font-semibold">
+          <h2 className="text-[13px] font-semibold">
             내 티켓 {tickets.length > 0 ? `${tickets.length}장` : ""}
           </h2>
           <Button asChild variant="ghost" size="xs">
@@ -184,7 +184,7 @@ export default async function DashboardPage() {
           </Link>
         ) : (
           <div className="rounded-4xl border border-dashed p-5 text-center">
-            <p className="text-13 text-muted-foreground">
+            <p className="text-[13px] text-muted-foreground">
               다가오는 티켓이 없어요. 받은 예매 링크로 예매하면 여기에 모입니다.
             </p>
           </div>
@@ -194,7 +194,7 @@ export default async function DashboardPage() {
       {/* 내가 여는 스테이지 요약 (Z2) — 주최 이력이 없으면 내 티켓과 같은 빈 상태만 보여준다 */}
       <section className="space-y-2.5">
         <div className="flex items-center justify-between">
-          <h2 className="text-13 font-semibold">내가 여는 스테이지</h2>
+          <h2 className="text-[13px] font-semibold">내가 여는 스테이지</h2>
           <Button asChild variant="ghost" size="xs">
             <Link href="/dashboard/events">전체 보기</Link>
           </Button>
@@ -202,7 +202,7 @@ export default async function DashboardPage() {
 
         {!isHost ? (
           <div className="rounded-4xl border border-dashed p-5 text-center">
-            <p className="text-13 text-muted-foreground">
+            <p className="text-[13px] text-muted-foreground">
               내가 만든 스테이지가 없어요.
             </p>
           </div>
@@ -218,7 +218,7 @@ export default async function DashboardPage() {
               </div>
 
               <div className="space-y-1">
-                <h3 className="text-17 font-semibold leading-snug">
+                <h3 className="text-[17px] font-semibold leading-snug">
                   {upcomingEvent.title}
                 </h3>
                 <p className="text-xs text-muted-foreground">
@@ -230,8 +230,8 @@ export default async function DashboardPage() {
               {upcomingEvent.capacity && (
                 <div className="space-y-1.5">
                   <div className="flex items-baseline justify-between">
-                    <span className="text-13 font-medium">좌석</span>
-                    <span className="font-mono text-15 text-primary">
+                    <span className="text-[13px] font-medium">좌석</span>
+                    <span className="font-mono text-[15px] text-primary">
                       {occupied} / {upcomingEvent.capacity}석
                     </span>
                   </div>
@@ -255,7 +255,7 @@ export default async function DashboardPage() {
 
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-13 font-medium">
+                  <p className="text-[13px] font-medium">
                     {pendingCount > 0
                       ? `입금대기 ${pendingCount}건`
                       : "입금대기 없음"}
@@ -277,7 +277,7 @@ export default async function DashboardPage() {
             </div>
         ) : (
           <div className="rounded-4xl border border-dashed p-5 text-center">
-            <p className="text-13 text-muted-foreground">
+            <p className="text-[13px] text-muted-foreground">
               예정된 스테이지가 없어요. 지난 스테이지는 전체 보기에서 확인할 수
               있습니다.
             </p>

@@ -317,7 +317,7 @@ export function EventForm({
       {showDraftBanner && savedDraft && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-4xl border border-primary/30 bg-primary/5 px-4 py-3.5">
           <div className="min-w-0 space-y-0.5">
-            <p className="text-13 font-semibold">작성하던 스테이지가 있어요.</p>
+            <p className="text-[13px] font-semibold">작성하던 스테이지가 있어요.</p>
             <p className="text-xs leading-relaxed text-muted-foreground">
               {formatKST(savedDraft.savedAt, "M월 d일 HH:mm")}에 이 브라우저에 저장된
               내용입니다. 포스터 이미지는 저장되지 않아 다시 올려야 해요.
@@ -472,7 +472,7 @@ export function EventForm({
               placeholder="예: 15000"
             />
           )}
-          <label className="flex cursor-pointer items-center gap-2 text-13 text-muted-foreground">
+          <label className="flex cursor-pointer items-center gap-2 text-[13px] text-muted-foreground">
             <input
               type="checkbox"
               className="accent-primary"

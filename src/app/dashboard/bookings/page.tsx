@@ -76,8 +76,8 @@ export default async function BookingsPage() {
       <div className="mx-auto flex max-w-2xl flex-col items-center justify-center gap-5 py-16 text-center">
         <Ticket className="size-10 text-muted-foreground/60" strokeWidth={1.5} />
         <div className="space-y-1.5">
-          <p className="text-15 font-semibold">아직 예매한 공연이 없습니다</p>
-          <p className="text-13 leading-relaxed text-muted-foreground">
+          <p className="text-[15px] font-semibold">아직 예매한 공연이 없습니다</p>
+          <p className="text-[13px] leading-relaxed text-muted-foreground">
             받은 예매 링크로 예매하면 QR 티켓이 여기에 모입니다.
             <br />
             비회원으로 예매했다면 그 링크의 &lsquo;비회원 예약 조회&rsquo;에서 확인할 수
@@ -90,7 +90,7 @@ export default async function BookingsPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">
-      <h1 className="text-17 font-bold tracking-tight sm:text-2xl">내 티켓</h1>
+      <h1 className="text-[17px] font-bold tracking-tight sm:text-2xl">내 티켓</h1>
 
       {/* 다가오는 티켓 — 입장에 바로 쓰는 한 장을 크게 */}
       {upcoming?.events && (
@@ -101,7 +101,7 @@ export default async function BookingsPage() {
                 status={upcoming.status}
                 isFree={upcoming.events.price === 0}
               />
-              <span className="font-mono text-13 font-medium text-primary">
+              <span className="font-mono text-[13px] font-medium text-primary">
                 {formatBookingNoRange(
                   upcoming.booking_no,
                   upcoming.quantity ?? 1,
@@ -117,7 +117,7 @@ export default async function BookingsPage() {
           </div>
 
           <div className="space-y-1">
-            <h2 className="text-17 font-semibold leading-snug">
+            <h2 className="text-[17px] font-semibold leading-snug">
               {upcoming.events.title}
             </h2>
             <p className="text-xs text-muted-foreground">
@@ -159,7 +159,7 @@ function TicketSection({
 }) {
   return (
     <section className="space-y-2.5">
-      <h2 className="text-13 font-semibold">
+      <h2 className="text-[13px] font-semibold">
         {title} {rows.length}건
       </h2>
       <div className="divide-y rounded-4xl bg-card shadow-md ring-1 ring-foreground/5">

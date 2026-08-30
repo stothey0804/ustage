@@ -49,19 +49,6 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/*
- * 중간 크기 텍스트 토큰 — 예전의 text-[10px]/[11px]/[13px]/[15px]/[17px] 하드코딩을 대체한다.
- * px 하드코딩은 아래 모바일 스케일 조정을 받지 못하므로 다시 쓰지 말 것.
- * (line-height 짝을 두지 않아 기존 bracket 표기처럼 줄간격은 상속된다)
- */
-@theme {
-  --text-10: 0.625rem;
-  --text-11: 0.6875rem;
-  --text-13: 0.8125rem;
-  --text-15: 0.9375rem;
-  --text-17: 1.0625rem;
-}
-
 :root {
   /* 본문 서체 — 한글은 Pretendard, 라틴도 같은 폰트(Inter 기반 설계)로 통일한다.
      next/font 대신 자체 호스팅 CSS를 쓰므로 여기서 스택을 정의한다. */
@@ -146,26 +133,5 @@
   }
   html {
     @apply font-sans;
-  }
-}
-
-/*
- * 모바일 가독성 — sm(40rem) 미만에서 텍스트 스케일 전체를 1px씩 키운다.
- * Tailwind v4 유틸리티는 font-size를 var()로 참조하므로 토큰 재정의만으로 적용된다.
- * 여백·아이콘 등 레이아웃 치수는 그대로 두고 글자만 커진다.
- */
-@media (width < 40rem) {
-  :root {
-    --text-10: 0.6875rem; /* 10 → 11px */
-    --text-11: 0.75rem; /* 11 → 12px */
-    --text-xs: 0.8125rem; /* 12 → 13px */
-    --text-13: 0.875rem; /* 13 → 14px */
-    --text-sm: 0.9375rem; /* 14 → 15px */
-    --text-15: 1rem; /* 15 → 16px */
-    --text-base: 1.0625rem; /* 16 → 17px */
-    --text-17: 1.125rem; /* 17 → 18px */
-    --text-lg: 1.1875rem; /* 18 → 19px */
-    --text-xl: 1.3125rem; /* 20 → 21px */
-    --text-2xl: 1.5625rem; /* 24 → 25px */
   }
 }

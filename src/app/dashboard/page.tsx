@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Mic, Ticket } from "lucide-react";
+import { Ticket } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { deriveAutoStatus } from "@/lib/auto-status";
@@ -31,6 +31,16 @@ function ddayLabel(iso: string): string {
   return "지난 공연";
 }
 
+/**
+ * 종료 판정은 시각 기준으로 정확히 한다.
+ * daysUntil은 24시간 단위 올림이라 종료 후 하루까지 0("오늘")로 잡혀,
+ * 이미 끝난 스테이지에 "공연이 오늘이에요"가 뜨는 문제가 있었다.
+ */
+function isPast(iso: string): boolean {
+  const t = new Date(iso).getTime();
+  return !isNaN(t) && t < Date.now();
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient();
   const {
@@ -50,7 +60,7 @@ export default async function DashboardPage() {
 
   const events = myEvents ?? [];
   const upcomingEvent =
-    events.find((e) => daysUntil(e.event_end_date ?? e.event_date) >= 0) ?? null;
+    events.find((e) => !isPast(e.event_end_date ?? e.event_date)) ?? null;
 
   // 요약 카드에 필요한 좌석·입금대기 집계 (해당 1건만 조회)
   let pendingCount = 0;
@@ -79,7 +89,9 @@ export default async function DashboardPage() {
   // 내가 예매한 티켓 — 가장 가까운 미종료 1건
   const { data: myBookings } = await supabase
     .from("bookings")
-    .select("id, status, quantity, cancelled_quantity, events(title, event_date, venue, price)")
+    .select(
+      "id, status, quantity, cancelled_quantity, events(title, event_date, event_end_date, venue, price)"
+    )
     .eq("user_id", user.id)
     .neq("status", "cancelled");
 
@@ -91,13 +103,16 @@ export default async function DashboardPage() {
     events: {
       title: string;
       event_date: string;
+      event_end_date: string | null;
       venue: string;
       price: number;
     } | null;
   };
 
   const tickets = ((myBookings ?? []) as unknown as TicketRow[])
-    .filter((b) => b.events && daysUntil(b.events.event_date) >= 0)
+    .filter(
+      (b) => b.events && !isPast(b.events.event_end_date ?? b.events.event_date)
+    )
     .sort((a, b) =>
       (a.events?.event_date ?? "").localeCompare(b.events?.event_date ?? "")
     );
@@ -122,7 +137,7 @@ export default async function DashboardPage() {
       {/* 인사 — 지금 신경 쓸 일 한 줄 */}
       <div className="space-y-1">
         <h1 className="text-xl font-bold tracking-tight">{headline}</h1>
-        <p className="text-[13px] text-muted-foreground">
+        <p className="text-13 text-muted-foreground">
           {isHost
             ? pendingCount > 0
               ? `입금대기 ${pendingCount}건을 확인하면 QR 티켓이 발송됩니다.`
@@ -136,7 +151,7 @@ export default async function DashboardPage() {
       {/* 내 티켓 요약 */}
       <section className="space-y-2.5">
         <div className="flex items-center justify-between">
-          <h2 className="text-[13px] font-semibold">
+          <h2 className="text-13 font-semibold">
             내 티켓 {tickets.length > 0 ? `${tickets.length}장` : ""}
           </h2>
           <Button asChild variant="ghost" size="xs">
@@ -169,24 +184,29 @@ export default async function DashboardPage() {
           </Link>
         ) : (
           <div className="rounded-4xl border border-dashed p-5 text-center">
-            <p className="text-[13px] text-muted-foreground">
+            <p className="text-13 text-muted-foreground">
               다가오는 티켓이 없어요. 받은 예매 링크로 예매하면 여기에 모입니다.
             </p>
           </div>
         )}
       </section>
 
-      {/* 내가 여는 스테이지 요약 (Z2) / 주최 유도 (Z3) */}
-      {isHost ? (
-        <section className="space-y-2.5">
-          <div className="flex items-center justify-between">
-            <h2 className="text-[13px] font-semibold">내가 여는 스테이지</h2>
-            <Button asChild variant="ghost" size="xs">
-              <Link href="/dashboard/events">전체 보기</Link>
-            </Button>
-          </div>
+      {/* 내가 여는 스테이지 요약 (Z2) — 주최 이력이 없으면 내 티켓과 같은 빈 상태만 보여준다 */}
+      <section className="space-y-2.5">
+        <div className="flex items-center justify-between">
+          <h2 className="text-13 font-semibold">내가 여는 스테이지</h2>
+          <Button asChild variant="ghost" size="xs">
+            <Link href="/dashboard/events">전체 보기</Link>
+          </Button>
+        </div>
 
-          {upcomingEvent ? (
+        {!isHost ? (
+          <div className="rounded-4xl border border-dashed p-5 text-center">
+            <p className="text-13 text-muted-foreground">
+              내가 만든 스테이지가 없어요.
+            </p>
+          </div>
+        ) : upcomingEvent ? (
             <div className="space-y-3.5 rounded-4xl bg-card p-5 shadow-md ring-1 ring-foreground/5">
               <div className="flex items-center gap-2">
                 <EventStatusBadge
@@ -198,7 +218,7 @@ export default async function DashboardPage() {
               </div>
 
               <div className="space-y-1">
-                <h3 className="text-[17px] font-semibold leading-snug">
+                <h3 className="text-17 font-semibold leading-snug">
                   {upcomingEvent.title}
                 </h3>
                 <p className="text-xs text-muted-foreground">
@@ -210,8 +230,8 @@ export default async function DashboardPage() {
               {upcomingEvent.capacity && (
                 <div className="space-y-1.5">
                   <div className="flex items-baseline justify-between">
-                    <span className="text-[13px] font-medium">좌석</span>
-                    <span className="font-mono text-[15px] text-primary">
+                    <span className="text-13 font-medium">좌석</span>
+                    <span className="font-mono text-15 text-primary">
                       {occupied} / {upcomingEvent.capacity}석
                     </span>
                   </div>
@@ -235,7 +255,7 @@ export default async function DashboardPage() {
 
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[13px] font-medium">
+                  <p className="text-13 font-medium">
                     {pendingCount > 0
                       ? `입금대기 ${pendingCount}건`
                       : "입금대기 없음"}
@@ -255,35 +275,15 @@ export default async function DashboardPage() {
                 </Button>
               </div>
             </div>
-          ) : (
-            <div className="rounded-4xl border border-dashed p-5 text-center">
-              <p className="text-[13px] text-muted-foreground">
-                예정된 스테이지가 없어요. 지난 스테이지는 전체 보기에서 확인할 수
-                있습니다.
-              </p>
-            </div>
-          )}
-        </section>
-      ) : (
-        <section className="space-y-3 rounded-4xl bg-card p-5 shadow-md ring-1 ring-foreground/5">
-          <div className="flex items-center gap-2.5">
-            <span className="grid size-10 place-items-center rounded-3xl bg-primary/10">
-              <Mic className="size-5 text-primary" />
-            </span>
-            <p className="text-[15px] font-semibold">공연을 열어보고 싶다면</p>
+        ) : (
+          <div className="rounded-4xl border border-dashed p-5 text-center">
+            <p className="text-13 text-muted-foreground">
+              예정된 스테이지가 없어요. 지난 스테이지는 전체 보기에서 확인할 수
+              있습니다.
+            </p>
           </div>
-          <p className="text-[13px] leading-relaxed text-muted-foreground">
-            지금 쓰는 계정으로 스테이지를 만들 수 있습니다. 좌석 수와 가격을 정하면
-            비공개 예매 링크가 만들어지고, 내 스테이지 탭에서 명단을 관리합니다.
-          </p>
-          <Button asChild size="lg" className="w-full">
-            <Link href="/dashboard/events/new">스테이지 만들기</Link>
-          </Button>
-          <Button asChild variant="ghost" size="sm" className="w-full">
-            <Link href="/guide">예매를 여는 순서 보기</Link>
-          </Button>
-        </section>
-      )}
+        )}
+      </section>
     </div>
   );
 }

@@ -66,6 +66,8 @@ export async function assertEventOwner(
         title: string;
         slug: string;
         price: number;
+        /** 현장 예매 1매 가격 — null이면 price와 동일 */
+        onsite_price: number | null;
         bank_info: string;
         event_date: string;
         venue: string;
@@ -130,9 +132,6 @@ export async function updateBookingStatus(
 
   // 주최자 취소 — 참석자에게 취소 통보 메일을 보낸다.
   // (이미 cancelled였던 예약에는 중복 발송하지 않기 위해 갱신 전에 조회)
-  // 갱신 전 상태 — 실제로 바뀌었는지(=메일이 나갔는지) 판단에 쓴다.
-  // 되돌리기(pending)는 조회하지 않으므로 null로 남는다.
-  let previousStatus: string | null = null;
   let cancelTarget: CancelEmailTarget | null = null;
   if (status === "cancelled") {
     const { data: full } = await ctx.supabase
@@ -143,7 +142,6 @@ export async function updateBookingStatus(
       .eq("id", bookingId)
       .single();
 
-    previousStatus = full?.status ?? null;
     if (full && full.status !== "cancelled" && full.email) {
       const ev = full.events as {
         title: string;
@@ -181,7 +179,6 @@ export async function updateBookingStatus(
       .eq("id", bookingId)
       .single();
 
-    previousStatus = full?.status ?? null;
     if (full && full.status !== "confirmed" && full.email) {
       const ev = full.events as {
         title: string;
@@ -220,14 +217,24 @@ export async function updateBookingStatus(
     }
   }
 
-  const { error } = await ctx.supabase
+  // 조건부 갱신 — 이미 같은 상태면 0건이 갱신된다. 위에서 읽은 상태와 갱신 사이에
+  // 다른 관리자(스태프)가 먼저 처리한 동시 요청도 여기서 걸러져 메일이 중복 발송되지 않는다.
+  const { data: updatedRows, error } = await ctx.supabase
     .from("bookings")
     .update({ status, status_updated_by: ctx.userId })
-    .eq("id", bookingId);
+    .eq("id", bookingId)
+    .neq("status", status)
+    .select("id");
 
   if (error) {
     console.error("[updateBookingStatus]", error);
     return { error: "상태 변경에 실패했습니다." };
+  }
+
+  const updated = (updatedRows ?? []).length;
+  if (updated === 0) {
+    // 이미 처리된 건 — 메일도 보내지 않는다 (화면이 안내 토스트를 띄운다)
+    return { success: true, updated: 0, mailed: 0 };
   }
 
   // 입금확인 완료 메일 (입장 QR 포함) — 응답 후 발송
@@ -275,7 +282,6 @@ export async function updateBookingStatus(
   // 실제로 바뀐/메일이 예약된 건수 — 화면 안내 문구가 사실과 어긋나지 않게 한다
   const mailed =
     (confirmTarget && confirmTarget.tickets.length > 0) || cancelTarget ? 1 : 0;
-  const updated = previousStatus === null || previousStatus !== status ? 1 : 0;
   return { success: true, updated, mailed };
 }
 
@@ -320,21 +326,29 @@ export async function updateBookingStatusBulk(
   if (owned.length === 0) return { error: "권한이 없습니다." };
 
   // 상태가 실제로 바뀌는 건만 갱신 대상 — 메일 중복 발송 방지
-  const changing = owned.filter((r) => r.status !== status);
-  if (changing.length === 0) return { success: true, updated: 0, mailed: 0 };
+  const candidates = owned.filter((r) => r.status !== status);
+  if (candidates.length === 0) return { success: true, updated: 0, mailed: 0 };
 
-  const { error: updateError } = await supabase
+  // 조건부 갱신 — 조회와 갱신 사이에 다른 관리자가 먼저 처리한 건은 0건으로 걸러진다.
+  // 메일도 실제로 갱신된 행에만 보낸다(동시 클릭 시 중복 발송 방지).
+  const { data: updatedRows, error: updateError } = await supabase
     .from("bookings")
     .update({ status, status_updated_by: user.id })
     .in(
       "id",
-      changing.map((r) => r.id)
-    );
+      candidates.map((r) => r.id)
+    )
+    .neq("status", status)
+    .select("id");
 
   if (updateError) {
     console.error("[updateBookingStatusBulk] update", updateError);
     return { error: "상태 변경에 실패했습니다." };
   }
+
+  const updatedIds = new Set((updatedRows ?? []).map((r) => r.id));
+  const changing = candidates.filter((r) => updatedIds.has(r.id));
+  if (changing.length === 0) return { success: true, updated: 0, mailed: 0 };
 
   const baseUrl = getBaseUrl();
   const eventInfo = (row: Row) =>
@@ -551,8 +565,10 @@ export async function createOnsiteBooking(input: {
     }
   }
   const email = values.email.toLowerCase();
-  const isFree = event.price === 0;
-  // 무료 스테이지는 입금 개념이 없으므로 항상 확정
+  // 현장 예매는 현장 가격을 따른다 — 미설정(null)이면 온라인 가격과 동일
+  const onsitePrice = event.onsite_price ?? event.price;
+  const isFree = onsitePrice === 0;
+  // 무료면 입금 개념이 없으므로 항상 확정
   const status: "pending" | "confirmed" =
     isFree || values.confirmNow ? "confirmed" : "pending";
 
@@ -675,7 +691,7 @@ export async function createOnsiteBooking(input: {
       eventVenue,
       isFree,
       bankInfo: event.bank_info,
-      totalAmount: event.price * values.quantity,
+      totalAmount: onsitePrice * values.quantity,
       confirmUrl,
       bookingNoLabel,
     }).catch((err) => console.error("[email]", err));

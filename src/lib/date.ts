@@ -39,7 +39,7 @@ export function formatKST(
  * 스테이지가 이미 끝났는가 — **시각 비교**로 판정한다.
  *
  * `daysUntil` 같은 24시간 단위 올림으로 판정하면 종료 후 하루까지 "오늘"로 잡혀,
- * 끝난 공연이 홈에는 "공연이 오늘이에요", 티켓 목록에는 "다가오는 티켓"으로 남는다.
+ * 끝난 스테이지가 홈에는 "스테이지가 오늘이에요", 티켓 목록에는 "다가오는 티켓"으로 남는다.
  * 종료 기준 시각은 항상 `event_end_date ?? event_date`다.
  */
 export function isPastInstant(iso: string | null | undefined): boolean {

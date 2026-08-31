@@ -52,8 +52,8 @@ export default async function BookingsPage() {
   const byDate = (a: TicketRow, b: TicketRow) =>
     (a.events?.event_date ?? "").localeCompare(b.events?.event_date ?? "");
 
-  // 지난 공연 판정은 종료 일시(없으면 시작 일시) 기준
-  // 홈과 같은 시각 기준으로 판정한다 (24시간 올림을 쓰면 끝난 공연이 하루 더 남는다)
+  // 지난 스테이지 판정은 종료 일시(없으면 시작 일시) 기준
+  // 홈과 같은 시각 기준으로 판정한다 (24시간 올림을 쓰면 끝난 스테이지가 하루 더 남는다)
   const isPast = (row: TicketRow) =>
     !row.events ||
     isPastInstant(row.events.event_end_date ?? row.events.event_date);
@@ -70,7 +70,7 @@ export default async function BookingsPage() {
       <div className="mx-auto flex max-w-2xl flex-col items-center justify-center gap-5 py-16 text-center">
         <Ticket className="size-10 text-muted-foreground/60" strokeWidth={1.5} />
         <div className="space-y-1.5">
-          <p className="text-[15px] font-semibold">아직 예매한 공연이 없습니다</p>
+          <p className="text-[15px] font-semibold">아직 예매한 스테이지가 없습니다</p>
           <p className="text-[13px] leading-relaxed text-muted-foreground">
             받은 예매 링크로 예매하면 QR 티켓이 여기에 모입니다.
             <br />

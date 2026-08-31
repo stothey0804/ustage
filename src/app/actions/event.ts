@@ -160,7 +160,7 @@ export async function updateEvent(
    * 종료된 스테이지를 미래 일시로 고치면 상태를 되살린다.
    *
    * `ended`는 deriveAutoStatus가 손대지 않는 종착 상태이고 상태 전환 UI도 감춰지므로,
-   * 공연이 연기돼 일시를 미래로 옮겨도 영원히 종료로 남아 복구 경로가 없었다.
+   * 스테이지가 연기돼 일시를 미래로 옮겨도 영원히 종료로 남아 복구 경로가 없었다.
    * 새 일시 기준으로 다시 계산해 draft(또는 예매 시작이 지났으면 open)로 돌린다.
    */
   const revivedStatus =

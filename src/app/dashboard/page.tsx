@@ -21,7 +21,7 @@ function ddayLabel(iso: string): string {
   const days = daysUntil(iso);
   if (days > 0) return `D-${days}`;
   if (days === 0) return "오늘";
-  return "지난 공연";
+  return "지난 스테이지";
 }
 
 export default async function DashboardPage() {
@@ -107,13 +107,13 @@ export default async function DashboardPage() {
   // 표시할 이름(프로필)이 없어 호칭은 쓰지 않고 '지금 상황'만 한 줄로 말한다.
   const headline = upcomingEvent
     ? daysUntil(upcomingEvent.event_date) > 0
-      ? `공연이 ${ddayLabel(upcomingEvent.event_date)} 남았어요`
-      : "공연이 오늘이에요"
+      ? `스테이지가 ${ddayLabel(upcomingEvent.event_date)} 남았어요`
+      : "스테이지가 오늘이에요"
     : upcomingTicket?.events
       ? daysUntil(upcomingTicket.events.event_date) > 0
-        ? `다음 공연이 ${ddayLabel(upcomingTicket.events.event_date)} 남았어요`
-        : "다음 공연이 오늘이에요"
-      : "예정된 공연이 없어요";
+        ? `다음 스테이지가 ${ddayLabel(upcomingTicket.events.event_date)} 남았어요`
+        : "다음 스테이지가 오늘이에요"
+      : "예정된 스테이지가 없어요";
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -196,7 +196,7 @@ export default async function DashboardPage() {
                   status={deriveAutoStatus(upcomingEvent) ?? upcomingEvent.status}
                 />
                 <span className="text-xs text-muted-foreground">
-                  가장 가까운 공연 · {ddayLabel(upcomingEvent.event_date)}
+                  가장 가까운 스테이지 · {ddayLabel(upcomingEvent.event_date)}
                 </span>
               </div>
 

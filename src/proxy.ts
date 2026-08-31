@@ -7,7 +7,7 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // /dashboard 이하는 공연자 로그인 필요.
+  // /dashboard 이하는 주최자 로그인 필요.
   if (pathname.startsWith("/dashboard") && !user) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";

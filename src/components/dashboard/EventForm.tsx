@@ -548,7 +548,7 @@ export function EventForm({
           </Label>
           <RichTextField
             value={cancelPolicy ?? ""}
-            placeholder="예: 공연 3일 전까지 전액 환불, 이후 환불 불가"
+            placeholder="예: 스테이지 3일 전까지 전액 환불, 이후 환불 불가"
             onChange={(v) => setValue("cancel_policy", v, { shouldDirty: true })}
           />
           <p className="text-xs text-muted-foreground">

@@ -20,7 +20,7 @@ function daysUntil(iso: string): number {
 
 function whenLabel(eventDate: string, endDate: string | null): string {
   const days = daysUntil(endDate ?? eventDate);
-  if (days < 0) return "지난 공연";
+  if (days < 0) return "지난 스테이지";
   const untilStart = daysUntil(eventDate);
   if (untilStart > 0) return `D-${untilStart}`;
   if (untilStart === 0) return "오늘";

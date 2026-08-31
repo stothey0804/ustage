@@ -307,9 +307,9 @@ export default function GuidePage() {
 
         <div className="space-y-2">
           <h1 className="text-2xl font-bold leading-snug tracking-tight sm:text-3xl">
-            비공개 모임 명단 관리와 당일 입장 처리를
+            비공개 모임 명단 관리와
             <br />
-            링크 하나로
+            당일 입장 처리를 링크 하나로
           </h1>
           <p className="text-[15px] leading-relaxed text-muted-foreground">
             어스테이지(us.tage)는 비공개 공연 및 모임을 위한 예매 서비스입니다.

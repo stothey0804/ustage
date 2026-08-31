@@ -204,6 +204,15 @@ accepted_at     timestamptz nullable
   수락한 스태프. `event_staff`를 정책 안에서 직접 조회하면 재귀가 나므로 함수로 감쌌다.
   단 파괴적 동작(`events` CUD, `bookings` DELETE, `event_draws` DELETE)은 **소유자 전용 유지**.
 - 감사용으로 `bookings.status_updated_by`, `booking_tickets.checked_in_by`에 처리한 계정을 남긴다.
+- **`bookings`·`booking_tickets`의 UPDATE는 컬럼 단위로 잠겨 있다**
+  (`20260831140000_booking_column_grants.sql`). RLS는 행만 통제하므로, 정책만으로는
+  스태프가 PostgREST에 직접 PATCH를 보내 `cancelled_at`으로 입장 티켓을 취소하거나
+  `email`·`booking_no`·`qr_token`을 고쳐 쓸 수 있었다. `authenticated`에 허용된 컬럼은
+  `bookings(status, status_updated_by, password_hash)`와
+  `booking_tickets(checked_in, checked_in_at, checked_in_by)` 뿐이다.
+  → **사용자 세션 클라이언트로 이 테이블의 새 컬럼을 쓰려면 grant를 함께 넓혀야 한다.**
+  빠뜨리면 그 기능이 프로덕션에서만 403으로 죽는다(타입체크·테스트는 통과한다).
+  service_role 경로(취소 API·QR 체크인 API·RPC·탈퇴 정리)는 이 제약과 무관하다.
 - 비밀번호 검증과 QR 토큰 조회는 **service_role**을 쓰는 API Route에서만 처리
 - 예매 생성은 `create_booking` RPC(이벤트 행 잠금 + 단일 트랜잭션)로 정원 초과를 방지하고,
   `(event_id, lower(email))` 부분 유니크 인덱스가 중복 예매를 차단 — `supabase/migrations/` 참고.

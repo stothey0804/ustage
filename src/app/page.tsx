@@ -8,6 +8,7 @@ import { safeInternalPath } from "@/lib/utils";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { KakaoLoginButton } from "@/components/auth/KakaoLoginButton";
 import { BrandMark } from "@/components/BrandMark";
+import { FooterMeta } from "@/components/FooterMeta";
 import { Wordmark } from "@/components/Wordmark";
 
 export const metadata: Metadata = {
@@ -164,6 +165,8 @@ export default async function Home({ searchParams }: Props) {
           </Link>
         </div>
       </div>
+
+      <FooterMeta className="px-6 pb-8" />
     </main>
   );
 }

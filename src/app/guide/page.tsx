@@ -20,6 +20,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/BrandMark";
+import { FooterMeta } from "@/components/FooterMeta";
 import { Wordmark } from "@/components/Wordmark";
 
 export const metadata: Metadata = {
@@ -350,6 +351,7 @@ export default function GuidePage() {
             <Link href="/">로그인 화면으로</Link>
           </Button>
         </div>
+        <FooterMeta className="pt-6" />
       </footer>
     </main>
   );

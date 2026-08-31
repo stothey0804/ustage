@@ -122,6 +122,7 @@ contact         text             # 오픈카톡 URL 또는 전화번호
 custom_fields   jsonb            # [{id, label, type, required}]
 slug            text UNIQUE      # 참석자 접근용 URL 식별자
 booking_seq     integer          # 인원 번호 발급 카운터 (예매당 quantity만큼 증분, 재사용 없음)
+draw_seq        integer          # 추첨 회차 발급 카운터 (next_draw_round RPC가 증분)
 status          text             # 'draft' | 'open' | 'closed' | 'ended'
 capacity        integer nullable
 booking_start   timestamptz      # 예매 시작일시
@@ -257,6 +258,11 @@ ended  (행사 종료) → event_date 경과
 - `open` → `closed`: 수동 마감, 또는 booking_end 도래 시 자동.
 - `open`/`closed` → `ended`: event_date 경과 시 자동.
 - `closed` → `open`: 재오픈 가능 (좌석 여유 + 예매기간 내 — 서버 액션에서 검증).
+  **예매 시작 전 재오픈은 막는다** — 배지는 '티켓 오픈'인데 폼·API가 거부해 주최자만
+  열렸다고 착각한다.
+- **`ended`는 종착 상태지만 영구는 아니다** — `updateEvent`가 일시를 미래로 옮기면
+  `computeInitialStatus`로 다시 계산해 draft(또는 open)로 되살린다. 공연 연기 시
+  상태 전환 UI가 숨겨져 복구 경로가 없던 것을 고쳤다(2026-08-31).
 - **예매 기간 미설정의 의미** (한쪽만 비우는 것도 허용):
   - `booking_end = null` = **자동 마감 없음**. 좌석 소진·행사 종료·수동 마감으로만 닫힌다.
     즉 실질 상한은 `event_date`가 아니라 `event_end_date ?? event_date`이며,
@@ -270,6 +276,9 @@ ended  (행사 종료) → event_date 경과
 - 자동 전환은 `lib/auto-status.ts`의 lazy 방식: 이벤트 상세/공개 페이지 조회 시
   `autoTransitionStatus`(service_role로 DB 반영), 목록 등 표시 전용은 `deriveAutoStatus`.
   예매 API도 저장된 status가 아닌 파생 상태로 판정하므로 전환 누락이 있어도 예매는 차단됨.
+- **취소된 예매를 되살릴 때(cancelled → pending/confirmed)도 정원을 검사한다** —
+  반환된 좌석은 이미 남이 채웠을 수 있다. 일괄 처리 바에서 '취소' 필터의 행을 선택해
+  입금확인을 누르면 검사 없이 정원을 넘길 수 있었다(2026-08-31 수정).
 - 좌석 소진 시 status는 바뀌지 않고, 예매 API가 신청 시점에 잔여석 검사로 거절.
   거절 응답은 `code: "capacity_exceeded"` + `remaining`(남은 좌석)을 함께 준다 —
   예매 폼·추가 구매 모달이 **닫지 않고 그 자리에서** 매수 상한을 낮춘다(동시 제출로
@@ -620,6 +629,9 @@ ended  (행사 종료) → event_date 경과
   기록은 `event_draws`에 저장해 새로고침·재접속에도 유지되고, 현장 분쟁의 근거가 된다.
   `attendee_no`를 스냅샷으로 남겨 티켓·예매가 삭제돼도 회차 기록은 보존된다.
   `(event_id, round, ticket_id)` 부분 UNIQUE로 같은 회차 중복 저장을 막는다.
+- **회차 번호는 `next_draw_round` RPC(events.draw_seq 원자적 증분)로 발급한다** —
+  코드에서 `max(round)+1`을 계산하면 소유자와 스태프가 동시에 추첨할 때 같은 번호가
+  두 번 나와 서로 다른 추첨이 한 회차로 합쳐진다. 기록 초기화는 카운터도 0으로 되돌린다.
 - 추첨은 서버에서 `node:crypto`의 `randomInt`로 수행한다(클라이언트 난수 금지).
   순수 로직은 `lib/lottery.ts`, 마스킹은 `lib/mask.ts` — 둘 다 vitest로 검증한다.
 - 결과 표기: 인원 번호 + 이름 마스킹(`김*영`) + 이메일 앞 4자만(`seyo***@ustage.im`).
@@ -813,6 +825,13 @@ ended  (행사 종료) → event_date 경과
   `posterStoragePath` 한 곳만 쓴다(버킷 밖·경로 탈출은 null).
   - **저장 전에 올린 파일**은 클라이언트가 지운다 — 교체하면 이전 파일을, 삭제 버튼을
     누르면 그 파일을, 저장 없이 화면을 떠나면(언마운트) 남은 파일 전부를 지운다.
+  - **`poster_url`은 우리 Storage의 posters 공개 URL만 저장한다**(`lib/poster.ts`의
+    `isAllowedPosterUrl`, 서버 액션이 검사). 이 값은 공개 OG 라우트가 **서버에서 fetch**
+    하므로 임의 URL을 허용하면 SSRF가 된다. OG 쪽도 허용 검사·타임아웃·리다이렉트 금지·
+    Content-Length 사전 검사로 한 번 더 막는다.
+  - 버킷 정책은 `supabase/migrations/20260831120000_posters_storage_policy.sql`에
+    버전관리한다 — 브라우저가 anon 키로 직접 업로드하므로 타입·크기·경로(`<uid>/…`)
+    강제는 클라이언트가 아니라 Storage 정책이 담당한다.
   - **이미 저장된 포스터**는 클라이언트가 절대 지우지 않는다. `updateEvent`가 저장을
     끝낸 뒤 예전 URL을 지운다(수정을 취소했을 때 살아 있는 스테이지의 포스터가
     사라지는 것을 막기 위함). 스테이지 삭제 시에는 `deleteEvent`가 지운다.
@@ -884,6 +903,9 @@ ended  (행사 종료) → event_date 경과
 
 ### 날짜·시간
 
+- **"지났는가" 판정은 `lib/date.ts`의 `isPastInstant`(시각 비교)** 를 쓴다. `daysUntil`은
+  24시간 단위 올림이라 D-day 문구 전용이며, 종료 판정에 쓰면 끝난 공연이 하루 더
+  "오늘"로 남는다(홈과 내 티켓 목록이 갈라졌던 원인).
 - 표시는 항상 `lib/date.ts`의 `formatKST` — `@date-fns/tz`의 `TZDate`로 `Asia/Seoul`
   벽시계를 계산하므로 **실행 환경 타임존과 무관**하다. `+9시간`을 손으로 더하는 코드를
   다시 쓰지 말 것(UTC 머신에서만 맞고 KST 로컬에서는 9시간 밀렸던 원인).

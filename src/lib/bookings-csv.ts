@@ -1,8 +1,6 @@
-import { format } from "date-fns";
-import { ko } from "date-fns/locale";
-
 import type { CustomField } from "@/lib/validations/event";
 import { formatBookingNoRange } from "@/lib/booking-code";
+import { formatKST } from "@/lib/date";
 import { bookingAmount } from "@/lib/booking-price";
 import { formatCustomAnswer } from "@/lib/custom-answers";
 
@@ -81,9 +79,8 @@ export function buildBookingsCsv(
       ...(opts.isFree ? [] : [bookingAmount(b, opts.price, quantity)]),
       // 표기는 명단 테이블·상세 패널과 같은 함수를 쓴다 (미응답은 빈 값)
       ...fields.map((f) => formatCustomAnswer(f, answers[f.id]) ?? ""),
-      b.created_at
-        ? format(new Date(b.created_at), "yyyy-MM-dd HH:mm", { locale: ko })
-        : "",
+      // 브라우저 로컬 타임존이 아니라 항상 KST — 서버 렌더 화면과 어긋나지 않게 한다
+      b.created_at ? formatKST(b.created_at, "yyyy-MM-dd HH:mm") : "",
     ]
       .map(csvCell)
       .join(",");

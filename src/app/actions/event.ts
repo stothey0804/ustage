@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { computeInitialStatus } from "@/lib/auto-status";
-import { posterStoragePath } from "@/lib/poster";
+import { isAllowedPosterUrl, posterStoragePath } from "@/lib/poster";
 import { occupiedSeats } from "@/lib/seats";
 import { eventSchema, type EventFormValues } from "@/lib/validations/event";
 
@@ -41,6 +41,11 @@ export async function createEvent(
 
   // 유료 스테이지의 계좌 필수 검사는 eventSchema가 담당한다(위 safeParse에서 걸린다).
   const v = parsed.data;
+
+  // 포스터는 우리 Storage에 올린 것만 — 임의 URL은 공개 OG 라우트의 서버 fetch로 이어진다
+  if (!isAllowedPosterUrl(v.poster_url)) {
+    return { error: "포스터 이미지는 직접 업로드한 파일만 사용할 수 있습니다." };
+  }
 
   const eventDate = toKST(v.event_date)!;
   const eventEndDate = toKST(v.event_end_date);
@@ -111,9 +116,13 @@ export async function updateEvent(
 
   const v = parsed.data;
 
+  if (!isAllowedPosterUrl(v.poster_url)) {
+    return { error: "포스터 이미지는 직접 업로드한 파일만 사용할 수 있습니다." };
+  }
+
   const { data: current } = await supabase
     .from("events")
-    .select("id, price, poster_url")
+    .select("id, price, poster_url, status")
     .eq("id", id)
     .eq("performer_id", user.id)
     .single();
@@ -144,16 +153,39 @@ export async function updateEvent(
     };
   }
 
+  const eventDate = toKST(v.event_date)!;
+  const eventEndDate = toKST(v.event_end_date);
+
+  /**
+   * 종료된 스테이지를 미래 일시로 고치면 상태를 되살린다.
+   *
+   * `ended`는 deriveAutoStatus가 손대지 않는 종착 상태이고 상태 전환 UI도 감춰지므로,
+   * 공연이 연기돼 일시를 미래로 옮겨도 영원히 종료로 남아 복구 경로가 없었다.
+   * 새 일시 기준으로 다시 계산해 draft(또는 예매 시작이 지났으면 open)로 돌린다.
+   */
+  const revivedStatus =
+    current.status === "ended"
+      ? computeInitialStatus({
+          event_date: eventDate,
+          event_end_date: eventEndDate,
+          booking_start: toKST(v.booking_start),
+          booking_end: toKST(v.booking_end),
+        })
+      : null;
+
   const { error } = await supabase
     .from("events")
     .update({
+      ...(revivedStatus && revivedStatus !== "ended"
+        ? { status: revivedStatus }
+        : {}),
       title: v.title,
       description: v.description ?? null,
       booking_notice: v.booking_notice || null,
       cancel_policy: v.cancel_policy || null,
       poster_url: v.poster_url ?? null,
-      event_date: toKST(v.event_date)!,
-      event_end_date: toKST(v.event_end_date),
+      event_date: eventDate,
+      event_end_date: eventEndDate,
       venue: v.venue,
       venue_address: v.venue_address ?? null,
       venue_lat: v.venue_lat ?? null,
@@ -283,6 +315,14 @@ export async function updateEventStatus(
     }
     if (event.booking_end && new Date(event.booking_end) < now) {
       return { error: "예매 종료 일시가 지났습니다. 예매 기간을 수정해 주세요." };
+    }
+    // 예매 시작 전에 오픈하면 배지는 '티켓 오픈'인데 폼도 API도 예매를 거부해
+    // 주최자만 열렸다고 착각한다. 시작 시각을 앞당기도록 안내한다.
+    if (event.booking_start && new Date(event.booking_start) > now) {
+      return {
+        error:
+          "예매 시작 일시가 아직 오지 않았습니다. 지금 열려면 예매 시작 일시를 앞당겨 주세요.",
+      };
     }
     if (event.capacity) {
       const { data: bookings } = await supabase

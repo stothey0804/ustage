@@ -3,6 +3,7 @@ import { ImageResponse } from "next/og";
 import { createClient } from "@/lib/supabase/server";
 import { formatKST } from "@/lib/date";
 import { brandMarkDataUri } from "@/lib/brand-mark";
+import { isAllowedPosterUrl } from "@/lib/poster";
 import { BookingShareCard, OG_SIZE } from "@/lib/og-card";
 
 export const alt = "예매 안내";
@@ -11,14 +12,20 @@ export const contentType = "image/png";
 
 /** 포스터를 그대로 싣기엔 큰 파일이 올 수 있어 상한을 둔다 */
 const MAX_POSTER_BYTES = 6 * 1024 * 1024;
+/** 외부 요청이 함수 타임아웃까지 매달리지 않게 하는 상한 */
+const FETCH_TIMEOUT_MS = 4000;
 
 async function loadGoogleFont(text: string): Promise<ArrayBuffer | null> {
   try {
     const cssUrl = `https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@700&text=${encodeURIComponent(text)}`;
-    const css = await (await fetch(cssUrl)).text();
+    const css = await (
+      await fetch(cssUrl, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+    ).text();
     const match = css.match(/src: url\((.+?)\) format\('(?:opentype|truetype)'\)/);
     if (!match) return null;
-    const res = await fetch(match[1]);
+    const res = await fetch(match[1], {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
     if (!res.ok) return null;
     return await res.arrayBuffer();
   } catch {
@@ -35,11 +42,21 @@ async function loadGoogleFont(text: string): Promise<ArrayBuffer | null> {
  */
 async function loadPoster(url: string | null): Promise<string | null> {
   if (!url) return null;
+  // 우리 Storage의 포스터만 가져온다 — poster_url에 임의 주소가 저장돼 있으면
+  // 이 fetch가 서버발 요청(SSRF)이 된다. 저장 단계에서도 막지만 여기서 한 번 더 건다.
+  if (!isAllowedPosterUrl(url)) return null;
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      // 리다이렉트를 따라가면 허용 목록 검사를 우회당한다
+      redirect: "manual",
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
     if (!res.ok) return null;
     const type = res.headers.get("content-type") ?? "";
     if (!type.startsWith("image/")) return null;
+    // 다 받은 뒤 크기를 재면 이미 메모리를 다 쓴 뒤다 — 헤더로 먼저 거른다
+    const declared = Number(res.headers.get("content-length") ?? "0");
+    if (declared > MAX_POSTER_BYTES) return null;
     const buf = await res.arrayBuffer();
     if (buf.byteLength > MAX_POSTER_BYTES) return null;
     return `data:${type};base64,${Buffer.from(buf).toString("base64")}`;

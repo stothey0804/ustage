@@ -4,6 +4,7 @@ import { randomInt } from "node:crypto";
 import { revalidatePath } from "next/cache";
 
 import { assertEventOwner } from "@/app/actions/booking";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { maskEmail, maskName } from "@/lib/mask";
 import {
   drawWinners,
@@ -74,8 +75,35 @@ export async function runDraw(
   }
 
   const previousRounds = draws ?? [];
-  const nextRound =
-    previousRounds.reduce((max, d) => Math.max(max, d.round), 0) + 1;
+
+  /**
+   * 회차는 DB 카운터로 발급한다 — `max(round) + 1`을 코드에서 계산하면 소유자와
+   * 스태프가 동시에 추첨했을 때 같은 번호가 두 번 나와 두 추첨이 한 회차로 합쳐진다.
+   * (마이그레이션 미적용 환경에서는 예전 방식으로 폴백한다.)
+   */
+  const admin = createAdminClient();
+  const rpc = admin.rpc.bind(admin) as unknown as (
+    fn: string,
+    args: Record<string, unknown>
+  ) => PromiseLike<{ data: unknown; error: { code?: string } | null }>;
+
+  const { data: allocated, error: roundError } = await rpc("next_draw_round", {
+    p_event_id: eventId,
+  });
+
+  let nextRound: number;
+  if (roundError?.code === "PGRST202") {
+    console.warn(
+      "[runDraw] next_draw_round RPC가 없어 max+1로 발급합니다. " +
+        "supabase/migrations/20260831130000_draw_round_counter.sql을 적용하세요."
+    );
+    nextRound = previousRounds.reduce((max, d) => Math.max(max, d.round), 0) + 1;
+  } else if (roundError || typeof allocated !== "number") {
+    console.error("[runDraw] next_draw_round", roundError);
+    return { error: "회차를 발급하지 못했습니다. 다시 시도해 주세요." };
+  } else {
+    nextRound = allocated;
+  }
 
   // 제외는 **티켓 단위** — 같은 예매의 아직 안 뽑힌 동반자는 후보로 남는다
   const excluded = opts.excludePrevious
@@ -146,6 +174,14 @@ export async function resetDraws(
     console.error("[resetDraws]", error);
     return { error: "추첨 기록 초기화에 실패했습니다." };
   }
+
+  // 회차 카운터도 되돌린다 — 기록을 지웠는데 다음 추첨이 5회차로 시작하면 이상하다.
+  // (실패해도 기록 초기화 자체는 끝났으므로 로그만 남긴다)
+  const { error: seqError } = await createAdminClient()
+    .from("events")
+    .update({ draw_seq: 0 })
+    .eq("id", eventId);
+  if (seqError) console.error("[resetDraws] draw_seq", seqError);
 
   revalidatePath(`/dashboard/events/${eventId}`);
   return { success: true };

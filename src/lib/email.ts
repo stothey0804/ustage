@@ -2,6 +2,7 @@ import { Resend } from "resend";
 import QRCode from "qrcode";
 
 import { LOTTERY_NOTICE_TEXT } from "@/lib/lottery-notice";
+import { maskEmail } from "@/lib/mask";
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -157,14 +158,15 @@ async function sendEmail(params: {
     });
 
     if (error) {
+      // 로그는 Vercel에 남고 로그 드레인으로 흘러갈 수 있다 — 수신자 주소는 마스킹한다
       console.error("[email] send failed", {
-        to: params.to,
+        to: maskEmail(params.to),
         from: FROM_EMAIL,
         error,
       });
       return;
     }
-    console.log("[email] sent", data?.id, "→", params.to);
+    console.log("[email] sent", data?.id, "→", maskEmail(params.to));
   } catch (err) {
     console.error("[email] send failed", err);
   }

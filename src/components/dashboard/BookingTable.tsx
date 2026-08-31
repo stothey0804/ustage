@@ -2,8 +2,6 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
-import { ko } from "date-fns/locale";
 import {
   Check,
   Download,
@@ -45,6 +43,7 @@ import {
   remainingSeats,
 } from "@/lib/seats";
 import { bookingAmount, isFreeStage } from "@/lib/booking-price";
+import { formatKST } from "@/lib/date";
 import { visibleBookingActions, type EventRole } from "@/lib/staff-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -221,15 +220,10 @@ function ticketStats(booking: BookingRow) {
   };
 }
 
+/** 신청일시 표기 — 항상 KST(lib/date). 브라우저 로컬 시각을 쓰면 서버 렌더 화면과 어긋난다. */
 function formatCreated(value: string | null, withYear = false): string {
   if (!value) return "-";
-  try {
-    return format(new Date(value), withYear ? "yyyy년 M월 d일 HH:mm" : "M월 d일 HH:mm", {
-      locale: ko,
-    });
-  } catch {
-    return value;
-  }
+  return formatKST(value, withYear ? "yyyy년 M월 d일 HH:mm" : "M월 d일 HH:mm");
 }
 
 /** 가장 오래된 입금대기 건의 경과일 — 요약 카드 서브 문구 */
@@ -555,7 +549,8 @@ export function BookingTable({
       toast.error("다운로드할 명단이 없습니다.");
       return;
     }
-    const date = format(new Date(), "yyyyMMdd", { locale: ko });
+    // 파일명 날짜도 KST 기준으로 (해외에서 내보내도 같은 파일명이 나오게)
+    const date = formatKST(new Date().toISOString(), "yyyyMMdd");
     const safeTitle = (eventTitle || "스테이지").replace(/[\\/:*?"<>|]/g, "_");
     const csv = buildBookingsCsv(visible, customFields ?? [], { isFree, price });
     downloadCsv(`${safeTitle}_신청자명단_${date}.csv`, csv);
@@ -1326,7 +1321,9 @@ function DetailPanel({
         <DetailRow
           label="예매번호"
           mono
-          value={formatBookingNoRange(booking.booking_no, quantity, booking.id)}
+          // 범위 표기는 **구매 매수** 기준을 유지한다 — 부분 취소로 줄이면
+          // 살아 있는 번호가 범위 밖처럼 보이고 다른 화면과도 어긋난다.
+          value={formatBookingNoRange(booking.booking_no, bought, booking.id)}
         />
         <DetailRow label="매수" value={`${quantity}매`} />
         {!isFree && (

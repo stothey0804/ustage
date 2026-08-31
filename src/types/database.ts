@@ -257,6 +257,7 @@ export type Database = {
           created_at: string | null
           custom_fields: Json | null
           description: string | null
+          draw_seq: number
           event_date: string
           event_end_date: string | null
           id: string
@@ -284,6 +285,7 @@ export type Database = {
           created_at?: string | null
           custom_fields?: Json | null
           description?: string | null
+          draw_seq?: number
           event_date: string
           event_end_date?: string | null
           id?: string
@@ -311,6 +313,7 @@ export type Database = {
           created_at?: string | null
           custom_fields?: Json | null
           description?: string | null
+          draw_seq?: number
           event_date?: string
           event_end_date?: string | null
           id?: string

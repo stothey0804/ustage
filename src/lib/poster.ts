@@ -28,3 +28,36 @@ export function posterStoragePath(url: string | null | undefined): string | null
     return null;
   }
 }
+
+/**
+ * 저장해도 되는 포스터 URL인가 — **우리 Supabase Storage의 posters 공개 URL만** 허용한다.
+ *
+ * `poster_url`은 서버 액션 인자라 폼을 거치지 않고 임의 문자열을 넣을 수 있고,
+ * 공개 OG 라우트가 그 URL을 서버에서 fetch한다(SSRF). 업로드 결과만 통과시켜
+ * 애초에 외부 주소가 저장되지 않게 막는다.
+ *
+ * 판정 기준은 Supabase URL 오리진 + posters 버킷 경로다. 환경변수가 없으면
+ * (빌드·테스트 환경) 경로 형태만 확인한다.
+ */
+export function isAllowedPosterUrl(url: string | null | undefined): boolean {
+  if (!url) return true; // 비어 있음 = 포스터 없음
+
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+  if (!parsed.pathname.includes(PUBLIC_MARKER)) return false;
+  if (posterStoragePath(url) === null) return false;
+
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!base) return true;
+  try {
+    return parsed.origin === new URL(base).origin;
+  } catch {
+    return true;
+  }
+}

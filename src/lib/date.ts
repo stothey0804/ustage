@@ -34,3 +34,23 @@ export function formatKST(
     return dateStr;
   }
 }
+
+/**
+ * 스테이지가 이미 끝났는가 — **시각 비교**로 판정한다.
+ *
+ * `daysUntil` 같은 24시간 단위 올림으로 판정하면 종료 후 하루까지 "오늘"로 잡혀,
+ * 끝난 공연이 홈에는 "공연이 오늘이에요", 티켓 목록에는 "다가오는 티켓"으로 남는다.
+ * 종료 기준 시각은 항상 `event_end_date ?? event_date`다.
+ */
+export function isPastInstant(iso: string | null | undefined): boolean {
+  if (!iso) return false;
+  const t = new Date(iso).getTime();
+  return !isNaN(t) && t < Date.now();
+}
+
+/** 오늘 기준 남은 일수 (지났으면 음수). D-day 문구 전용 — 종료 판정에는 쓰지 말 것. */
+export function daysUntil(iso: string): number {
+  const target = new Date(iso).getTime();
+  if (isNaN(target)) return 0;
+  return Math.ceil((target - Date.now()) / (24 * 60 * 60 * 1000));
+}

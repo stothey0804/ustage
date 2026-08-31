@@ -17,7 +17,7 @@ import type { CustomField } from "@/lib/validations/event";
 import { sanitizeEventHtml } from "@/lib/sanitize";
 import { formatKST } from "@/lib/date";
 import { formatBookingNoRange } from "@/lib/booking-code";
-import { effectiveQuantity } from "@/lib/seats";
+import { effectiveQuantity, occupiedSeats } from "@/lib/seats";
 import { bookingUnitPrice } from "@/lib/booking-price";
 import {
   assertBookingAccess,
@@ -93,6 +93,59 @@ export async function assertEventOwner(
   };
 }
 
+/**
+ * 취소된 예매를 되살릴 때(cancelled → pending/confirmed) 정원을 초과하는지 확인한다.
+ *
+ * 취소로 반환된 좌석은 이미 다른 사람이 채웠을 수 있다. 되살리기는 사실상 신규 예매와
+ * 같은 좌석 요구라 같은 검사가 필요한데, 상태 갱신 경로에는 그 검사가 없어 실수로
+ * 취소한 건을 되돌리다 정원을 넘길 수 있었다.
+ *
+ * 신규 예매(RPC)처럼 이벤트 행을 잠그지는 않는다 — 주최자 화면에서만 일어나는 드문
+ * 동작이라 경합보다 "검사가 아예 없는 것"이 문제였다. 좌석 기준은 lib/seats.ts로 통일.
+ *
+ * @returns 막아야 하면 사용자에게 보여줄 이유, 통과면 null
+ */
+async function capacityBlockOnRestore(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  eventId: string,
+  restoringIds: readonly string[]
+): Promise<string | null> {
+  if (restoringIds.length === 0) return null;
+
+  const { data: event } = await supabase
+    .from("events")
+    .select("capacity")
+    .eq("id", eventId)
+    .single();
+
+  if (!event?.capacity) return null; // 정원 없음 = 무제한
+
+  const { data: rows, error } = await supabase
+    .from("bookings")
+    .select("id, status, quantity, cancelled_quantity")
+    .eq("event_id", eventId);
+
+  if (error) {
+    console.error("[capacityBlockOnRestore]", error);
+    return "좌석을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+  }
+
+  const all = rows ?? [];
+  const restoring = new Set(restoringIds);
+  // 되살릴 건을 뺀 현재 점유 + 되살릴 건이 요구하는 좌석
+  const occupied = occupiedSeats(all.filter((b) => !restoring.has(b.id)));
+  const needed = all
+    .filter((b) => restoring.has(b.id))
+    .reduce((sum, b) => sum + effectiveQuantity(b), 0);
+
+  const over = occupied + needed - event.capacity;
+  if (over > 0) {
+    const free = Math.max(event.capacity - occupied, 0);
+    return `좌석이 부족해 되살릴 수 없습니다. ${needed}석이 필요한데 ${free}석만 남았어요. 좌석 한도를 늘리거나 다른 예매를 정리해 주세요.`;
+  }
+  return null;
+}
+
 type ConfirmEmailTarget = {
   email: string;
   name: string;
@@ -135,13 +188,19 @@ export async function updateBookingStatus(
   // (이미 cancelled였던 예약에는 중복 발송하지 않기 위해 갱신 전에 조회)
   let cancelTarget: CancelEmailTarget | null = null;
   if (status === "cancelled") {
-    const { data: full } = await ctx.supabase
+    const { data: full, error: readError } = await ctx.supabase
       .from("bookings")
       .select(
         "name, email, quantity, cancelled_quantity, status, events!inner(title, event_date, venue, venue_address, contact, cancel_policy)"
       )
       .eq("id", bookingId)
       .single();
+
+    // 조회가 실패하면 상태만 바뀌고 통보 메일은 조용히 사라진다 — 먼저 멈춘다.
+    if (readError) {
+      console.error("[updateBookingStatus] read", readError);
+      return { error: "예매 정보를 불러오지 못했습니다. 다시 시도해 주세요." };
+    }
 
     if (full && full.status !== "cancelled" && full.email) {
       const ev = full.events as {
@@ -172,13 +231,19 @@ export async function updateBookingStatus(
   // (이미 confirmed였던 예약에는 중복 발송하지 않기 위해)
   let confirmTarget: ConfirmEmailTarget | null = null;
   if (status === "confirmed") {
-    const { data: full } = await ctx.supabase
+    const { data: full, error: readError } = await ctx.supabase
       .from("bookings")
       .select(
         "booking_no, name, email, quantity, status, user_id, booking_tickets(ticket_number, qr_token, attendee_no, cancelled_at), events!inner(title, event_date, venue, venue_address, slug)"
       )
       .eq("id", bookingId)
       .single();
+
+    // 조회가 실패하면 확정 처리는 되고 입장 QR 메일만 안 나가는 상태가 된다 — 먼저 멈춘다.
+    if (readError) {
+      console.error("[updateBookingStatus] read", readError);
+      return { error: "예매 정보를 불러오지 못했습니다. 다시 시도해 주세요." };
+    }
 
     if (full && full.status !== "confirmed" && full.email) {
       const ev = full.events as {
@@ -215,6 +280,22 @@ export async function updateBookingStatus(
         slug: ev.slug,
         tickets: activeTickets,
       };
+    }
+  }
+
+  // 취소된 예매를 되살리는 경우에만 정원을 확인한다 (좌석은 이미 남이 채웠을 수 있다)
+  if (status !== "cancelled") {
+    const { data: current } = await ctx.supabase
+      .from("bookings")
+      .select("status")
+      .eq("id", bookingId)
+      .single();
+
+    if (current?.status === "cancelled") {
+      const blocked = await capacityBlockOnRestore(ctx.supabase, ctx.eventId, [
+        bookingId,
+      ]);
+      if (blocked) return { error: blocked };
     }
   }
 
@@ -330,6 +411,22 @@ export async function updateBookingStatusBulk(
   const candidates = owned.filter((r) => r.status !== status);
   if (candidates.length === 0) return { success: true, updated: 0, mailed: 0 };
 
+  // 취소 건을 되살리는 선택이 섞여 있으면 스테이지별로 정원을 확인한다.
+  // (일괄 선택은 '취소' 필터에서도 할 수 있어 실수로 정원을 넘기기 쉽다)
+  if (status !== "cancelled") {
+    const restoringByEvent = new Map<string, string[]>();
+    for (const row of candidates) {
+      if (row.status !== "cancelled") continue;
+      const list = restoringByEvent.get(row.event_id) ?? [];
+      list.push(row.id);
+      restoringByEvent.set(row.event_id, list);
+    }
+    for (const [eventId, ids] of restoringByEvent) {
+      const blocked = await capacityBlockOnRestore(supabase, eventId, ids);
+      if (blocked) return { error: blocked };
+    }
+  }
+
   // 조건부 갱신 — 조회와 갱신 사이에 다른 관리자가 먼저 처리한 건은 0건으로 걸러진다.
   // 메일도 실제로 갱신된 행에만 보낸다(동시 클릭 시 중복 발송 방지).
   const { data: updatedRows, error: updateError } = await supabase
@@ -418,7 +515,10 @@ export async function updateBookingStatusBulk(
   // after() 안에서는 셀 수 없으므로 발송 대상을 미리 센다
   const mailed = changing.filter((row) => {
     if (!row.email) return false;
-    if (status === "confirmed") return (row.booking_tickets ?? []).length > 0;
+    // 발송 루프와 같은 기준 — 취소된 티켓만 남았으면 메일이 나가지 않는다
+    if (status === "confirmed") {
+      return (row.booking_tickets ?? []).some((t) => !t.cancelled_at);
+    }
     return status === "cancelled";
   }).length;
 
@@ -642,11 +742,17 @@ export async function createOnsiteBooking(input: {
 
   const bookingId = data as string;
 
-  const { data: created } = await admin
+  const { data: created, error: createdError } = await admin
     .from("bookings")
     .select("booking_no, booking_tickets(ticket_number, qr_token, attendee_no)")
     .eq("id", bookingId)
     .single();
+
+  // 예매는 이미 만들어졌다 — 여기서 실패하면 QR 없는 확정 메일이 나가므로 로그를 남긴다.
+  // (예매 자체를 되돌리지는 않는다. 주최자가 명단에서 확정 메일을 재발송하면 된다.)
+  if (createdError) {
+    console.error("[createOnsiteBooking] created read", createdError);
+  }
 
   const bookingNo = created?.booking_no ?? null;
   const tickets = (created?.booking_tickets ?? [])

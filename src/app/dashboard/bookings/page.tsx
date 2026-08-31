@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Ticket } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
-import { formatKST } from "@/lib/date";
+import { daysUntil, formatKST, isPastInstant } from "@/lib/date";
 import { effectiveQuantity } from "@/lib/seats";
 import { formatBookingNoRange } from "@/lib/booking-code";
 import { Button } from "@/components/ui/button";
@@ -30,13 +30,6 @@ type TicketRow = {
   } | null;
 };
 
-/** 오늘 기준 남은 일수 (지났으면 음수) */
-function daysUntil(iso: string): number {
-  const target = new Date(iso).getTime();
-  if (isNaN(target)) return 0;
-  return Math.ceil((target - Date.now()) / (24 * 60 * 60 * 1000));
-}
-
 export default async function BookingsPage() {
   const supabase = await createClient();
   const {
@@ -60,9 +53,10 @@ export default async function BookingsPage() {
     (a.events?.event_date ?? "").localeCompare(b.events?.event_date ?? "");
 
   // 지난 공연 판정은 종료 일시(없으면 시작 일시) 기준
+  // 홈과 같은 시각 기준으로 판정한다 (24시간 올림을 쓰면 끝난 공연이 하루 더 남는다)
   const isPast = (row: TicketRow) =>
     !row.events ||
-    daysUntil(row.events.event_end_date ?? row.events.event_date) < 0;
+    isPastInstant(row.events.event_end_date ?? row.events.event_date);
 
   const active = rows.filter((r) => !isPast(r) && r.status !== "cancelled");
   const confirmed = active.filter((r) => r.status === "confirmed").sort(byDate);

@@ -4,7 +4,7 @@ import { Ticket } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { deriveAutoStatus } from "@/lib/auto-status";
-import { formatKST } from "@/lib/date";
+import { daysUntil, formatKST, isPastInstant } from "@/lib/date";
 import {
   confirmedSeats,
   effectiveQuantity,
@@ -17,28 +17,11 @@ import { BookingStatusBadge, EventStatusBadge } from "@/components/StatusBadge";
 
 const LIST_DATE_FORMAT = "yyyy. M. d. (EEE) HH:mm";
 
-/** 오늘 기준 남은 일수 (지났으면 음수) */
-function daysUntil(iso: string): number {
-  const target = new Date(iso).getTime();
-  if (isNaN(target)) return 0;
-  return Math.ceil((target - Date.now()) / (24 * 60 * 60 * 1000));
-}
-
 function ddayLabel(iso: string): string {
   const days = daysUntil(iso);
   if (days > 0) return `D-${days}`;
   if (days === 0) return "오늘";
   return "지난 공연";
-}
-
-/**
- * 종료 판정은 시각 기준으로 정확히 한다.
- * daysUntil은 24시간 단위 올림이라 종료 후 하루까지 0("오늘")로 잡혀,
- * 이미 끝난 스테이지에 "공연이 오늘이에요"가 뜨는 문제가 있었다.
- */
-function isPast(iso: string): boolean {
-  const t = new Date(iso).getTime();
-  return !isNaN(t) && t < Date.now();
 }
 
 export default async function DashboardPage() {
@@ -60,7 +43,7 @@ export default async function DashboardPage() {
 
   const events = myEvents ?? [];
   const upcomingEvent =
-    events.find((e) => !isPast(e.event_end_date ?? e.event_date)) ?? null;
+    events.find((e) => !isPastInstant(e.event_end_date ?? e.event_date)) ?? null;
 
   // 요약 카드에 필요한 좌석·입금대기 집계 (해당 1건만 조회)
   let pendingCount = 0;
@@ -111,7 +94,7 @@ export default async function DashboardPage() {
 
   const tickets = ((myBookings ?? []) as unknown as TicketRow[])
     .filter(
-      (b) => b.events && !isPast(b.events.event_end_date ?? b.events.event_date)
+      (b) => b.events && !isPastInstant(b.events.event_end_date ?? b.events.event_date)
     )
     .sort((a, b) =>
       (a.events?.event_date ?? "").localeCompare(b.events?.event_date ?? "")

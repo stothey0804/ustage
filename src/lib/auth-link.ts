@@ -50,9 +50,17 @@ export function isEmailLinkOtpType(
   );
 }
 
-/** 내부 경로만 허용 — `//host`로 시작하는 open redirect를 막는다. */
+/**
+ * 내부 경로만 허용 — open redirect를 막는다.
+ *
+ * `//host`뿐 아니라 **백슬래시 형태 `/\host`도 반드시 막아야 한다.** WHATWG URL 파서가
+ * http(s)에서 `\`를 `/`로 정규화하므로 `new URL("/\\evil.com", origin)`의 오리진이
+ * evil.com이 된다(콜백이 이 값을 그대로 redirect에 쓴다). `lib/utils.ts`의
+ * `safeInternalPath`와 같은 규칙을 유지할 것 — 한쪽만 고치면 다시 갈라진다.
+ */
 function isSafePath(value: string | null | undefined): value is string {
-  return !!value && value.startsWith("/") && !value.startsWith("//");
+  if (!value || !value.startsWith("/")) return false;
+  return !(value.length > 1 && (value[1] === "/" || value[1] === "\\"));
 }
 
 /**

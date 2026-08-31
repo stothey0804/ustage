@@ -80,6 +80,21 @@ describe("resolveSafeNext", () => {
     expect(resolveSafeNext({ next: "//evil.example" }, ORIGIN)).toBe(
       "/dashboard",
     );
+    // 백슬래시 우회 — URL 파서가 `\`를 `/`로 정규화해 외부 오리진이 된다.
+    // (new URL("/\\evil.example", ORIGIN).origin === "https://evil.example")
+    expect(resolveSafeNext({ next: "/\\evil.example" }, ORIGIN)).toBe(
+      "/dashboard",
+    );
+    expect(resolveSafeNext({ next: "/\\/evil.example" }, ORIGIN)).toBe(
+      "/dashboard",
+    );
+    // 중첩된 redirect_to 안의 next에도 같은 규칙이 걸려야 한다
+    expect(
+      resolveSafeNext(
+        { redirectTo: `${ORIGIN}/auth/callback?next=/%5Cevil.example` },
+        ORIGIN,
+      ),
+    ).toBe("/dashboard");
     // 다른 오리진의 redirect_to는 신뢰하지 않는다
     expect(
       resolveSafeNext(

@@ -2,11 +2,11 @@ import { ImageResponse } from "next/og";
 
 import { brandMarkDataUri } from "@/lib/brand-mark";
 
-export const alt = "us.tage(어스테이지) — 소규모 공연 예매 · QR 입장 시스템";
+export const alt = "us.tage(어스테이지) — 비공개 모임 예매 · QR 입장 시스템";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const TAGLINE = "소규모 공연 예매 · QR 입장 시스템";
+const TAGLINE = "비공개 모임 예매 · QR 입장 시스템";
 const SUB = "링크 하나로 예매부터 입장까지";
 
 /**

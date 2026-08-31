@@ -24,17 +24,19 @@ if (NAVER_SITE_VERIFICATION) {
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "어스테이지(us.tage) — 소규모 공연 예매 · QR 입장 시스템",
+    default: "어스테이지(us.tage) — 비공개 모임 예매 · QR 입장 시스템",
     template: "%s | 어스테이지 us.tage",
   },
   description:
-    "어스테이지(us.tage)는 소규모 공연·강연을 위한 링크 공유형 예매 서비스입니다. 공연자가 예매 링크를 공유하면 참석자는 그 링크로만 예매하고, 계좌이체 입금 확인 후 QR 코드로 입장합니다. 비회원도 이메일과 비밀번호로 예매·조회할 수 있습니다.",
+    "어스테이지(us.tage)는 비공개 공연 및 모임을 위한 예매 서비스입니다. 외부에서 검색되지 않는 프라이빗한 행사를 기획하고, 비공개 링크로 예매를 받아 입금을 확인하면 참가자에게 QR 티켓이 메일로 전송됩니다. 행사 당일에는 그 QR로 입장시킬 수 있습니다. 비회원도 이메일과 비밀번호로 예매·조회할 수 있습니다.",
   applicationName: "어스테이지",
   category: "business",
   keywords: [
     "어스테이지",
     "us.tage",
     "ustage",
+    "비공개 모임 예매",
+    "프라이빗 행사 예매",
     "공연 예매",
     "소규모 공연 예매",
     "강연 예매",
@@ -58,15 +60,15 @@ export const metadata: Metadata = {
     locale: "ko_KR",
     url: SITE_URL,
     siteName: "어스테이지 (us.tage)",
-    title: "어스테이지(us.tage) — 소규모 공연 예매 · QR 입장 시스템",
+    title: "어스테이지(us.tage) — 비공개 모임 예매 · QR 입장 시스템",
     description:
-      "공연자가 링크를 공유하면, 참석자는 그 링크로만 예매할 수 있어요. 계좌이체 확인부터 QR 입장까지 한 번에.",
+      "비공개 링크로 예매를 받고, 입금을 확인하면 QR 티켓이 메일로 나가고, 당일에는 그 QR로 입장시킵니다.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "어스테이지(us.tage) — 소규모 공연 예매 · QR 입장 시스템",
+    title: "어스테이지(us.tage) — 비공개 모임 예매 · QR 입장 시스템",
     description:
-      "공연자가 링크를 공유하면, 참석자는 그 링크로만 예매할 수 있어요. 계좌이체 확인부터 QR 입장까지 한 번에.",
+      "비공개 링크로 예매를 받고, 입금을 확인하면 QR 티켓이 메일로 나가고, 당일에는 그 QR로 입장시킵니다.",
   },
   appleWebApp: {
     capable: true,

@@ -28,7 +28,7 @@ const JSON_LD = {
       url: SITE_URL,
       logo: `${SITE_URL}/icon-512.png`,
       description:
-        "소규모 공연·강연을 위한 링크 공유형 예매·QR 입장 서비스 어스테이지(us.tage).",
+        "비공개 공연 및 모임을 위한 예매·QR 입장 서비스 어스테이지(us.tage). 외부에서 검색되지 않는 프라이빗한 행사를 위한 폐쇄형 예매 링크를 제공합니다.",
     },
     {
       "@type": "WebSite",
@@ -38,7 +38,7 @@ const JSON_LD = {
       alternateName: ["us.tage", "UStage"],
       publisher: { "@id": `${SITE_URL}/#organization` },
       description:
-        "소규모 공연·강연을 위한 링크 공유형 예매 서비스. 계좌이체 입금 확인과 QR 입장까지 한 번에.",
+        "비공개 공연 및 모임을 위한 예매 서비스. 비공개 링크로 예매를 받고 입금 확인 후 QR 티켓을 메일로 보내 당일 입장까지 처리합니다.",
       inLanguage: "ko-KR",
     },
     {
@@ -49,14 +49,14 @@ const JSON_LD = {
       operatingSystem: "Web",
       url: SITE_URL,
       description:
-        "공연자가 예매 링크를 직접 공유하는 폐쇄형 예매·입장확인 시스템. 참석자는 링크로만 예매하고, 공연자가 계좌이체 입금을 확인하면 QR 티켓이 발급됩니다. 비회원도 이메일과 비밀번호로 예매·조회할 수 있습니다.",
+        "주최자가 예매 링크를 직접 공유하는 폐쇄형 예매·입장확인 시스템. 외부에서 검색되지 않으며, 참석자는 받은 링크로만 예매하고 주최자가 계좌이체 입금을 확인하면 QR 티켓이 메일로 발급됩니다. 비회원도 이메일과 비밀번호로 예매·조회할 수 있습니다.",
       offers: {
         "@type": "Offer",
         price: "0",
         priceCurrency: "KRW",
       },
       featureList: [
-        "링크 공유형 비공개 예매",
+        "외부 검색이 되지 않는 비공개 예매 링크",
         "계좌이체 입금 수동 확인",
         "QR 코드 입장 확인",
         "비회원 예매 및 조회",
@@ -103,7 +103,7 @@ export default async function Home({ searchParams }: Props) {
       <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-8 px-6 py-12">
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-bold leading-snug tracking-tight">
-            작은 공연의 예매를
+            비공개 모임의 예매를
             <br />
             링크 하나로
           </h1>

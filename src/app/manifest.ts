@@ -2,10 +2,10 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "어스테이지 — 소규모 공연 예매 · 입장 시스템",
+    name: "어스테이지 — 비공개 모임 예매 · 입장 시스템",
     short_name: "어스테이지",
     description:
-      "공연자가 링크를 공유하면, 참석자는 그 링크로만 예매할 수 있어요. QR로 입장까지 한 번에.",
+      "비공개 링크로 예매를 받고, 입금을 확인하면 QR 티켓이 메일로 나가고, 당일에는 그 QR로 입장시킵니다.",
     start_url: "/dashboard",
     display: "standalone",
     background_color: "#f5fafa",

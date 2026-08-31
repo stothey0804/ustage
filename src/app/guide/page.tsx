@@ -24,8 +24,9 @@ import { Wordmark } from "@/components/Wordmark";
 
 export const metadata: Metadata = {
   title: "어스테이지 사용 방법",
+  // 본문 h1·리드 문구와 같은 포지셔닝을 유지한다 — 검색 결과에 그대로 노출된다
   description:
-    "공연 명단 관리와 당일 입장 처리를 위한 어스테이지 — 비공개 예매 링크, 이메일 자동 발송, QR 입장, 현장 추첨, 스태프 공동 운영까지 화면과 함께 안내합니다.",
+    "비공개 모임 명단 관리와 당일 입장 처리를 링크 하나로 — 외부에서 검색되지 않는 프라이빗한 행사를 기획하고, 비공개 링크로 예매를 받아 입금 확인 후 QR 티켓을 메일로 보내고 당일 QR로 입장시키는 방법을 화면과 함께 안내합니다.",
   alternates: { canonical: "/guide" },
 };
 
@@ -293,7 +294,7 @@ export default function GuidePage() {
       <header className="space-y-5">
         <Link
           href="/"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          className="inline-flex items-center gap-1 text-[15px] text-muted-foreground hover:text-foreground"
         >
           <ChevronLeft className="size-4" />
           처음으로
@@ -306,14 +307,16 @@ export default function GuidePage() {
 
         <div className="space-y-2">
           <h1 className="text-2xl font-bold leading-snug tracking-tight sm:text-3xl">
-            공연 명단 관리와 당일 입장 처리를
+            비공개 모임 명단 관리와 당일 입장 처리를
             <br />
             링크 하나로
           </h1>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            어스테이지(us.tage)는 소규모 공연·강연을 위한 예매 서비스입니다. 비공개
-            링크로 예매를 받고, 입금을 확인하면 QR 티켓이 나가고, 당일에는 QR로
-            입장시키고 추첨까지 진행합니다.
+          <p className="text-[15px] leading-relaxed text-muted-foreground">
+            어스테이지(us.tage)는 비공개 공연 및 모임을 위한 예매 서비스입니다.
+            외부에서 검색되지 않는 프라이빗한 행사를 기획해 보세요. 비공개 링크로
+            예매를 받고, 입금 받을 계좌를 확인하여 입금 처리 하면 참가자에게 QR
+            티켓이 메일로 전송됩니다. 행사 당일에는 전송된 QR을 통해 입장시킬 수
+            있어요.
           </p>
         </div>
       </header>
@@ -335,7 +338,7 @@ export default function GuidePage() {
       </div>
 
       <footer className="space-y-3 border-t pt-8">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-[15px] text-muted-foreground">
           지금 쓰는 계정으로 첫 스테이지를 만들 수 있습니다. 좌석 수와 가격만 정하면
           바로 예매 링크가 생깁니다.
         </p>
@@ -359,9 +362,9 @@ function FlowCard({ flow }: { flow: Flow }) {
   return (
     <section className="space-y-4 rounded-4xl bg-card p-5 shadow-md ring-1 ring-foreground/5 sm:p-6">
       <div className="space-y-1">
-        <p className="text-xs font-semibold text-primary">{eyebrow}</p>
-        <h3 className="text-[15px] font-semibold">{title}</h3>
-        <p className="text-[13px] leading-relaxed text-muted-foreground">
+        <p className="text-[13px] font-semibold text-primary">{eyebrow}</p>
+        <h3 className="text-[16px] font-semibold">{title}</h3>
+        <p className="text-[14px] leading-relaxed text-muted-foreground">
           {lead}
         </p>
       </div>
@@ -378,13 +381,13 @@ function FlowCard({ flow }: { flow: Flow }) {
                 <Icon className="size-4 text-primary" />
               </span>
               <div className="min-w-0 space-y-0.5">
-                <p className="text-[13px] font-semibold leading-snug">
-                  <span className="mr-1.5 font-mono text-xs text-primary">
+                <p className="text-[14px] font-semibold leading-snug">
+                  <span className="mr-1.5 font-mono text-[13px] text-primary">
                     {i + 1}
                   </span>
                   {stepTitle}
                 </p>
-                <p className="text-xs leading-relaxed text-muted-foreground">
+                <p className="text-[13px] leading-relaxed text-muted-foreground">
                   {detail}
                 </p>
               </div>
@@ -398,7 +401,7 @@ function FlowCard({ flow }: { flow: Flow }) {
           {notes.map((note) => (
             <li
               key={note}
-              className="flex gap-2 text-xs leading-relaxed text-muted-foreground"
+              className="flex gap-2 text-[13px] leading-relaxed text-muted-foreground"
             >
               <span className="mt-1.5 size-1 shrink-0 rounded-full bg-primary/60" />
               {note}
@@ -426,20 +429,20 @@ function SectionBlock({
           <Icon className="size-4.5 text-primary" />
         </span>
         <div className="space-y-1">
-          <p className="font-mono text-xs text-primary">
+          <p className="font-mono text-[13px] text-primary">
             {String(index).padStart(2, "0")}
           </p>
           <h2 className="text-lg font-semibold leading-snug">{title}</h2>
         </div>
       </div>
 
-      <p className="text-sm leading-relaxed">{lead}</p>
+      <p className="text-[15px] leading-relaxed">{lead}</p>
 
       <ul className="space-y-1.5">
         {points.map((point) => (
           <li
             key={point}
-            className="flex gap-2 text-[13px] leading-relaxed text-muted-foreground"
+            className="flex gap-2 text-[14px] leading-relaxed text-muted-foreground"
           >
             <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary/60" />
             {point}

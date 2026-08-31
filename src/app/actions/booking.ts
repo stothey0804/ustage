@@ -18,6 +18,7 @@ import { sanitizeEventHtml } from "@/lib/sanitize";
 import { formatKST } from "@/lib/date";
 import { formatBookingNoRange } from "@/lib/booking-code";
 import { effectiveQuantity } from "@/lib/seats";
+import { bookingUnitPrice } from "@/lib/booking-price";
 import {
   assertBookingAccess,
   assertEventAccess,
@@ -759,7 +760,7 @@ export async function cancelBookingTickets(
   const { data: before } = await ctx.supabase
     .from("bookings")
     .select(
-      "id, name, email, quantity, cancelled_quantity, status, booking_tickets(id, attendee_no, ticket_number, checked_in, cancelled_at), events!inner(title, event_date, venue, venue_address, contact, cancel_policy, price)"
+      "id, name, email, quantity, cancelled_quantity, status, unit_price, booking_tickets(id, attendee_no, ticket_number, checked_in, cancelled_at), events!inner(title, event_date, venue, venue_address, contact, cancel_policy, price)"
     )
     .eq("id", bookingId)
     .single();
@@ -834,6 +835,8 @@ export async function cancelBookingTickets(
     price: number;
   };
   const email = before.email;
+  // 환불 금액은 이 예매에 적용된 단가로 계산한다 (현장 예매는 온라인 가격과 다를 수 있다)
+  const unitPrice = bookingUnitPrice(before, ev.price);
   const cancelledNos = selected
     .map((t) => t.attendee_no ?? t.ticket_number)
     .sort((a, b) => a - b);
@@ -859,8 +862,8 @@ export async function cancelBookingTickets(
                 cancelledAttendeeNos: cancelledNos,
                 remainingQuantity: remaining,
                 refundAmount:
-                  ev.price > 0 && before.status === "confirmed"
-                    ? ev.price * cancelled
+                  unitPrice > 0 && before.status === "confirmed"
+                    ? unitPrice * cancelled
                     : undefined,
               }
             : undefined,

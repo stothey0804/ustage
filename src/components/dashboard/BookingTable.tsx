@@ -44,6 +44,7 @@ import {
   occupancyPercent,
   remainingSeats,
 } from "@/lib/seats";
+import { bookingAmount, isFreeStage } from "@/lib/booking-price";
 import { visibleBookingActions, type EventRole } from "@/lib/staff-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,8 +61,39 @@ import {
 } from "@/components/ui/dialog";
 import type { CustomField } from "@/lib/validations/event";
 
-type BookingRow = Tables<"bookings"> & {
-  booking_tickets?: Tables<"booking_tickets">[];
+/**
+ * 명단 한 줄 — **화면이 실제로 쓰는 필드만** 담는다.
+ *
+ * 이 타입은 클라이언트 컴포넌트의 prop이라 값이 RSC 페이로드로 브라우저에 전송된다.
+ * `Tables<"bookings">` 전체를 쓰면 password_hash(bcrypt)·감사 컬럼까지 딸려가므로
+ * 넓히지 말 것. 서버(events/[id]/page.tsx)의 select도 이 목록과 짝이다.
+ */
+type BookingRow = Pick<
+  Tables<"bookings">,
+  | "id"
+  | "booking_no"
+  | "name"
+  | "email"
+  | "quantity"
+  | "cancelled_quantity"
+  | "unit_price"
+  | "depositor_name"
+  | "deposited_at"
+  | "status"
+  | "custom_answers"
+  | "created_at"
+  | "user_id"
+> & {
+  booking_tickets?: Pick<
+    Tables<"booking_tickets">,
+    | "id"
+    | "ticket_number"
+    | "attendee_no"
+    | "qr_token"
+    | "checked_in"
+    | "checked_in_at"
+    | "cancelled_at"
+  >[];
 };
 
 interface Props {
@@ -296,7 +328,11 @@ export function BookingTable({
       activeTickets: seats(active),
       confirmedCount: confirmed.length,
       confirmedSeats: seats(confirmed),
-      confirmedAmount: price * seats(confirmed),
+      // 예매마다 단가가 다를 수 있다(현장 예매) — 행별로 더한다
+      confirmedAmount: confirmed.reduce(
+        (sum, b) => sum + bookingAmount(b, price, effectiveQuantity(b)),
+        0
+      ),
       pendingCount: pending.length,
       cancelledCount: cancelled.length,
       checkedInCount,
@@ -834,7 +870,7 @@ export function BookingTable({
                           ? "무료"
                           : booking.status === "cancelled"
                             ? "—"
-                            : won(price * quantity)}
+                            : won(bookingAmount(booking, price, quantity))}
                       </span>
 
                       <span className="truncate text-[13px]">
@@ -1295,7 +1331,10 @@ function DetailPanel({
         <DetailRow label="매수" value={`${quantity}매`} />
         {!isFree && (
           <>
-            <DetailRow label="금액" value={won(price * quantity)} />
+            <DetailRow
+              label="금액"
+              value={won(bookingAmount(booking, price, quantity))}
+            />
             <DetailRow label="입금자명" value={booking.depositor_name} />
             <DetailRow label="입금예상" value={booking.deposited_at} />
           </>

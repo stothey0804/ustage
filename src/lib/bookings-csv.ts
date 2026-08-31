@@ -3,6 +3,7 @@ import { ko } from "date-fns/locale";
 
 import type { CustomField } from "@/lib/validations/event";
 import { formatBookingNoRange } from "@/lib/booking-code";
+import { bookingAmount } from "@/lib/booking-price";
 import { formatCustomAnswer } from "@/lib/custom-answers";
 
 export type CsvBooking = {
@@ -13,6 +14,8 @@ export type CsvBooking = {
   quantity: number | null;
   /** 부분 취소된 매수 — 유효 매수는 quantity - cancelled_quantity */
   cancelled_quantity?: number | null;
+  /** 이 예매에 적용된 1매 단가 — 없으면 스테이지 온라인 가격으로 계산한다 */
+  unit_price?: number | null;
   depositor_name: string;
   deposited_at: string;
   status: string;
@@ -74,7 +77,8 @@ export function buildBookingsCsv(
       b.deposited_at,
       bookingStatusLabel(b.status, opts.isFree),
       `${checkedIn}/${quantity}`,
-      ...(opts.isFree ? [] : [opts.price * quantity]),
+      // 예매마다 단가가 다를 수 있다(현장 예매) — 행의 단가로 계산한다
+      ...(opts.isFree ? [] : [bookingAmount(b, opts.price, quantity)]),
       // 표기는 명단 테이블·상세 패널과 같은 함수를 쓴다 (미응답은 빈 값)
       ...fields.map((f) => formatCustomAnswer(f, answers[f.id]) ?? ""),
       b.created_at

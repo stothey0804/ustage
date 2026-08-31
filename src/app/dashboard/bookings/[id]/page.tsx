@@ -18,6 +18,7 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { BookingStatusBadge } from "@/components/StatusBadge";
 import { formatBookingNoRange } from "@/lib/booking-code";
 import { selfCancelBlockReason } from "@/lib/booking-cancel";
+import { bookingUnitPrice } from "@/lib/booking-price";
 import { remainingSeats } from "@/lib/seats";
 
 export default async function BookingDetailPage({
@@ -69,7 +70,9 @@ export default async function BookingDetailPage({
   } | null;
 
   const status = booking.status;
-  const isFree = event?.price === 0;
+  // 이 예매에 적용된 단가 — 현장 예매는 온라인 가격과 다를 수 있다
+  const unitPrice = bookingUnitPrice(booking, event?.price ?? 0);
+  const isFree = unitPrice === 0;
   // 부분 취소분을 뺀 유효 매수 (구매 매수는 booking.quantity에 그대로 남는다)
   const bought = booking.quantity ?? 1;
   const cancelledQuantity = booking.cancelled_quantity ?? 0;
@@ -92,7 +95,7 @@ export default async function BookingDetailPage({
   // 참석자 직접 취소 가능 여부 — 서버(API)와 같은 함수로 판정한다.
   const cancelBlockReason = selfCancelBlockReason({
     status,
-    price: event?.price ?? 0,
+    price: unitPrice,
     checkedIn: (tickets ?? []).some((t) => t.checked_in),
     eventEnd: event ? new Date(event.event_end_date ?? event.event_date) : null,
   });
@@ -215,9 +218,9 @@ export default async function BookingDetailPage({
               <Banknote className="size-4 text-muted-foreground shrink-0 mt-0.5" />
               <span className="text-muted-foreground w-20 shrink-0">가격</span>
               <span>
-                {event.price === 0
+                {unitPrice === 0
                   ? "무료"
-                  : `${(event.price * quantity).toLocaleString()}원 (${event.price.toLocaleString()}원 × ${quantity}매)`}
+                  : `${(unitPrice * quantity).toLocaleString()}원 (${unitPrice.toLocaleString()}원 × ${quantity}매)`}
               </span>
             </div>
           </div>
@@ -319,6 +322,9 @@ export default async function BookingDetailPage({
                 ticket_number: t.ticket_number,
                 checked_in: t.checked_in,
                 attendee_no: t.attendee_no,
+                // 취소된 티켓은 QR 대신 '취소된 티켓'으로 그려야 한다 —
+                // 이 값을 빼면 무효 QR이 유효한 것처럼 보인다(비회원 조회와 갈라졌던 버그)
+                cancelled_at: t.cancelled_at,
               }))}
             />
           </div>

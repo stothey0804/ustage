@@ -41,7 +41,7 @@ export default async function BookingLookupPage({ params }: Props) {
         <p className="mt-1 text-sm text-muted-foreground">{event.title}</p>
       </div>
 
-      <BookingLookup eventId={event.id} isFree={event.price === 0} />
+      <BookingLookup eventId={event.id} />
 
       {/* 회원으로 예매했다면 비밀번호 조회가 아니라 로그인이 맞다 — 통로를 함께 둔다
           (회원 예매는 password_hash가 빈 값이라 이 화면에서는 찾을 수 없다) */}

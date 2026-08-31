@@ -125,6 +125,15 @@ export function EventForm({
   const [sameOnsitePrice, setSameOnsitePrice] = useState(
     (defaultValues?.onsite_price ?? null) == null
   );
+  const watchOnsitePrice = watch("onsite_price");
+  /**
+   * 계좌 입력란을 보여줄 조건 — **eventSchema의 계좌 필수 조건과 반드시 같아야 한다.**
+   * 온라인이 무료여도 현장에서 돈을 받으면 입금 안내가 나가므로 계좌가 필요하다.
+   * (조건이 어긋나면 "계좌를 입력하라"는 오류가 뜨는데 입력란이 화면에 없는
+   *  저장 불가 상태가 된다 — 실제로 있었던 버그다.)
+   */
+  const needsBankInfo =
+    watchPrice > 0 || (!sameOnsitePrice && (watchOnsitePrice ?? 0) > 0);
 
   // 새로고침·탭 닫기로 작성 내용이 사라지는 것을 막는다(앱 내부 이동은 '취소' 버튼에서 확인).
   useUnsavedWarning(isDirty && !isPending);
@@ -605,7 +614,7 @@ export function EventForm({
           결제 & 연락
         </h2>
 
-        {watchPrice > 0 && (
+        {needsBankInfo && (
           <div className="space-y-1.5">
             <Label htmlFor="bank_info">입금 계좌 *</Label>
             <Input

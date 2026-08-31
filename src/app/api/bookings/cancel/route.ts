@@ -10,6 +10,7 @@ import { getAccountEmail } from "@/lib/account-email";
 import { sendBookingCancelled, sendOwnerCancelNotice, getBaseUrl } from "@/lib/email";
 import { formatKST } from "@/lib/date";
 import { selfCancelBlockReason } from "@/lib/booking-cancel";
+import { bookingUnitPrice } from "@/lib/booking-price";
 import { effectiveQuantity } from "@/lib/seats";
 
 const cancelSchema = z.object({
@@ -77,7 +78,7 @@ export async function POST(req: Request) {
   const { data: booking, error } = await admin
     .from("bookings")
     .select(
-      "id, user_id, name, email, password_hash, quantity, cancelled_quantity, status, booking_tickets(checked_in), events!inner(id, title, slug, event_date, event_end_date, venue, venue_address, contact, cancel_policy, performer_id, price)"
+      "id, user_id, name, email, password_hash, quantity, cancelled_quantity, status, unit_price, booking_tickets(checked_in), events!inner(id, title, slug, event_date, event_end_date, venue, venue_address, contact, cancel_policy, performer_id, price)"
     )
     .eq("id", booking_id)
     .single();
@@ -115,9 +116,12 @@ export async function POST(req: Request) {
 
   // 취소 가능 여부는 화면과 같은 함수로 판정한다 (lib/booking-cancel.ts)
   const tickets = (booking.booking_tickets ?? []) as { checked_in: boolean }[];
+  // 이 예매에 실제로 적용된 단가로 판정한다 — 현장 예매는 온라인 가격과 다를 수 있고,
+  // 스테이지 가격으로 판정하면 현장 결제 확정분이 "무료 예약"으로 새어 나간다.
+  const unitPrice = bookingUnitPrice(booking, event.price ?? 0);
   const blockReason = selfCancelBlockReason({
     status: booking.status,
-    price: event.price ?? 0,
+    price: unitPrice,
     checkedIn: tickets.some((t) => t.checked_in),
     eventEnd: new Date(event.event_end_date ?? event.event_date),
   });
@@ -196,7 +200,7 @@ export async function POST(req: Request) {
       eventDate,
       manageUrl: `${baseUrl}/dashboard/events/${event.id}`,
       wasConfirmed,
-      isFree: (event.price ?? 0) === 0,
+      isFree: unitPrice === 0,
     }).catch((err) => console.error("[email]", err));
   });
 

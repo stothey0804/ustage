@@ -142,6 +142,7 @@ password_hash   text             # bcrypt, 비회원 예매 시에만 사용 (�
 depositor_name  text             # 입금자명 (참석자 입력, 무료 이벤트는 name으로 자동 채움)
 deposited_at    text             # 입금시간 (참석자 입력, 자유형식, 무료 이벤트는 "무료입장")
 quantity        integer          # 예매 매수 (1~20)
+unit_price      integer nullable # 이 예매에 적용된 1매 단가 — 예매 시점에 확정(RPC가 저장)
 status          text             # 'pending' | 'confirmed' | 'cancelled' (무료 이벤트는 즉시 confirmed)
 custom_answers  jsonb            # {field_id: value}
 created_at      timestamptz
@@ -542,6 +543,10 @@ ended  (행사 종료) → event_date 경과
   반영된다. 뒤에 `&`로 붙이므로 **모든 호출부의 `emailRedirectTo`는 쿼리스트링(`?next=…`)을
   포함해야 한다** — LoginForm/SignupForm 테스트가 이 불변식을 지킨다.
   목적지 판정은 `lib/auth-link.ts`의 `resolveSafeNext`(순수 함수, vitest로 검증)가 한다.
+  → **내부 경로 판정은 `//host`와 백슬래시 `/\host`를 모두 막아야 한다.** WHATWG URL
+  파서가 http(s)에서 `\`를 `/`로 정규화해 `new URL("/\evil.com", origin)`의 오리진이
+  evil.com이 되고, 콜백이 그 값을 그대로 redirect에 쓴다(2026-08-31 수정).
+  `lib/utils.ts`의 `safeInternalPath`와 **같은 규칙을 유지할 것** — 한쪽만 고치면 갈라진다.
 - **가입 인증(`type=signup`)은 `/auth/verified` 안내 화면을 한 번 거친다.** 링크를 메일 앱의
   인앱브라우저에서 열면 세션이 그 브라우저에만 생기는데, 바로 대시보드로 보내면 원래(PC)
   브라우저로 돌아간 사용자가 인증된 줄 모르고 다시 가입해 "이미 가입된 이메일입니다"를 본다
@@ -630,6 +635,16 @@ ended  (행사 종료) → event_date 경과
   좌석 정원과 중복 이메일은 그대로 막는다(중복은 재확인 후 추가 예매로 허용).
 - **가격은 `events.onsite_price`를 따른다**(NULL이면 `price`와 동일) — 다이얼로그의
   총액 표시·무료 판정과 서버 액션의 입금 안내 금액이 모두 이 유효 가격 기준이다.
+  **적용 단가는 예매 시점에 `bookings.unit_price`로 못 박는다**(RPC가 저장:
+  공개 예매=`events.price`, 현장 예매=`coalesce(onsite_price, price)`).
+  금액을 말하는 모든 곳은 `lib/booking-price.ts`(`bookingUnitPrice`/`bookingAmount`/
+  `isFreeStage`)만 쓴다 — 스테이지 가격으로 추정하면 현장 결제분이 온라인 가격으로
+  집계되고, 셀프 취소 차단(`selfCancelBlockReason`)이 "무료 예약"으로 오판해
+  입금이 끝난 예약을 참석자가 취소할 수 있다(2026-08-31 수정).
+  **스테이지의 무료 판정도 `isFreeStage(price, onsite_price)`** 다 — 온라인만 0원인
+  스테이지를 무료로 보면 명단에서 입금대기 필터와 입금 확인 흐름이 통째로 사라진다.
+  스테이지 폼의 계좌 입력란 표시 조건은 `eventSchema`의 계좌 필수 조건과 **반드시 짝**이다
+  (어긋나면 "계좌를 입력하라"는데 입력란이 없는 저장 불가 상태가 된다 — 실제로 있었다).
   스테이지 폼은 현장 가격 input 아래 "온라인 예매 가격과 동일해요" 체크박스로
   NULL(동일)을 명시하고, 온라인 무료 + 현장 유료 조합이면 계좌를 요구한다(zod refine).
   온라인 예매(`/e/[slug]`)에는 노출하지 않는다 — 주최자 화면 전용 정보다.
@@ -735,6 +750,13 @@ ended  (행사 종료) → event_date 경과
   필드별 필터 UI는 두지 않는다 — 상태 칩 + 자유 검색으로 충분하다.
 - 예약번호는 `lib/booking-code.ts`의 `bookingCode(id)`로 uuid에서 파생한 **표시 전용** 값이다.
   조회·인증 키로 쓰지 않는다.
+- **명단 조회는 `select("*")` 금지 — 컬럼을 명시한다.** 결과가 클라이언트 컴포넌트
+  (`BookingTable`)의 prop이 되어 RSC 페이로드로 브라우저에 직렬화되므로, 화면에 그리지
+  않는 필드도 개발자도구에서 읽힌다. `*`였을 때 참석자의 `password_hash`(bcrypt)와
+  감사 컬럼(`status_updated_by`·`checked_in_by`)이 소유자뿐 아니라 **스태프 브라우저까지**
+  전송되고 있었다(2026-08-31 수정). `BookingRow` 타입도 `Pick<>`으로 좁혀 두었으니
+  넓히지 말 것 — 서버의 select와 짝이다. 같은 이유로 `/api/bookings/lookup` 응답도
+  행을 스프레드하지 않고 필드를 골라 담는다.
 - 대시보드 레이아웃은 폭을 제한하지 않고(`max-w-[1520px]`) 각 페이지가 자기 max-width를 정한다.
 
 ### 예매 흐름 (참석자 관점)

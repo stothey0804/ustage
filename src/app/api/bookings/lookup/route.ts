@@ -129,13 +129,23 @@ export async function POST(req: Request) {
         .eq("booking_id", booking.id)
         .order("ticket_number", { ascending: true });
 
-      const { password_hash, ...safeBooking } = booking;
-      void password_hash;
       // 취소 규정은 CKEditor HTML — 클라이언트에서 그대로 렌더하므로 여기서 정화한다.
       const { cancel_policy, ...event } = booking.events;
-      // bank_info는 소유자가 입력한 그대로 노출한다. 마스킹이 필요하면 소유자가 직접 입력.
+      // **필요한 필드만 골라 담는다(allowlist).** 행을 통째로 스프레드하면
+      // password_hash·감사 컬럼(status_updated_by)·레거시 qr_token까지 와이어에 실린다.
+      // bank_info는 소유자가 입력한 그대로 노출한다(입금 안내용).
       return {
-        ...safeBooking,
+        id: booking.id,
+        name: booking.name,
+        status: booking.status,
+        quantity: booking.quantity,
+        booking_no: booking.booking_no,
+        cancelled_quantity: booking.cancelled_quantity,
+        unit_price: booking.unit_price,
+        depositor_name: booking.depositor_name,
+        deposited_at: booking.deposited_at,
+        created_at: booking.created_at,
+        custom_answers: booking.custom_answers,
         events: {
           ...event,
           cancel_policy_html: cancel_policy

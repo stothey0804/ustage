@@ -3,6 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { formatKST } from "@/lib/date";
 import { occupiedSeats } from "@/lib/seats";
+import { isFreeStage } from "@/lib/booking-price";
 import {
   ChevronLeft,
   Edit,
@@ -87,9 +88,15 @@ export default async function EventDetailPage({
   const newStatus = await autoTransitionStatus(event);
   if (newStatus) event.status = newStatus;
 
+  // **컬럼을 명시한다 — `*`를 쓰면 안 된다.**
+  // 이 결과는 클라이언트 컴포넌트(BookingTable)로 넘어가 RSC 페이로드에 직렬화되므로,
+  // 화면에 그리지 않는 필드까지 브라우저로 전송된다. `*`였을 때는 참석자의
+  // password_hash(bcrypt)와 감사 컬럼(status_updated_by·checked_in_by)까지 새고 있었다.
   const { data: bookings } = await supabase
     .from("bookings")
-    .select("*, booking_tickets(*)")
+    .select(
+      "id, booking_no, name, email, quantity, cancelled_quantity, unit_price, depositor_name, deposited_at, status, custom_answers, created_at, user_id, booking_tickets(id, ticket_number, attendee_no, qr_token, checked_in, checked_in_at, cancelled_at)"
+    )
     .eq("event_id", id)
     .order("created_at", { ascending: false });
 
@@ -330,7 +337,8 @@ export default async function EventDetailPage({
             initialBookings={bookings ?? []}
             eventId={id}
             eventTitle={event.title}
-            isFree={event.price === 0}
+            // 현장에서만 돈을 받는 스테이지도 입금 확인 흐름이 필요하다
+            isFree={isFreeStage(event.price, event.onsite_price)}
             price={event.price}
             onsitePrice={event.onsite_price}
             capacity={event.capacity}

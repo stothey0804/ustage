@@ -15,6 +15,7 @@ import { QRTicket } from "@/components/booking/QRTicket";
 import { AdditionalPurchase } from "@/components/booking/AdditionalPurchase";
 import { CancelBooking } from "@/components/booking/CancelBooking";
 import { selfCancelBlockReason } from "@/lib/booking-cancel";
+import { bookingUnitPrice } from "@/lib/booking-price";
 import { effectiveQuantity } from "@/lib/seats";
 import { formatBookingNoRange } from "@/lib/booking-code";
 import { BookingStatusBadge } from "@/components/StatusBadge";
@@ -23,7 +24,6 @@ import { CopyButton } from "@/components/ui/copy-button";
 
 interface Props {
   eventId: string;
-  isFree?: boolean;
 }
 
 type LookupTicket = {
@@ -44,6 +44,8 @@ type LookupResult = {
   booking_no?: number | null;
   /** 부분 취소된 매수 — 유효 매수는 quantity - cancelled_quantity */
   cancelled_quantity?: number | null;
+  /** 이 예매에 적용된 1매 단가 — 현장 예매는 스테이지 온라인 가격과 다를 수 있다 */
+  unit_price?: number | null;
   depositor_name: string;
   deposited_at: string;
   created_at: string | null;
@@ -64,11 +66,16 @@ type LookupResult = {
   };
 };
 
+/** 이 예매에 적용된 단가 — 현장 예매는 스테이지 온라인 가격과 다를 수 있다. */
+function unitPriceOf(result: LookupResult): number {
+  return bookingUnitPrice(result, result.events.price);
+}
+
 /** 직접 취소를 막는 이유 — 서버(API)와 같은 함수로 판정한다. 가능하면 null. */
 function cancelBlockReason(result: LookupResult): string | null {
   return selfCancelBlockReason({
     status: result.status,
-    price: result.events.price,
+    price: unitPriceOf(result),
     checkedIn: result.tickets.some((t) => t.checked_in),
     eventEnd: new Date(result.events.event_end_date ?? result.events.event_date),
   });
@@ -83,7 +90,7 @@ type LookupFormValues = z.infer<typeof lookupFormSchema>;
 
 type LookupState = "idle" | "loading" | "found" | "notFound" | "error";
 
-export function BookingLookup({ eventId, isFree = false }: Props) {
+export function BookingLookup({ eventId }: Props) {
   const [state, setState] = useState<LookupState>("idle");
   const [results, setResults] = useState<LookupResult[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -219,7 +226,6 @@ export function BookingLookup({ eventId, isFree = false }: Props) {
             <BookingResultCard
               key={result.id}
               result={result}
-              isFree={isFree}
               label={results.length > 1 ? `예약 ${results.length - index}` : undefined}
               credentials={credentials ?? undefined}
               onCancelled={() => {
@@ -235,18 +241,19 @@ export function BookingLookup({ eventId, isFree = false }: Props) {
 
 function BookingResultCard({
   result,
-  isFree,
   label,
   credentials,
   onCancelled,
 }: {
   result: LookupResult;
-  isFree: boolean;
   label?: string;
   credentials?: LookupFormValues;
   onCancelled?: () => void;
 }) {
   const status = result.status;
+  // 무료 여부는 스테이지가 아니라 **이 예매의 단가**로 정한다 — 온라인 무료 스테이지라도
+  // 현장에서 돈을 받았으면 입금 정보와 금액을 보여줘야 한다.
+  const isFree = unitPriceOf(result) === 0;
   const policyHtml = result.events.cancel_policy_html ?? undefined;
   const blockReason = cancelBlockReason(result);
   // 부분 취소분을 뺀 유효 매수 (lib/seats.ts와 같은 계산)
@@ -307,9 +314,9 @@ function BookingResultCard({
               입금 금액
             </span>
             <span>
-              {(result.events.price * effective).toLocaleString()}원
+              {(unitPriceOf(result) * effective).toLocaleString()}원
               {effective > 1 &&
-                ` (${result.events.price.toLocaleString()}원 × ${effective}매)`}
+                ` (${unitPriceOf(result).toLocaleString()}원 × ${effective}매)`}
             </span>
           </div>
         </div>

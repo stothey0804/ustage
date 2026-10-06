@@ -266,7 +266,7 @@ export function OnsiteBookingDialog({
               </p>
 
               <div className="space-y-1.5">
-                <Label htmlFor="onsite-name">이름 *</Label>
+                <Label htmlFor="onsite-name">이름<span className="ml-0.5 text-destructive">*</span></Label>
                 <Input
                   id="onsite-name"
                   {...register("name")}
@@ -279,7 +279,7 @@ export function OnsiteBookingDialog({
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="onsite-email">이메일 *</Label>
+                <Label htmlFor="onsite-email">이메일<span className="ml-0.5 text-destructive">*</span></Label>
                 <Input
                   id="onsite-email"
                   type="email"
@@ -295,7 +295,7 @@ export function OnsiteBookingDialog({
               </div>
 
               <div className="space-y-1.5">
-                <Label>매수 *</Label>
+                <Label>매수<span className="ml-0.5 text-destructive">*</span></Label>
                 <div className="flex items-center gap-3">
                   <Button
                     type="button"

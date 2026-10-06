@@ -153,7 +153,7 @@ export function AdditionalPurchase({
             </p>
 
             <div className="space-y-1.5">
-              <Label htmlFor="add-quantity">매수 *</Label>
+              <Label htmlFor="add-quantity">매수<span className="ml-0.5 text-destructive">*</span></Label>
               <Select
                 value={String(quantity)}
                 onValueChange={(v) => setQuantity(Number(v))}
@@ -189,7 +189,7 @@ export function AdditionalPurchase({
             {!isFree && (
               <>
                 <div className="space-y-1.5">
-                  <Label htmlFor="add-depositor">입금자명 *</Label>
+                  <Label htmlFor="add-depositor">입금자명<span className="ml-0.5 text-destructive">*</span></Label>
                   <Input
                     id="add-depositor"
                     value={depositorName}
@@ -198,12 +198,15 @@ export function AdditionalPurchase({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="add-deposited-at">입금 예상 시간 *</Label>
+                  <Label htmlFor="add-deposited-at">입금 예상 시간<span className="ml-0.5 text-destructive">*</span></Label>
                   <DateTimePicker
                     value={depositedAt}
                     onChange={setDepositedAt}
                     placeholder="입금 예상 날짜·시간 선택"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    입금 예정 시간을 초과하는 경우 예매가 취소될 수 있습니다.
+                  </p>
                 </div>
               </>
             )}

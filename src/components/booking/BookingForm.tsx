@@ -527,7 +527,7 @@ export function BookingForm({
                 </p>
               )}
               <div className="space-y-1.5">
-                <Label htmlFor="name">이름 *</Label>
+                <Label htmlFor="name">이름<span className="ml-0.5 text-destructive">*</span></Label>
                 <Input
                   id="name"
                   {...register("name")}
@@ -540,7 +540,7 @@ export function BookingForm({
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="email">이메일 *</Label>
+                <Label htmlFor="email">이메일<span className="ml-0.5 text-destructive">*</span></Label>
                 <Input
                   id="email"
                   type="email"
@@ -558,7 +558,7 @@ export function BookingForm({
               {!isLoggedIn && (
                 <div className="space-y-1.5">
                   <Label htmlFor="password">
-                    비밀번호 *{" "}
+                    비밀번호<span className="ml-0.5 text-destructive">*</span>{" "}
                     <span className="text-muted-foreground font-normal text-xs">
                       (예약 조회 시 사용)
                     </span>
@@ -587,7 +587,7 @@ export function BookingForm({
               {!isFree && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="depositor_name">입금자명 *</Label>
+                    <Label htmlFor="depositor_name">입금자명<span className="ml-0.5 text-destructive">*</span></Label>
                     <Input
                       id="depositor_name"
                       {...register("depositor_name")}
@@ -618,7 +618,7 @@ export function BookingForm({
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="deposited_at">입금 예상 시간 *</Label>
+                    <Label htmlFor="deposited_at">입금 예상 시간<span className="ml-0.5 text-destructive">*</span></Label>
                     <Controller
                       control={control}
                       name="deposited_at"
@@ -630,6 +630,9 @@ export function BookingForm({
                         />
                       )}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      입금 예정 시간을 초과하는 경우 예매가 취소될 수 있습니다.
+                    </p>
                     {errors.deposited_at && (
                       <p className="text-xs text-destructive">
                         {errors.deposited_at.message}

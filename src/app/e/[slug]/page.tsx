@@ -254,7 +254,7 @@ export default async function EventPublicPage({
               event.booking_end && `예매 종료: ${formatKST(event.booking_end)}`,
             ]
               .filter(Boolean)
-              .join(" · ")}
+              .join("\n")}
           />
         )}
         <ContactRow value={event.contact} />
@@ -362,7 +362,7 @@ function InfoRow({
   return (
     <div className="flex items-start gap-2.5">
       <Icon className="size-4 text-muted-foreground shrink-0 mt-0.5" />
-      <span>{value}</span>
+      <span className="whitespace-pre-line">{value}</span>
     </div>
   );
 }

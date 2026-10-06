@@ -277,7 +277,7 @@ describe("BookingForm — 제출과 안내(3단계)", () => {
     render(<BookingForm {...BASE_PROPS} isLoggedIn userEmail="me@example.com" />);
 
     await u.click(screen.getByRole("button", { name: "예매하기" }));
-    await u.type(screen.getByLabelText("이름 *"), "홍길동");
+    await u.type(screen.getByLabelText("이름*"), "홍길동");
     await u.click(screen.getByRole("button", { name: "입금 안내 받기" }));
 
     expect(

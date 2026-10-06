@@ -6,6 +6,7 @@ import { occupiedSeats } from "@/lib/seats";
 import { isFreeStage } from "@/lib/booking-price";
 import {
   ChevronLeft,
+  Copy,
   Edit,
   QrCode,
   ExternalLink,
@@ -183,6 +184,14 @@ export default async function EventDetailPage({
             <Link href={`/dashboard/events/${id}/edit`}>
               <Edit className="size-4 mr-1.5" />
               수정
+            </Link>
+          </Button>
+        )}
+        {isOwner && (
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/dashboard/events/new?from=${id}`}>
+              <Copy className="size-4 mr-1.5" />
+              복사
             </Link>
           </Button>
         )}

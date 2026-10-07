@@ -510,10 +510,10 @@ export function BookingForm({
           </div>
 
           {noticeHtml && (
-            <div
-              className="rounded-lg border border-amber-300/60 bg-amber-50 px-3.5 py-3 text-xs leading-relaxed text-amber-900 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-200 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:mb-2 [&_ol]:list-decimal [&_ol]:pl-4 [&_ol]:mb-2 [&_li]:mb-0.5 [&_a]:underline [&_a]:underline-offset-2 [&_strong]:font-semibold [&_h2]:font-semibold [&_h2]:mb-1 [&_h3]:font-semibold [&_h3]:mb-1"
-              dangerouslySetInnerHTML={{ __html: noticeHtml }}
-            />
+            <RichTextView
+              html={noticeHtml}
+              className="rounded-lg border border-amber-300/60 bg-amber-50 px-3.5 py-3 text-xs text-amber-900 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-200 [&_a]:text-current"
+              />
           )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">

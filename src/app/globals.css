@@ -135,3 +135,74 @@
     @apply font-sans;
   }
 }
+/*
+ * 리치텍스트 본문 스타일 — 표시(RichTextView)와 작성(CKEditor)이 같은 규칙을 쓴다.
+ * 에디터 안은 Tailwind preflight가 p·제목·목록 여백을 0으로 지워 문단(Enter)과
+ * 줄바꿈(Shift+Enter)이 똑같아 보였고, 글꼴도 CKEditor 기본값(Helvetica 16px)이었다.
+ * 간격은 em 단위라 text-xs로 줄여 쓰는 곳(예매 폼의 규정 등)에서도 비율이 유지된다.
+ */
+@layer components {
+  .rich-text {
+    @apply text-sm leading-relaxed;
+  }
+  :is(.rich-text, .ck-editor-wrapper .ck-content) {
+    & p {
+      margin: 0 0 0.75em;
+    }
+    & > :last-child {
+      margin-bottom: 0;
+    }
+    & h2 {
+      margin: 1.25em 0 0.5em;
+      font-size: 1.15em;
+      font-weight: 600;
+    }
+    & h3 {
+      margin: 1em 0 0.375em;
+      font-size: 1em;
+      font-weight: 600;
+    }
+    & h4 {
+      margin: 0.75em 0 0.25em;
+      font-weight: 600;
+    }
+    & > :is(h2, h3, h4):first-child {
+      margin-top: 0;
+    }
+    & ul {
+      list-style: disc;
+    }
+    & ol {
+      list-style: decimal;
+    }
+    & :is(ul, ol) {
+      margin: 0 0 0.75em;
+      padding-left: 1.4em;
+    }
+    & li {
+      margin-bottom: 0.25em;
+    }
+    & a {
+      @apply text-primary underline underline-offset-2;
+    }
+    & strong {
+      font-weight: 600;
+    }
+  }
+}
+
+/* CKEditor 기본 스타일은 레이어 밖이라 위 규칙보다 우선한다 — 변수와 겹치는 규칙만 덮는다 */
+.ck-editor-wrapper {
+  --ck-content-font-family: var(--font-sans);
+  --ck-content-font-size: var(--text-sm);
+  --ck-content-line-height: var(--leading-relaxed);
+  --ck-content-font-color: var(--foreground);
+}
+.rich-text blockquote,
+.ck-editor-wrapper .ck-content blockquote {
+  margin: 0 0 0.75em;
+  padding: 0 0 0 0.75em;
+  border-left: 2px solid var(--border);
+  font-style: italic;
+  color: var(--muted-foreground);
+}

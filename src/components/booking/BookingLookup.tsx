@@ -21,6 +21,7 @@ import { formatBookingNoRange } from "@/lib/booking-code";
 import { BookingStatusBadge } from "@/components/StatusBadge";
 import { RichTextView } from "@/components/RichTextView";
 import { CopyButton } from "@/components/ui/copy-button";
+import { MAX_BOOKING_QUANTITY } from "@/lib/validations/booking";
 
 interface Props {
   eventId: string;
@@ -215,7 +216,7 @@ export function BookingLookup({ eventId }: Props) {
                 price={eventInfo.price}
                 email={credentials.email}
                 password={credentials.password}
-                maxQuantity={eventInfo.remaining_seats ?? 20}
+                maxQuantity={eventInfo.remaining_seats ?? MAX_BOOKING_QUANTITY}
                 remainingSeats={eventInfo.remaining_seats}
                 onSuccess={() => runLookup(credentials)}
               />

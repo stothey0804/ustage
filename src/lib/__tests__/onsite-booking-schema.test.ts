@@ -32,8 +32,8 @@ describe("onsiteBookingSchema — 커스텀 답변", () => {
     expect(onsiteBookingSchema.safeParse(base).success).toBe(true);
   });
 
-  it("매수 상한 20매는 그대로 유지된다", () => {
-    expect(onsiteBookingSchema.safeParse({ ...base, quantity: 21 }).success).toBe(
+  it("매수 상한 10매는 그대로 유지된다", () => {
+    expect(onsiteBookingSchema.safeParse({ ...base, quantity: 11 }).success).toBe(
       false,
     );
   });

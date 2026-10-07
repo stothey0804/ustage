@@ -38,11 +38,11 @@ describe("bookingApiSchema", () => {
     ).toBe(false);
   });
 
-  it("매수는 1~20 정수만 허용한다", () => {
+  it("매수는 1~10 정수만 허용한다", () => {
     expect(bookingApiSchema.safeParse({ ...VALID_API, quantity: 0 }).success).toBe(false);
-    expect(bookingApiSchema.safeParse({ ...VALID_API, quantity: 21 }).success).toBe(false);
+    expect(bookingApiSchema.safeParse({ ...VALID_API, quantity: 11 }).success).toBe(false);
     expect(bookingApiSchema.safeParse({ ...VALID_API, quantity: 1.5 }).success).toBe(false);
-    expect(bookingApiSchema.safeParse({ ...VALID_API, quantity: 20 }).success).toBe(true);
+    expect(bookingApiSchema.safeParse({ ...VALID_API, quantity: 10 }).success).toBe(true);
   });
 
   it("custom_answers는 문자열/숫자/불리언 값을 허용한다", () => {

@@ -1,5 +1,9 @@
 import { z } from "@/lib/zod";
 
+/** 예매 1건당 최대 매수 — DB(create_booking·create_onsite_booking)의 INVALID_QUANTITY 검사와 짝 */
+export const MAX_BOOKING_QUANTITY = 10;
+export const MAX_BOOKING_QUANTITY_MESSAGE = `최대 ${MAX_BOOKING_QUANTITY}매까지 예매할 수 있습니다.`;
+
 export const bookingApiSchema = z.object({
   event_id: z.string().uuid("올바른 스테이지 ID가 아닙니다."),
   // 추가 구매(additional)에서는 기존 예약에서 상속하므로 선택 — 신규 예매는 라우트에서 필수 검증
@@ -7,7 +11,7 @@ export const bookingApiSchema = z.object({
   email: z.string().min(1, "이메일을 입력해 주세요.").email("올바른 이메일 형식이 아닙니다."),
   depositor_name: z.string().optional().default(""),
   deposited_at: z.string().optional().default(""),
-  quantity: z.number().int().min(1, "최소 1매 이상이어야 합니다.").max(20, "최대 20매까지 예매할 수 있습니다."),
+  quantity: z.number().int().min(1, "최소 1매 이상이어야 합니다.").max(MAX_BOOKING_QUANTITY, MAX_BOOKING_QUANTITY_MESSAGE),
   password: z.string().optional(),
   custom_answers: z
     .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
@@ -24,7 +28,7 @@ export const bookingFormSchema = z.object({
   email: z.string().min(1, "이메일을 입력해 주세요.").email("올바른 이메일 형식이 아닙니다."),
   depositor_name: z.string(),
   deposited_at: z.string(),
-  quantity: z.number().int().min(1).max(20),
+  quantity: z.number().int().min(1).max(MAX_BOOKING_QUANTITY),
   password: z.string().optional(),
   /**
    * 값이 `undefined`인 키를 허용한다 — select·checkbox는 Controller가 등록만 하고
@@ -63,7 +67,7 @@ export const onsiteBookingSchema = z.object({
     .number()
     .int()
     .min(1, "최소 1매 이상이어야 합니다.")
-    .max(20, "최대 20매까지 예매할 수 있습니다."),
+    .max(MAX_BOOKING_QUANTITY, MAX_BOOKING_QUANTITY_MESSAGE),
   /** 미입력 시 서버가 4자리 숫자를 자동 생성해 알려준다 */
   password: z
     .string()

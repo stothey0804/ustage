@@ -17,6 +17,7 @@ import type { CustomAnswersForm } from "@/lib/validations/booking";
 import type { CustomField } from "@/lib/validations/event";
 import { formatBookingNoRange } from "@/lib/booking-code";
 import {
+  MAX_BOOKING_QUANTITY,
   onsiteBookingSchema,
   type OnsiteBookingValues,
 } from "@/lib/validations/booking";
@@ -38,7 +39,7 @@ interface Props {
   price: number;
   /** 현장 예매 1매 가격 — null이면 온라인 가격과 동일 */
   onsitePrice?: number | null;
-  /** 남은 좌석 — 정원이 없으면 null(상한 20매). 좌석은 주최자도 초과할 수 없다 */
+  /** 남은 좌석 — 정원이 없으면 null(상한 MAX_BOOKING_QUANTITY). 좌석은 주최자도 초과할 수 없다 */
   remainingSeats?: number | null;
   /** 스테이지의 커스텀 필드 — 필수 항목은 현장 예매에서도 받아야 한다 */
   customFields?: CustomField[];
@@ -106,7 +107,9 @@ export function OnsiteBookingDialog({
    */
   const maxQuantity = Math.max(
     1,
-    remainingSeats === null ? 20 : Math.min(20, remainingSeats)
+    remainingSeats === null
+      ? MAX_BOOKING_QUANTITY
+      : Math.min(MAX_BOOKING_QUANTITY, remainingSeats)
   );
   const soldOut = remainingSeats === 0;
 

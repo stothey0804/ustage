@@ -142,7 +142,7 @@ email           text             # 예매자 이메일 (확인 메일 발송, �
 password_hash   text             # bcrypt, 비회원 예매 시에만 사용 (회원 예매는 빈 문자열 "")
 depositor_name  text             # 입금자명 (참석자 입력, 무료 이벤트는 name으로 자동 채움)
 deposited_at    text             # 입금시간 (참석자 입력, 자유형식, 무료 이벤트는 "무료입장")
-quantity        integer          # 예매 매수 (1~20)
+quantity        integer          # 예매 매수 (1~10, `MAX_BOOKING_QUANTITY`)
 unit_price      integer nullable # 이 예매에 적용된 1매 단가 — 예매 시점에 확정(RPC가 저장)
 status          text             # 'pending' | 'confirmed' | 'cancelled' (무료 이벤트는 즉시 confirmed)
 custom_answers  jsonb            # {field_id: value}
@@ -671,7 +671,7 @@ ended  (행사 종료) → event_date 경과
   온라인 예매(`/e/[slug]`)에는 노출하지 않는다 — 주최자 화면 전용 정보다.
   마이그레이션 `20260831100000_onsite_price.sql`.
 - **잔여석을 초과할 수 없다** — 다이얼로그가 남은 좌석을 매수 상한으로 쓰고(정원이 없으면
-  20매), 매진이면 등록 버튼을 막는다. RPC도 같은 검사를 하므로 이중 방어다.
+  10매), 매진이면 등록 버튼을 막는다. RPC도 같은 검사를 하므로 이중 방어다.
 - **커스텀 필드를 함께 받는다.** 예전에는 이 폼에 필드가 아예 없어 현장 예매만 답변이 빈
   채로 남았고(예매 수정 UI가 없어 영구히), 필수 항목도 비어 있었다. 필수 검사는 서버 액션이
   공개 예매(`api/bookings`)와 같은 규칙으로 한다.

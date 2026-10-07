@@ -20,6 +20,7 @@ import { formatBookingNoRange } from "@/lib/booking-code";
 import { selfCancelBlockReason } from "@/lib/booking-cancel";
 import { bookingUnitPrice } from "@/lib/booking-price";
 import { remainingSeats } from "@/lib/seats";
+import { MAX_BOOKING_QUANTITY } from "@/lib/validations/booking";
 
 export default async function BookingDetailPage({
   params,
@@ -182,7 +183,7 @@ export default async function BookingDetailPage({
             eventId={event.id}
             price={event.price}
             email={booking.email}
-            maxQuantity={remaining ?? 20}
+            maxQuantity={remaining ?? MAX_BOOKING_QUANTITY}
             remainingSeats={remaining}
           />
         </div>

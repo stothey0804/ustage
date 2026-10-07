@@ -14,6 +14,7 @@ import { CheckCircle, Loader2, Minus, Plus } from "lucide-react";
 
 import {
   bookingFormSchema,
+  MAX_BOOKING_QUANTITY,
   type BookingFormValues,
   type CustomAnswersForm,
 } from "@/lib/validations/booking";
@@ -59,7 +60,7 @@ interface BookingFormProps {
   userEmail?: string;
   isOpen: boolean;
   closedReason?: string;
-  /** 잔여석 기준 최대 예매 매수 (기본 20) */
+  /** 잔여석 기준 최대 예매 매수 (기본 MAX_BOOKING_QUANTITY) */
   maxQuantity?: number;
 }
 
@@ -78,7 +79,7 @@ export function BookingForm({
   userEmail,
   isOpen,
   closedReason,
-  maxQuantity = 20,
+  maxQuantity = MAX_BOOKING_QUANTITY,
 }: BookingFormProps) {
   const isFree = price === 0;
   const pathname = usePathname();
@@ -409,7 +410,7 @@ export function BookingForm({
           </div>
         </div>
 
-        {effectiveMax < 20 && (
+        {effectiveMax < MAX_BOOKING_QUANTITY && (
           <p className="text-xs text-muted-foreground">
             잔여석 기준 최대 {effectiveMax}매까지 예매할 수 있어요.
           </p>

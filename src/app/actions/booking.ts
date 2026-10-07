@@ -12,7 +12,10 @@ import {
   sendBookingConfirmed,
   getBaseUrl,
 } from "@/lib/email";
-import { onsiteBookingSchema } from "@/lib/validations/booking";
+import {
+  MAX_BOOKING_QUANTITY_MESSAGE,
+  onsiteBookingSchema,
+} from "@/lib/validations/booking";
 import type { CustomField } from "@/lib/validations/event";
 import { sanitizeEventHtml } from "@/lib/sanitize";
 import { formatKST } from "@/lib/date";
@@ -723,7 +726,7 @@ export async function createOnsiteBooking(input: {
       };
     }
     if (message.includes("INVALID_QUANTITY")) {
-      return { error: "최대 20매까지 예매할 수 있습니다." };
+      return { error: MAX_BOOKING_QUANTITY_MESSAGE };
     }
     if (error.code === "PGRST202" || message.includes("create_onsite_booking")) {
       console.warn(

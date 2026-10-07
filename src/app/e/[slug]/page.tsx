@@ -26,6 +26,7 @@ import { AddToCalendar } from "@/components/booking/AddToCalendar";
 import { VenueMapLinks } from "@/components/booking/VenueMapLinks";
 import type { CustomField } from "@/lib/validations/event";
 import { bookingShareMeta } from "@/lib/og-share";
+import { MAX_BOOKING_QUANTITY } from "@/lib/validations/booking";
 
 /**
  * 공유 미리보기(OG) — 포스터가 있으면 그 이미지를 그대로 쓴다.
@@ -313,7 +314,9 @@ export default async function EventPublicPage({
           isOpen={isOpen}
           closedReason={reason}
           maxQuantity={
-            remainingSeats === null ? 20 : Math.max(Math.min(20, remainingSeats), 1)
+            remainingSeats === null
+              ? MAX_BOOKING_QUANTITY
+              : Math.max(Math.min(MAX_BOOKING_QUANTITY, remainingSeats), 1)
           }
         />
       </section>

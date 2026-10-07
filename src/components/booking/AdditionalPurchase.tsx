@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { MAX_BOOKING_QUANTITY } from "@/lib/validations/booking";
 
 interface AdditionalPurchaseProps {
   eventId: string;
@@ -33,7 +34,7 @@ interface AdditionalPurchaseProps {
   password?: string;
   /**
    * 고를 수 있는 최대 매수. 잔여석이 있으면 그 값을 넘겨 신규 예매 폼과 같은 상한을 쓴다.
-   * 넘기지 않으면 20매(서버 RPC가 최종적으로 정원을 검사한다).
+   * 넘기지 않으면 MAX_BOOKING_QUANTITY(서버 RPC가 최종적으로 정원을 검사한다).
    */
   maxQuantity?: number;
   /** 잔여석(정원 없으면 null) — 안내 문구용 */
@@ -51,7 +52,7 @@ export function AdditionalPurchase({
   price,
   email,
   password,
-  maxQuantity = 20,
+  maxQuantity = MAX_BOOKING_QUANTITY,
   remainingSeats = null,
   onSuccess,
 }: AdditionalPurchaseProps) {
@@ -65,11 +66,11 @@ export function AdditionalPurchase({
   const [seatLimit, setSeatLimit] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  // 잔여석보다 많이 고를 수 없게 한다 — 예전에는 1~20 고정이라 제출 후에야 거절됐다.
+  // 잔여석보다 많이 고를 수 없게 한다 — 예전에는 매수 상한 고정이라 제출 후에야 거절됐다.
   // 제출 뒤 서버가 알려준 잔여석(seatLimit)이 있으면 그 값이 더 우선한다.
   const maxSelectable = Math.max(
     1,
-    Math.min(20, seatLimit === null ? maxQuantity : Math.min(maxQuantity, seatLimit))
+    Math.min(MAX_BOOKING_QUANTITY, seatLimit === null ? maxQuantity : Math.min(maxQuantity, seatLimit))
   );
   const soldOut = seatLimit === 0;
   const totalAmount = price * quantity;

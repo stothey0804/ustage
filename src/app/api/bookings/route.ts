@@ -3,7 +3,10 @@ import bcrypt from "bcryptjs";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { bookingApiSchema } from "@/lib/validations/booking";
+import {
+  bookingApiSchema,
+  MAX_BOOKING_QUANTITY_MESSAGE,
+} from "@/lib/validations/booking";
 import { sendBookingConfirmation, getBaseUrl } from "@/lib/email";
 import { formatKST } from "@/lib/date";
 import { autoTransitionStatus } from "@/lib/auto-status";
@@ -122,7 +125,7 @@ async function createBookingAtomic(
     return { status: 404, error: "스테이지를 찾을 수 없습니다." };
   }
   if (message.includes("INVALID_QUANTITY")) {
-    return { status: 400, error: "최대 20매까지 예매할 수 있습니다." };
+    return { status: 400, error: MAX_BOOKING_QUANTITY_MESSAGE };
   }
 
   // 함수 미존재 = 마이그레이션 미적용 — 비원자 경로로 폴백

@@ -12,7 +12,12 @@ export async function signOut() {
   const supabase = await createClient();
   const { error } = await supabase.auth.signOut();
   if (error) {
+    // GoTrue가 5xx·429·네트워크 오류를 주면 auth-js가 세션 쿠키를 지우지 않는다 —
+    // 그대로 "/"로 보내면 남은 세션 때문에 다시 대시보드로 튕겨 "로그아웃이 안 된다".
+    // local 범위는 서버 호출 없이 이 브라우저의 쿠키만 지운다.
     console.error("[auth] sign out error", error);
+    const { error: localError } = await supabase.auth.signOut({ scope: "local" });
+    if (localError) console.error("[auth] local sign out error", localError);
   }
   redirect("/");
 }

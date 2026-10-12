@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { randomInt } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { venueLabel } from "@/lib/venue";
 import {
   sendBookingCancelled,
   sendBookingConfirmation,
@@ -221,7 +222,7 @@ export async function updateBookingStatus(
         quantity: effectiveQuantity(full),
         eventTitle: ev.title,
         eventDate: formatKST(ev.event_date),
-        eventVenue: ev.venue_address || ev.venue,
+        eventVenue: venueLabel(ev.venue, ev.venue_address),
         contact: ev.contact,
         cancelPolicyHtml: ev.cancel_policy
           ? sanitizeEventHtml(ev.cancel_policy)
@@ -279,7 +280,7 @@ export async function updateBookingStatus(
         userId: full.user_id,
         eventTitle: ev.title,
         eventDate: formatKST(ev.event_date),
-        eventVenue: ev.venue_address || ev.venue,
+        eventVenue: venueLabel(ev.venue, ev.venue_address),
         slug: ev.slug,
         tickets: activeTickets,
       };
@@ -487,7 +488,7 @@ export async function updateBookingStatusBulk(
           quantity,
           eventTitle: ev.title,
           eventDate: formatKST(ev.event_date),
-          eventVenue: ev.venue_address || ev.venue,
+          eventVenue: venueLabel(ev.venue, ev.venue_address),
           confirmUrl: row.user_id
             ? `${baseUrl}/dashboard/bookings/${row.id}`
             : `${baseUrl}/e/${ev.slug}/me`,
@@ -504,7 +505,7 @@ export async function updateBookingStatusBulk(
           quantity,
           eventTitle: ev.title,
           eventDate: formatKST(ev.event_date),
-          eventVenue: ev.venue_address || ev.venue,
+          eventVenue: venueLabel(ev.venue, ev.venue_address),
           contact: ev.contact,
           cancelPolicyHtml: ev.cancel_policy
             ? sanitizeEventHtml(ev.cancel_policy)
@@ -580,7 +581,7 @@ export async function resendBookingConfirmation(
       quantity: tickets.length,
       eventTitle: ev.title,
       eventDate: formatKST(ev.event_date),
-      eventVenue: ev.venue_address || ev.venue,
+      eventVenue: venueLabel(ev.venue, ev.venue_address),
       confirmUrl: booking.user_id
         ? `${baseUrl}/dashboard/bookings/${booking.id}`
         : `${baseUrl}/e/${ev.slug}/me`,
@@ -775,7 +776,7 @@ export async function createOnsiteBooking(input: {
 
   // 비회원이므로 확인 링크는 비회원 조회 페이지
   const confirmUrl = `${getBaseUrl()}/e/${event.slug}/me`;
-  const eventVenue = event.venue_address || event.venue;
+  const eventVenue = venueLabel(event.venue, event.venue_address);
   const eventDate = formatKST(event.event_date);
 
   after(() => {
@@ -958,7 +959,7 @@ export async function cancelBookingTickets(
         quantity: before.quantity ?? 1,
         eventTitle: ev.title,
         eventDate: formatKST(ev.event_date),
-        eventVenue: ev.venue_address || ev.venue,
+        eventVenue: venueLabel(ev.venue, ev.venue_address),
         contact: ev.contact,
         cancelPolicyHtml: ev.cancel_policy
           ? sanitizeEventHtml(ev.cancel_policy)

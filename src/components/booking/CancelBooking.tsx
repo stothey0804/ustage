@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { RichTextView } from "@/components/RichTextView";
+import { ContactLink } from "@/components/ContactLink";
 
 interface Props {
   bookingId: string;
@@ -136,7 +137,7 @@ export function CancelBooking({
             {contact && (
               <p className="text-xs text-muted-foreground">
                 환불 문의:{" "}
-                <span className="font-medium text-foreground">{contact}</span>
+                <ContactLink value={contact} className="font-medium" />
               </p>
             )}
 

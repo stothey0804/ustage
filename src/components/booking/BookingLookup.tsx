@@ -22,6 +22,7 @@ import { BookingStatusBadge } from "@/components/StatusBadge";
 import { RichTextView } from "@/components/RichTextView";
 import { CopyButton } from "@/components/ui/copy-button";
 import { MAX_BOOKING_QUANTITY } from "@/lib/validations/booking";
+import { ContactLink } from "@/components/ContactLink";
 
 interface Props {
   eventId: string;
@@ -327,16 +328,15 @@ function BookingResultCard({
       {status === "pending" && result.events.contact && (
         <p className="rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
           입금 확인은 아래 연락처로 문의해 주세요:{" "}
-          <span className="font-medium text-foreground">
-            {result.events.contact}
-          </span>
+          <ContactLink value={result.events.contact} className="font-medium" />
         </p>
       )}
 
       {/* 취소 안내 */}
       {status === "cancelled" && result.events.contact && (
         <p className="rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-          환불 등 문의는 주최자에게 연락해 주세요: {result.events.contact}
+          환불 등 문의는 주최자에게 연락해 주세요:{" "}
+          <ContactLink value={result.events.contact} />
         </p>
       )}
 
@@ -386,7 +386,11 @@ function BookingResultCard({
         status !== "cancelled" && (
           <p className="rounded-md border bg-muted/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
             {blockReason}
-            {result.events.contact ? ` (연락처: ${result.events.contact})` : ""}
+            {result.events.contact && (
+              <>
+                {" "}(연락처: <ContactLink value={result.events.contact} />)
+              </>
+            )}
           </p>
         )
       )}

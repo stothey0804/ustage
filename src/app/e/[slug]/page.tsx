@@ -27,6 +27,7 @@ import { VenueMapLinks } from "@/components/booking/VenueMapLinks";
 import type { CustomField } from "@/lib/validations/event";
 import { bookingShareMeta } from "@/lib/og-share";
 import { MAX_BOOKING_QUANTITY } from "@/lib/validations/booking";
+import { ContactLink } from "@/components/ContactLink";
 
 /**
  * 공유 미리보기(OG) — 포스터가 있으면 그 이미지를 그대로 쓴다.
@@ -263,7 +264,7 @@ export default async function EventPublicPage({
 
       {/* 지도 링크 (주소가 있는 경우에만) */}
       {event.venue_address && (
-        <VenueMapLinks address={event.venue_address} />
+        <VenueMapLinks venue={event.venue} address={event.venue_address} />
       )}
 
       {/* 안내 내용 */}
@@ -368,28 +369,10 @@ function InfoRow({
 }
 
 function ContactRow({ value }: { value: string }) {
-  const isUrl = /^https?:\/\//.test(value);
-  const isPhone = /^[\d\-+() ]{8,}$/.test(value.trim());
-
   return (
     <div className="flex items-start gap-2.5">
       <Phone className="size-4 text-muted-foreground shrink-0 mt-0.5" />
-      {isUrl ? (
-        <a
-          href={value}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary underline underline-offset-2"
-        >
-          {value}
-        </a>
-      ) : isPhone ? (
-        <a href={`tel:${value.replace(/[^+\d]/g, "")}`} className="text-primary underline underline-offset-2">
-          {value}
-        </a>
-      ) : (
-        <span>{value}</span>
-      )}
+      <ContactLink value={value} />
     </div>
   );
 }

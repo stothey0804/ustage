@@ -5,6 +5,7 @@ import { after } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { venueLabel } from "@/lib/venue";
 import { assertEventAccess } from "@/lib/event-access";
 import { validateInviteAcceptance } from "@/lib/staff-permissions";
 import { staffInviteSchema } from "@/lib/validations/staff";
@@ -151,7 +152,7 @@ export async function inviteEventStaff(
       to: invitedEmail,
       eventTitle: event.title,
       eventDate: formatKST(event.event_date),
-      eventVenue: event.venue_address || event.venue,
+      eventVenue: venueLabel(event.venue, event.venue_address),
       acceptUrl,
     }).catch((err) => console.error("[email]", err))
   );

@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { venueLabel } from "@/lib/venue";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { sanitizeEventHtml } from "@/lib/sanitize";
 import { getAccountEmail } from "@/lib/account-email";
@@ -172,7 +173,7 @@ export async function POST(req: Request) {
         quantity,
         eventTitle: event.title,
         eventDate,
-        eventVenue: event.venue_address || event.venue,
+        eventVenue: venueLabel(event.venue, event.venue_address),
         contact: event.contact,
         cancelPolicyHtml: event.cancel_policy
           ? sanitizeEventHtml(event.cancel_policy)

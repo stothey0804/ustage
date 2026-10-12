@@ -1,15 +1,26 @@
 import { MapPin } from "lucide-react";
 
+import { extraAddress } from "@/lib/venue";
+
 interface VenueMapLinksProps {
+  /** 주최자가 입력한 장소 — 건물명·층수 등이 붙어 있으므로 이것을 먼저 보여준다 */
+  venue: string;
+  /** 주소 검색 결과 — 지도 검색어로 쓴다 */
   address: string;
 }
 
-export function VenueMapLinks({ address }: VenueMapLinksProps) {
+export function VenueMapLinks({ venue, address }: VenueMapLinksProps) {
+  const extra = extraAddress(venue, address);
   return (
     <div className="rounded-lg border overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-3 text-sm">
-        <MapPin className="size-4 text-muted-foreground shrink-0" />
-        <span className="flex-1">{address}</span>
+      <div className="flex items-start gap-2 px-4 py-3 text-sm">
+        <MapPin className="size-4 text-muted-foreground shrink-0 mt-0.5" />
+        <div className="flex-1 min-w-0 break-words">
+          <p>{venue || address}</p>
+          {extra && (
+            <p className="mt-0.5 text-xs text-muted-foreground">{extra}</p>
+          )}
+        </div>
       </div>
       <div className="flex border-t divide-x">
         <a

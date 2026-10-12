@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { venueLabel } from "@/lib/venue";
 import {
   bookingApiSchema,
   MAX_BOOKING_QUANTITY_MESSAGE,
@@ -529,7 +530,7 @@ export async function POST(req: Request) {
       quantity: data.quantity,
       eventTitle: event.title,
       eventDate: formatKST(event.event_date),
-      eventVenue: event.venue_address || event.venue,
+      eventVenue: venueLabel(event.venue, event.venue_address),
       isFree: event.price === 0,
       bankInfo: event.bank_info,
       totalAmount: event.price * data.quantity,

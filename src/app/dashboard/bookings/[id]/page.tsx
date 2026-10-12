@@ -21,6 +21,7 @@ import { selfCancelBlockReason } from "@/lib/booking-cancel";
 import { bookingUnitPrice } from "@/lib/booking-price";
 import { remainingSeats } from "@/lib/seats";
 import { MAX_BOOKING_QUANTITY } from "@/lib/validations/booking";
+import { ContactLink } from "@/components/ContactLink";
 
 export default async function BookingDetailPage({
   params,
@@ -152,9 +153,7 @@ export default async function BookingDetailPage({
             {event?.contact && (
               <p className="text-xs">
                 문의:{" "}
-                <span className="font-medium text-foreground">
-                  {event.contact}
-                </span>
+                <ContactLink value={event.contact} className="font-medium" />
               </p>
             )}
           </div>
@@ -169,7 +168,8 @@ export default async function BookingDetailPage({
             <p>취소된 예약입니다.</p>
             {event?.contact && (
               <p className="text-xs">
-                환불 등 문의는 주최자에게 연락해 주세요: {event.contact}
+                환불 등 문의는 주최자에게 연락해 주세요:{" "}
+                <ContactLink value={event.contact} />
               </p>
             )}
           </div>
@@ -228,7 +228,7 @@ export default async function BookingDetailPage({
 
           {/* 지도 링크 */}
           {event.venue_address && (
-            <VenueMapLinks address={event.venue_address} />
+            <VenueMapLinks venue={event.venue} address={event.venue_address} />
           )}
         </div>
       )}
@@ -305,7 +305,11 @@ export default async function BookingDetailPage({
         status !== "cancelled" && (
           <p className="rounded-lg border bg-muted/30 px-3.5 py-3 text-xs leading-relaxed text-muted-foreground">
             {cancelBlockReason}
-            {event?.contact ? ` (연락처: ${event.contact})` : ""}
+            {event?.contact && (
+              <>
+                {" "}(연락처: <ContactLink value={event.contact} />)
+              </>
+            )}
           </p>
         )
       )}

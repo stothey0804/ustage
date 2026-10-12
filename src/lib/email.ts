@@ -3,6 +3,7 @@ import QRCode from "qrcode";
 
 import { LOTTERY_NOTICE_TEXT } from "@/lib/lottery-notice";
 import { maskEmail } from "@/lib/mask";
+import { contactHref } from "@/lib/contact";
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
@@ -27,6 +28,14 @@ function escapeHtml(value: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+/** 주최자 연락처 — 링크로 만들 수 있으면(오픈카톡·전화·이메일) <a>로 감싼다 */
+function contactHtml(contact: string): string {
+  const href = contactHref(contact);
+  const text = escapeHtml(contact);
+  if (!href) return text;
+  return `<a href="${escapeHtml(href)}" style="color:#2b8a8a;">${text}</a>`;
 }
 
 interface EmailTicket {
@@ -376,7 +385,7 @@ export async function sendBookingCancelled({
     </p>
     <div style="margin:12px 0 0;padding:16px;background:#f5f5f5;border-radius:8px;">
       <p style="margin:0 0 4px;font-size:12px;color:#666;">주최자 연락처</p>
-      <p style="margin:0;font-size:14px;font-weight:600;">${escapeHtml(contact)}</p>
+      <p style="margin:0;font-size:14px;font-weight:600;">${contactHtml(contact)}</p>
     </div>
 
     ${
